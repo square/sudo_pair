@@ -244,11 +244,11 @@ User {} is attempting to run
 \t<\x1b[1;34m{}\x1b[0m@\x1b[1;32m{}\x1b[0m:\x1b[01;34m{}\x1b[0m\x1b[1;32m $\x1b[0m > sudo -u {} {}
 
 If you approve, you will see the live session through this terminal. To \
-immediately abort the interactive session (and kill the approved sudo \
-command), press ESC.
+immediately abort the interactive session (and kill the running sudo \
+session), press Ctrl-D (EOF).
 
-Please note: if you abandon this session, it will kill the approved sudo \
-command.
+Please note: if you abandon this session, it will kill the running sudo \
+session.
 
 Approve? y/n [n]: ",
             user,
