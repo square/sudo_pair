@@ -18,5 +18,5 @@ item_brace_style = "PreferSameLine"
 
 use_try_shorthand = true
 
-generics_ident = "Tabbed"
+generics_ident    = "Tabbed"
 where_pred_indent = "Tabbed"
