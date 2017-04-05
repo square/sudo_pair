@@ -22,13 +22,20 @@
 
 use libc::{c_char, c_int, c_uint, c_void};
 
-pub const SUDO_IO_PLUGIN: c_uint = 2;
-
 const SUDO_API_VERSION_MAJOR: c_uint = 1;
 const SUDO_API_VERSION_MINOR: c_uint = 9;
 
 pub const SUDO_API_VERSION: c_uint = (SUDO_API_VERSION_MAJOR << 16) |
                                      SUDO_API_VERSION_MINOR;
+
+pub const SUDO_IO_PLUGIN: c_uint = 2;
+
+// pub const SUDO_CONV_PROMPT_ECHO_OFF: c_int = 0x0001;  /* do not echo user input */
+// pub const SUDO_CONV_PROMPT_ECHO_ON: c_int = 0x0002;  /* echo user input */
+// pub const SUDO_CONV_ERROR_MSG: c_int = 0x0003;  /* error message */
+pub const SUDO_CONV_INFO_MSG: c_int = 0x0004;  /* informational message */
+// pub const SUDO_CONV_PROMPT_MASK: c_int = 0x0005;  /* mask user input */
+// pub const SUDO_CONV_PROMPT_ECHO_OK: c_int = 0x1000;  /* flag: allow echo if no tty */
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 #[repr(C)]
@@ -80,7 +87,7 @@ pub struct sudo_conv_callback {
 }
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_open_fn_t = extern "C" fn(
+pub type sudo_open_fn_t = unsafe extern "C" fn(
     version:        c_uint,
     conversation:   sudo_conv_t,
     sudo_printf:    sudo_printf_t,
@@ -90,39 +97,39 @@ pub type sudo_open_fn_t = extern "C" fn(
     argc:           c_int,
     argv: *const    *mut c_char,
     user_env:       *const *mut c_char,
-    plugin_plugins: *const *mut c_char,
+    plugin_options: *const *mut c_char,
 ) -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_close_fn_t = extern "C" fn(
+pub type sudo_close_fn_t = unsafe extern "C" fn(
     exit_status: c_int,
     error:       c_int,
 );
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_show_version_fn_t = extern "C" fn(
+pub type sudo_show_version_fn_t = unsafe extern "C" fn(
     verbose: c_int,
 ) -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_log_fn_t = extern "C" fn(
+pub type sudo_log_fn_t = unsafe extern "C" fn(
     buf: *const c_char,
     len: c_uint,
 ) -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_hook_registration_fn_t = extern "C" fn(
+pub type sudo_hook_registration_fn_t = unsafe extern "C" fn(
     version:       c_int,
     register_hook: sudo_hook_register_fn_t,
 );
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_hook_register_fn_t = extern "C" fn(
+pub type sudo_hook_register_fn_t = unsafe extern "C" fn(
     hook: *mut sudo_hook,
 ) -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_conv_t = extern "C" fn(
+pub type sudo_conv_t = unsafe extern "C" fn(
     num_msgs: c_int,
     msgs:     *mut sudo_conv_message,
     replies:  *mut sudo_conv_reply,
@@ -130,17 +137,17 @@ pub type sudo_conv_t = extern "C" fn(
 ) -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_printf_t = extern "C" fn(
+pub type sudo_printf_t = unsafe extern "C" fn(
     msg_type: c_int,
     fmt:      *const c_char,
     ...
 ) -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_hook_fn_t = extern "C" fn() -> c_int;
+pub type sudo_hook_fn_t = unsafe extern "C" fn() -> c_int;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
-pub type sudo_conv_callback_fn_t = extern "C" fn(
+pub type sudo_conv_callback_fn_t = unsafe extern "C" fn(
     signo:   c_int,
     closure: *mut c_void,
 ) -> c_int;
