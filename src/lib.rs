@@ -256,7 +256,7 @@ User {} is attempting to run
 
 If you approve, you will see the live session through this terminal. To \
 immediately abort the interactive session (and kill the approved sudo \
-command), press Ctrl-C.
+command), press ESC.
 
 Please note: if you abandon this session, it will kill the approved sudo \
 command.
