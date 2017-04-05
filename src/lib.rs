@@ -69,7 +69,7 @@ const MSG_PIPE_DISALLOWED: &'static [u8]
     = b"sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n\0";
 
 const MSG_SESSION_ENDED: &'static [u8]
-    = b"\nsudo: sudo_pair session terminated\n\0";
+    = b"\n\rsudo: sudo_pair session terminated\n\0";
 
 const MSG_ERROR: &'static [u8]
     = b"sudo: %s\n\0";
@@ -250,7 +250,6 @@ session. Please have another user run
     }
 
     // TODO: handle return value
-    // \t<{}@{}:{} $ > sudo -u {} {}
     let _ = session.write_all(
         format!("\
 User {} is attempting to run
