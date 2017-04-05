@@ -54,6 +54,9 @@ const MSG_VERSION_MISMATCH: &'static [u8]
 const MSG_PIPE_DISALLOWED: &'static [u8]
     = b"sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n\0";
 
+const MSG_SESSION_ENDED: &'static [u8]
+    = b"\nsudo: sudo_pair session terminated\n\0";
+
 const MSG_ERROR: &'static [u8]
     = b"sudo: %s\n\0";
 
@@ -295,8 +298,13 @@ unsafe extern "C" fn sudo_pair_log_ttyout(
 
     match sess.write_all(std::slice::from_raw_parts(buf as _, len as _)) {
         Ok(_)  => return 1,
-        Err(_) => return -1, // socket is closed, kill the command;
-                             // TODO: return 0 broken, segfaults?
+        Err(_) => {
+            sudo_printf!(MSG_SESSION_ENDED);
+
+            // socket is closed, kill the command;
+            // TODO: return 0 broken, segfaults?
+            return -1
+        },
     };
 }
 
