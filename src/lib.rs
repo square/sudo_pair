@@ -315,8 +315,7 @@ unsafe extern "C" fn sudo_pair_log_ttyout(
             sudo_printf!(MSG_SESSION_ENDED);
 
             // socket is closed, kill the command;
-            // TODO: return 0 broken, segfaults?
-            return -1
+            return 0
         },
     };
 }
