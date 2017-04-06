@@ -54,24 +54,29 @@ use result::{Result, Error, SettingKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
-use std::error::Error as StdError;
 use std::ffi::{CStr, CString};
 use std::io::{self, Read, Write};
+use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::str;
 
 use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, pid_t, uid_t, gid_t};
 
 const MSG_VERSION_MISMATCH: &'static [u8]
-    = b"sudo: WARNING: API version %x, sudo_pair expects %x\n\0";
+    = b"sudo: WARNING: API version 0x%x, sudo_pair expects 0x%x\n\0";
 
 const MSG_PIPE_DISALLOWED: &'static [u8]
     = b"sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n\0";
 
 const MSG_SESSION_ENDED: &'static [u8]
-    = b"\n\rsudo: sudo_pair session terminated\n\0";
+    = b"sudo: sudo_pair session terminated\n\0";
 
-const MSG_ERROR: &'static [u8]
+const MSG_PAIR_REQUIRED: &'static [u8]
+    = b"Running this command requires another user to approve and watch \
+      your session. Please have another user run\n\n\
+          \tssh %s 'sudo -u %s %s %d'\n\0";
+
+const MSG: &'static [u8]
     = b"sudo: %s\n\0";
 
 static mut SUDO_PAIR_SESSION: Option<Session> = None;
@@ -97,17 +102,17 @@ pub static SUDO_PAIR_PLUGIN: sudo::io_plugin = sudo::io_plugin {
 };
 
 macro_rules! sudo_printf {
-    ( $message:expr , $( $arg:expr ),* ) => ({
+    ( $level:expr , $message:expr , $( $arg:expr ),* ) => ({
         let _ = SUDO_PRINTF.map(|printf| {
             let _ = printf(
-                sudo::SUDO_CONV_INFO_MSG,
+                $level,
                 $message.as_ptr() as _,
                 $( $arg ),*
             );
         });
     });
 
-    ( $message:expr ) => ( sudo_printf!{ $message, } );
+    ( $level:expr, $message:expr ) => ( sudo_printf!{ $level, $message, } );
 }
 
 unsafe extern "C" fn sudo_pair_open(
@@ -120,7 +125,7 @@ unsafe extern "C" fn sudo_pair_open(
     _argc:              c_int,
     _argv:              *const *mut c_char,
     user_env_ptr:       *const *mut c_char,
-    plugin_options_ptr: *const *mut c_char
+    plugin_options_ptr: *const *mut c_char,
 ) -> c_int {
     // set the global-scope conversation and s functions
     SUDO_CONVERSATION = Some(conversation);
@@ -129,6 +134,7 @@ unsafe extern "C" fn sudo_pair_open(
     // warn if we're using a potentially incompatible plugin version
     if version != sudo::SUDO_API_VERSION {
         let _ = sudo_printf!(
+            sudo::SUDO_CONV_ERROR_MSG,
             MSG_VERSION_MISMATCH,
             version,
             sudo::SUDO_API_VERSION
@@ -145,8 +151,9 @@ unsafe extern "C" fn sudo_pair_open(
         Ok(sess) => Some(sess),
         Err(e)   => {
             sudo_printf!(
-                MSG_ERROR,
-                CString::new(e.description()).unwrap()
+                sudo::SUDO_CONV_ERROR_MSG,
+                MSG,
+                CString::new(format!("{}", e)).unwrap()
             );
 
             return -1
@@ -312,7 +319,7 @@ unsafe extern "C" fn sudo_pair_log_ttyout(
     match sess.write_all(std::slice::from_raw_parts(buf as _, len as _)) {
         Ok(_)  => return 1,
         Err(_) => {
-            sudo_printf!(MSG_SESSION_ENDED);
+            sudo_printf!(sudo::SUDO_CONV_INFO_MSG, MSG_SESSION_ENDED);
 
             // socket is closed, kill the command;
             return 0
@@ -324,7 +331,7 @@ unsafe extern "C" fn sudo_pair_log_disabled(
     _buf: *const c_char,
     _len: c_uint
 ) -> c_int {
-    sudo_printf!(MSG_PIPE_DISALLOWED);
+    sudo_printf!(sudo::SUDO_CONV_ERROR_MSG, MSG_PIPE_DISALLOWED);
 
     return -1;
 }
