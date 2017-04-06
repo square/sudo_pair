@@ -174,11 +174,16 @@ unsafe fn sudo_pair_open_real(
     let settings       = parse_option_vector(settings_ptr as _);
     let user_info      = parse_option_vector(user_info_ptr as _);
     let command_info   = parse_option_vector(command_info_ptr as _);
-    let user_env       = parse_option_vector(user_env_ptr as _);
+    let _user_env      = parse_option_vector(user_env_ptr as _);
     let plugin_options = parse_option_vector(plugin_options_ptr as _);
 
+    // if `runas_user` wasn't provided (via the `-u` flag), it means
+    // we're sudoing to root
     let runas_user = settings.get("runas_user")
-        .ok_or(Error::MissingSetting(SettingKind::Settings, "runas_user"))?;
+        .map(|s| s.as_str() ).unwrap_or("root");
+
+    let user = user_info.get("user")
+        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "user"))?;
 
     let pid = user_info.get("pid")
        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "pid"))?
@@ -210,9 +215,6 @@ unsafe fn sudo_pair_open_real(
     let runas_gid = command_info.get("runas_gid")
         .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "runas_gid"))?
         .parse()?;
-
-    let user = user_env.get("SUDO_USER")
-        .ok_or(Error::MissingSetting(SettingKind::UserEnv, "SUDO_USER"))?;
 
     let options = PluginOptions::from(plugin_options);
 
