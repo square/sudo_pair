@@ -16,7 +16,7 @@ use super::socket::Socket;
 
 use std::collections::HashSet;
 use std::io::{Read, Write, Error};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::result;
 
 use libc::{uid_t, gid_t, mode_t};
@@ -24,6 +24,7 @@ use libc::{uid_t, gid_t, mode_t};
 type Result<T> = result::Result<T, Error>;
 
 pub struct Session {
+    path:    PathBuf,
     socket:  Option<Socket>,
     uid:     uid_t,
     gids:    HashSet<gid_t>,
@@ -48,24 +49,14 @@ impl Session {
         uid:     uid_t,
         gids:    HashSet<gid_t>,
         options: Options,
-    ) -> Result<Session> {
-        let mut session = Session {
+    ) -> Session {
+        Session {
+            path:    path.as_ref().to_path_buf(),
             socket:  None,
             uid:     uid,
             gids:    gids,
             options: options,
-        };
-
-        if !session.is_exempt() {
-            session.socket = Some(Socket::open(
-                path,
-                session.options.socket_uid,
-                session.options.socket_gid,
-                session.options.socket_mode,
-            )?);
         }
-
-        return Ok(session);
     }
 
     pub fn is_exempt(&self) -> bool {
@@ -94,10 +85,31 @@ impl Session {
     pub fn is_root(&self) -> bool {
         self.uid == 0
     }
+
+    fn connect(&mut self) -> Result<()> {
+        if self.socket.is_some() {
+            return Ok(())
+        }
+
+        if self.is_exempt() {
+            return Ok(())
+        }
+
+        self.socket = Some(Socket::open(
+            &self.path,
+            self.options.socket_uid,
+            self.options.socket_gid,
+            self.options.socket_mode,
+        )?);
+
+        Ok(())
+    }
 }
 
 impl Read for Session {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        self.connect()?;
+
         match self.socket {
             Some(ref mut sock) => sock.read(buf),
             None               => Ok(0),
@@ -107,6 +119,8 @@ impl Read for Session {
 
 impl Write for Session {
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        self.connect()?;
+
         // if we have a socket, write to it and return the result; if
         // not, pretend we did successfully
         match self.socket {

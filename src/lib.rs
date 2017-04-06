@@ -252,7 +252,7 @@ session. Please have another user run
             gids_exempted: options.gids_exempted,
             exempt:        exempt,
         },
-    )?;
+    );
 
     if session.is_exempt() {
         return Ok(session);
