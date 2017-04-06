@@ -56,7 +56,6 @@ use session::{Session, Options};
 use std::collections::{HashMap, HashSet};
 use std::ffi::{CStr, CString};
 use std::io::{self, Read, Write};
-use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::str;
 
@@ -69,12 +68,12 @@ const MSG_PIPE_DISALLOWED: &'static [u8]
     = b"sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n\0";
 
 const MSG_SESSION_ENDED: &'static [u8]
-    = b"sudo: sudo_pair session terminated\n\0";
+    = b"\nsudo: sudo_pair session terminated\n\0";
 
 const MSG_PAIR_REQUIRED: &'static [u8]
     = b"Running this command requires another user to approve and watch \
       your session. Please have another user run\n\n\
-          \tssh %s 'sudo -u %s %s %d'\n\0";
+          \tsudo_pair_approve %s %s %d\n\0";
 
 const MSG: &'static [u8]
     = b"sudo: %s\n\0";
@@ -230,8 +229,8 @@ unsafe fn sudo_pair_open_real(
             socket_uid:    options.socket_uid.unwrap_or(runas_uid),
             socket_gid:    options.socket_gid.unwrap_or(runas_gid),
             socket_mode:   options.socket_mode,
-            gids_enforced: options.gids_enforced.clone(),
-            gids_exempted: options.gids_exempted.clone(),
+            gids_enforced: options.gids_enforced,
+            gids_exempted: options.gids_exempted,
             exempt:        exempt,
         },
     );
@@ -245,7 +244,6 @@ unsafe fn sudo_pair_open_real(
         MSG_PAIR_REQUIRED,
         CString::new(host.as_bytes()).unwrap().as_ptr(),
         CString::new(runas_user.as_bytes()).unwrap().as_ptr(),
-        CString::new(options.binary_path.as_os_str().as_bytes()).unwrap().as_ptr(),
         pid
     );
 
