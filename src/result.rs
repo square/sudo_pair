@@ -14,11 +14,10 @@ pub enum Error {
 
 #[derive(Debug)]
 pub enum SettingKind {
-    Settings,
+    // Settings,
     UserInfo,
     CommandInfo,
-    UserEnv,
-    // PluginOptions,
+    // UserEnv,
 }
 
 pub type Result<T> = result::Result<T, Error>;
@@ -26,11 +25,10 @@ pub type Result<T> = result::Result<T, Error>;
 impl SettingKind {
     fn as_str(&self) -> &'static str {
         match *self {
-            SettingKind::Settings      => "settings",
-            SettingKind::UserInfo      => "user_info",
-            SettingKind::CommandInfo   => "command_info",
-            SettingKind::UserEnv       => "user_env",
-            // SettingKind::PluginOptions => "plugin_options",
+            // SettingKind::Settings    => "settings",
+            SettingKind::UserInfo    => "user_info",
+            SettingKind::CommandInfo => "command_info",
+            // SettingKind::UserEnv     => "user_env",
         }
     }
 }
