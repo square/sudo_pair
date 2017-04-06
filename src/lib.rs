@@ -347,8 +347,7 @@ fn parse_delimited_string<F, T>(
     delimiter: char,
     parser: F,
 ) -> HashSet<T>
-    where F: FnMut(&str) -> T, T: Eq + std::hash::Hash
-         {
+    where F: FnMut(&str) -> T, T: Eq + std::hash::Hash {
     string.split(delimiter).map(parser).collect()
 }
 
