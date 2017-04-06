@@ -208,24 +208,6 @@ unsafe fn sudo_pair_open_real(
     // command
     let exempt = options.binary_path == PathBuf::from(&command);
 
-    if !exempt {
-        println!("\
-Running this command requires another user to approve and watch your \
-session. Please have another user run
-
-\tssh {} 'sudo -u {} {} {}'\n",
-            host,
-            runas_user,
-            options.binary_path.to_string_lossy(),
-            pid,
-        );
-    }
-
-    // temporarily install a SIGINT handler while we block on accept()
-    // TODO: handle errors
-    let sigint = signal(libc::SIGINT, ctrl_c as _).unwrap();
-
-    // TODO: error messaging
     let mut session = Session::new(
         options.socket_dir.join(pid.to_string()).with_extension("sock"),
         uid,
@@ -234,8 +216,8 @@ session. Please have another user run
             socket_uid:    options.socket_uid.unwrap_or(runas_uid),
             socket_gid:    options.socket_gid.unwrap_or(runas_gid),
             socket_mode:   options.socket_mode,
-            gids_enforced: options.gids_enforced,
-            gids_exempted: options.gids_exempted,
+            gids_enforced: options.gids_enforced.clone(),
+            gids_exempted: options.gids_exempted.clone(),
             exempt:        exempt,
         },
     );
@@ -243,6 +225,19 @@ session. Please have another user run
     if session.is_exempt() {
         return Ok(session);
     }
+
+    sudo_printf!(
+        sudo::SUDO_CONV_INFO_MSG,
+        MSG_PAIR_REQUIRED,
+        CString::new(host.as_bytes()).unwrap().as_ptr(),
+        CString::new(runas_user.as_bytes()).unwrap().as_ptr(),
+        CString::new(options.binary_path.as_os_str().as_bytes()).unwrap().as_ptr(),
+        pid
+    );
+
+    // temporarily install a SIGINT handler while we block on accept()
+    // TODO: handle errors
+    let sigint = signal(libc::SIGINT, ctrl_c as _).unwrap();
 
     // TODO: handle return value
     let _ = session.write_all(
