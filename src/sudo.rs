@@ -17,11 +17,11 @@ pub const SUDO_API_VERSION: c_uint = (SUDO_API_VERSION_MAJOR << 16) |
 pub const SUDO_IO_PLUGIN: c_uint = 2;
 
 // pub const SUDO_CONV_PROMPT_ECHO_OFF: c_int = 0x0001;  /* do not echo user input */
-// pub const SUDO_CONV_PROMPT_ECHO_ON: c_int = 0x0002;  /* echo user input */
-// pub const SUDO_CONV_ERROR_MSG: c_int = 0x0003;  /* error message */
-pub const SUDO_CONV_INFO_MSG: c_int = 0x0004;  /* informational message */
-// pub const SUDO_CONV_PROMPT_MASK: c_int = 0x0005;  /* mask user input */
-// pub const SUDO_CONV_PROMPT_ECHO_OK: c_int = 0x1000;  /* flag: allow echo if no tty */
+// pub const SUDO_CONV_PROMPT_ECHO_ON:  c_int = 0x0002;  /* echo user input */
+pub const SUDO_CONV_ERROR_MSG:       c_int = 0x0003;  /* error message */
+pub const SUDO_CONV_INFO_MSG:        c_int = 0x0004;  /* informational message */
+// pub const SUDO_CONV_PROMPT_MASK:     c_int = 0x0005;  /* mask user input */
+// pub const SUDO_CONV_PROMPT_ECHO_OK:  c_int = 0x1000;  /* flag: allow echo if no tty */
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 #[repr(C)]
