@@ -328,6 +328,15 @@ unsafe extern "C" fn sudo_pair_log_disabled(
     _buf: *const c_char,
     _len: c_uint
 ) -> c_int {
+    let sess = match SUDO_PAIR_SESSION.as_mut() {
+        Some(sess) => sess,
+        None       => return 0, // no session means we didn't initialize
+    };
+
+    if sess.is_exempt() {
+        return 0;
+    }
+
     sudo_printf!(sudo::SUDO_CONV_ERROR_MSG, MSG_PIPE_DISALLOWED);
 
     return -1;
