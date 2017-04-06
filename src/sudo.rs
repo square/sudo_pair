@@ -95,7 +95,7 @@ pub type sudo_open_fn_t = unsafe extern "C" fn(
     user_info:      *const *mut c_char,
     command_info:   *const *mut c_char,
     argc:           c_int,
-    argv: *const    *mut c_char,
+    argv:           *const *mut c_char,
     user_env:       *const *mut c_char,
     plugin_options: *const *mut c_char,
 ) -> c_int;
