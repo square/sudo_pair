@@ -310,7 +310,7 @@ unsafe extern "C" fn sudo_pair_log_ttyout(
 ) -> c_int {
     let mut sess = match SUDO_PAIR_SESSION.as_mut() {
         Some(sess) => sess,
-        None       => return 0, // no session means we didn't initialize
+        None       => return -1, // no session means we didn't initialize
     };
 
     match sess.write_all(std::slice::from_raw_parts(buf as _, len as _)) {
@@ -330,16 +330,16 @@ unsafe extern "C" fn sudo_pair_log_disabled(
 ) -> c_int {
     let sess = match SUDO_PAIR_SESSION.as_mut() {
         Some(sess) => sess,
-        None       => return 0, // no session means we didn't initialize
+        None       => return -1, // no session means we didn't initialize
     };
 
     if sess.is_exempt() {
-        return 0;
+        return 1;
     }
 
     sudo_printf!(sudo::SUDO_CONV_ERROR_MSG, MSG_PIPE_DISALLOWED);
 
-    return -1;
+    return 0;
 }
 
 unsafe fn parse_option_vector(
