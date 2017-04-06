@@ -324,6 +324,10 @@ unsafe fn parse_option_vector(
 ) -> HashMap<String, String> {
     let mut hash = HashMap::new();
 
+    if ptr.is_null() {
+        return hash;
+    }
+
     while !(*ptr).is_null() {
         let cstr      = CStr::from_ptr(*ptr).to_string_lossy();
         let mut pair  = cstr.split('=');
