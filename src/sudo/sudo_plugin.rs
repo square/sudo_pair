@@ -6,22 +6,35 @@
 #![allow(missing_copy_implementations)]
 #![allow(missing_debug_implementations)]
 
+// bitflags crate creates these warnings
+#![allow(trivial_numeric_casts)]
+
 use libc::{c_char, c_int, c_uint, c_void};
 
-const SUDO_API_VERSION_MAJOR: c_uint = 1;
-const SUDO_API_VERSION_MINOR: c_uint = 9;
+pub const SUDO_API_VERSION_MAJOR: c_uint = 1;
+pub const SUDO_API_VERSION_MINOR: c_uint = 9;
+pub const SUDO_API_VERSION:       c_uint
+    = SUDO_API_VERSION_MAJOR << 16
+    | SUDO_API_VERSION_MINOR;
 
-pub const SUDO_API_VERSION: c_uint = (SUDO_API_VERSION_MAJOR << 16) |
-                                     SUDO_API_VERSION_MINOR;
+pub enum SUDO_PLUGIN {
+    #[allow(dead_code)]
 
-pub const SUDO_IO_PLUGIN: c_uint = 2;
+    POLICY = 0x01, // policy plugin identifier
+    IO     = 0x02, // io plugin identifier
+}
 
-// pub const SUDO_CONV_PROMPT_ECHO_OFF: c_int = 0x0001;  /* do not echo user input */
-// pub const SUDO_CONV_PROMPT_ECHO_ON:  c_int = 0x0002;  /* echo user input */
-pub const SUDO_CONV_ERROR_MSG:       c_int = 0x0003;  /* error message */
-pub const SUDO_CONV_INFO_MSG:        c_int = 0x0004;  /* informational message */
-// pub const SUDO_CONV_PROMPT_MASK:     c_int = 0x0005;  /* mask user input */
-// pub const SUDO_CONV_PROMPT_ECHO_OK:  c_int = 0x1000;  /* flag: allow echo if no tty */
+bitflags! {
+    pub flags SUDO_CONV_FLAGS: c_int {
+        const SUDO_CONV_PROMPT_ECHO_OFF = 0x0001, // do not echo user input
+        const SUDO_CONV_PROMPT_ECHO_ON  = 0x0002, // echo user input
+        const SUDO_CONV_ERROR_MSG       = 0x0003, // error message
+        const SUDO_CONV_INFO_MSG        = 0x0004, // informational message
+        const SUDO_CONV_PROMPT_MASK     = 0x0005, // mask user input
+        const SUDO_CONV_DEBUG_MSG       = 0x0006, // debugging message
+        const SUDO_CONV_PROMPT_ECHO_OK  = 0x1000, // flag: allow echo if no tty
+    }
+}
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 #[repr(C)]
