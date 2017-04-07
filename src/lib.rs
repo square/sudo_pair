@@ -45,48 +45,33 @@
 extern crate libc;
 extern crate unix_socket;
 
+#[macro_use]
+extern crate bitflags;
+
 mod result;
 mod session;
 mod socket;
+
+#[macro_use]
 mod sudo;
 
 use result::{Result, Error, SettingKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::str;
 
 use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, pid_t, uid_t, gid_t};
 
-const MSG_VERSION_MISMATCH: &'static [u8]
-    = b"sudo: WARNING: API version 0x%x, sudo_pair expects 0x%x\n\0";
-
-const MSG_PIPE_DISALLOWED: &'static [u8]
-    = b"sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n\0";
-
-const MSG_SESSION_ENDED: &'static [u8]
-    = b"\r\nsudo: sudo_pair session terminated\r\n\0";
-
-const MSG_PAIR_REQUIRED: &'static [u8]
-    = b"Running this command requires another user to approve and watch \
-      your session. Please have another user run\n\n\
-          \tsudo_pair_approve %s %s %s %d\n\0";
-
-const MSG: &'static [u8]
-    = b"sudo: %s\n\0";
-
 static mut SUDO_PAIR_SESSION: Option<Session> = None;
-
-static mut SUDO_CONVERSATION: Option<sudo::sudo_conv_t>   = None;
-static mut SUDO_PRINTF:       Option<sudo::sudo_printf_t> = None;
 
 /// The exported plugin function that hooks into sudo.
 #[no_mangle]
 pub static SUDO_PAIR_PLUGIN: sudo::io_plugin = sudo::io_plugin {
-    type_:            sudo::SUDO_IO_PLUGIN,
+    type_:            sudo::SUDO_PLUGIN::IO as u32,
     version:          sudo::SUDO_API_VERSION,
     open:             Some(sudo_pair_open),
     close:            Some(sudo_pair_close),
@@ -100,20 +85,6 @@ pub static SUDO_PAIR_PLUGIN: sudo::io_plugin = sudo::io_plugin {
     deregister_hooks: None,
 };
 
-macro_rules! sudo_printf {
-    ( $level:expr , $message:expr , $( $arg:expr ),* ) => ({
-        let _ = SUDO_PRINTF.map(|printf| {
-            let _ = printf(
-                $level,
-                $message.as_ptr() as _,
-                $( $arg ),*
-            );
-        });
-    });
-
-    ( $level:expr, $message:expr ) => ( sudo_printf!{ $level, $message, } );
-}
-
 unsafe extern "C" fn sudo_pair_open(
     version:            c_uint,
     conversation:       sudo::sudo_conv_t,
@@ -126,18 +97,16 @@ unsafe extern "C" fn sudo_pair_open(
     user_env_ptr:       *const *mut c_char,
     plugin_options_ptr: *const *mut c_char,
 ) -> c_int {
-    // set the global-scope conversation and s functions
-    SUDO_CONVERSATION = Some(conversation);
-    SUDO_PRINTF       = Some(sudo_printf);
+    // set the global-scope conversation and printf functions
+    sudo::init(conversation, sudo_printf);
 
     // warn if we're using a potentially incompatible plugin version
     if version != sudo::SUDO_API_VERSION {
-        let _ = sudo_printf!(
-            sudo::SUDO_CONV_ERROR_MSG,
-            MSG_VERSION_MISMATCH,
+        let _ = sudo::print(sudo::SUDO_CONV_ERROR_MSG, &format!(
+            "sudo: WARNING: API version {:#x}, sudo_pair expects {:#x}\n",
             version,
-            sudo::SUDO_API_VERSION
-        );
+            sudo::SUDO_API_VERSION,
+        ));
     }
 
     SUDO_PAIR_SESSION = match sudo_pair_open_real(
@@ -149,10 +118,9 @@ unsafe extern "C" fn sudo_pair_open(
     ) {
         Ok(sess) => Some(sess),
         Err(e)   => {
-            sudo_printf!(
+            let _ = sudo::print(
                 sudo::SUDO_CONV_ERROR_MSG,
-                MSG,
-                CString::new(format!("{}", e)).unwrap()
+                &format!("{}", e),
             );
 
             return -1
@@ -242,14 +210,16 @@ unsafe fn sudo_pair_open_real(
         return Ok(session);
     }
 
-    sudo_printf!(
-        sudo::SUDO_CONV_INFO_MSG,
-        MSG_PAIR_REQUIRED,
-        CString::new(host.as_bytes()).unwrap().as_ptr(),
-        CString::new(user.as_bytes()).unwrap().as_ptr(),
-        CString::new(runas_user.as_bytes()).unwrap().as_ptr(),
-        pid
-    );
+    let _ = sudo::print(sudo::SUDO_CONV_INFO_MSG, &format!(
+        "Running this command requires another user to approve and watch \
+        your session. Please have another user run\n\
+        \n\
+        \tsudo_pair_approve {} {} {} {}\n",
+        host,
+        user,
+        runas_user,
+        pid,
+    ));
 
     // temporarily install a SIGINT handler while we block on accept()
     // TODO: handle errors
@@ -318,7 +288,9 @@ unsafe extern "C" fn sudo_pair_log_ttyout(
     match sess.write_all(std::slice::from_raw_parts(buf as _, len as _)) {
         Ok(_)  => return 1,
         Err(_) => {
-            sudo_printf!(sudo::SUDO_CONV_INFO_MSG, MSG_SESSION_ENDED);
+            let _ = sudo::print(sudo::SUDO_CONV_INFO_MSG,
+                "\r\nsudo: sudo_pair session terminated\r\n",
+            );
 
             // socket is closed, kill the command;
             return 0
@@ -339,7 +311,9 @@ unsafe extern "C" fn sudo_pair_log_disabled(
         return 1;
     }
 
-    sudo_printf!(sudo::SUDO_CONV_ERROR_MSG, MSG_PIPE_DISALLOWED);
+    let _ = sudo::print(sudo::SUDO_CONV_ERROR_MSG,
+        "sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n"
+    );
 
     return 0;
 }
