@@ -51,8 +51,8 @@ use std::str;
 
 use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, pid_t, uid_t, gid_t};
 
-static mut SUDO_PLUGIN:       Option<sudo_plugin::IoPlugin> = None;
-static mut SUDO_PAIR_SESSION: Option<Session>               = None;
+static mut SUDO_PLUGIN:       Option<sudo_plugin::Plugin> = None;
+static mut SUDO_PAIR_SESSION: Option<Session>             = None;
 
 /// The exported plugin function that hooks into sudo.
 #[no_mangle]
@@ -83,7 +83,7 @@ unsafe extern "C" fn sudo_pair_open(
     user_env_ptr:       *const *mut c_char,
     plugin_options_ptr: *const *mut c_char,
 ) -> c_int {
-    let plugin = sudo_plugin::IoPlugin::new(
+    let plugin = sudo_plugin::Plugin::new(
         version,
         conversation,
         plugin_printf,
@@ -111,7 +111,7 @@ unsafe extern "C" fn sudo_pair_open(
 }
 
 unsafe fn sudo_pair_open_real(
-    plugin: &sudo_plugin::IoPlugin,
+    plugin: &sudo_plugin::Plugin,
 ) -> Result<Session> {
     // if `runas_user` wasn't provided (via the `-u` flag), it means
     // we're sudoing to root
