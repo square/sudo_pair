@@ -68,12 +68,12 @@ const MSG_PIPE_DISALLOWED: &'static [u8]
     = b"sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n\0";
 
 const MSG_SESSION_ENDED: &'static [u8]
-    = b"\nsudo: sudo_pair session terminated\n\0";
+    = b"\r\nsudo: sudo_pair session terminated\r\n\0";
 
 const MSG_PAIR_REQUIRED: &'static [u8]
     = b"Running this command requires another user to approve and watch \
       your session. Please have another user run\n\n\
-          \tsudo_pair_approve %s %s %d\n\0";
+          \tsudo_pair_approve %s %s %s %d\n\0";
 
 const MSG: &'static [u8]
     = b"sudo: %s\n\0";
@@ -221,8 +221,11 @@ unsafe fn sudo_pair_open_real(
     // command
     let exempt = options.binary_path == PathBuf::from(&command);
 
+    // encode the original uid into the socket name
+    let sockfile = format!("{}.{}.sock", uid, pid);
+
     let mut session = Session::new(
-        options.socket_dir.join(pid.to_string()).with_extension("sock"),
+        options.socket_dir.join(sockfile),
         uid,
         gids,
         Options {
@@ -243,6 +246,7 @@ unsafe fn sudo_pair_open_real(
         sudo::SUDO_CONV_INFO_MSG,
         MSG_PAIR_REQUIRED,
         CString::new(host.as_bytes()).unwrap().as_ptr(),
+        CString::new(user.as_bytes()).unwrap().as_ptr(),
         CString::new(runas_user.as_bytes()).unwrap().as_ptr(),
         pid
     );
