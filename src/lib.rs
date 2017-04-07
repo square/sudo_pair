@@ -130,7 +130,7 @@ unsafe fn sudo_pair_open_real(
         .filter_map(|gid| gid.parse().ok())
         .collect();
 
-    let options = PluginOptions::from(plugin.plugin_options.clone());
+    let options = PluginOptions::from(&plugin.plugin_options);
 
     // force the session to be exempt if we're running the approval
     // command
@@ -322,11 +322,11 @@ impl Default for PluginOptions {
     }
 }
 
-impl From<HashMap<String, String>> for PluginOptions {
-    fn from(map: HashMap<String, String>) -> Self {
+impl<'a> From<&'a HashMap<String, String>> for PluginOptions {
+    fn from(map: &'a HashMap<String, String>) -> Self {
         let mut options = Self::default();
 
-        for (key, value) in &map {
+        for (key, value) in map {
             match &key[..] {
                 "BinaryPath"   => options.binary_path   = PathBuf::from(value),
                 "SocketDir"    => options.socket_dir    = PathBuf::from(value),
