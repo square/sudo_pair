@@ -39,26 +39,26 @@ mod session;
 mod socket;
 
 #[macro_use]
-mod sudo;
+mod sudo_plugin;
 
 use result::{Result, Error, SettingKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
-use std::ffi::CStr;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::str;
 
 use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, pid_t, uid_t, gid_t};
 
-static mut SUDO_PAIR_SESSION: Option<Session> = None;
+static mut SUDO_PLUGIN:       Option<sudo_plugin::IoPlugin> = None;
+static mut SUDO_PAIR_SESSION: Option<Session>               = None;
 
 /// The exported plugin function that hooks into sudo.
 #[no_mangle]
-pub static SUDO_PAIR_PLUGIN: sudo::io_plugin = sudo::io_plugin {
-    type_:            sudo::SUDO_PLUGIN::IO as u32,
-    version:          sudo::SUDO_API_VERSION,
+pub static SUDO_PAIR_PLUGIN: sudo_plugin::io_plugin = sudo_plugin::io_plugin {
+    type_:            sudo_plugin::SUDO_PLUGIN::IO as u32,
+    version:          sudo_plugin::SUDO_API_VERSION,
     open:             Some(sudo_pair_open),
     close:            Some(sudo_pair_close),
     show_version:     None,
@@ -73,8 +73,8 @@ pub static SUDO_PAIR_PLUGIN: sudo::io_plugin = sudo::io_plugin {
 
 unsafe extern "C" fn sudo_pair_open(
     version:            c_uint,
-    conversation:       sudo::sudo_conv_t,
-    sudo_printf:        sudo::sudo_printf_t,
+    conversation:       sudo_plugin::sudo_conv_t,
+    plugin_printf:      sudo_plugin::sudo_printf_t,
     settings_ptr:       *const *mut c_char,
     user_info_ptr:      *const *mut c_char,
     command_info_ptr:   *const *mut c_char,
@@ -83,29 +83,21 @@ unsafe extern "C" fn sudo_pair_open(
     user_env_ptr:       *const *mut c_char,
     plugin_options_ptr: *const *mut c_char,
 ) -> c_int {
-    // set the global-scope conversation and printf functions
-    sudo::init(conversation, sudo_printf);
-
-    // warn if we're using a potentially incompatible plugin version
-    if version != sudo::SUDO_API_VERSION {
-        let _ = sudo::print(sudo::SUDO_CONV_ERROR_MSG, &format!(
-            "sudo: WARNING: API version {:#x}, sudo_pair expects {:#x}\n",
-            version,
-            sudo::SUDO_API_VERSION,
-        ));
-    }
-
-    SUDO_PAIR_SESSION = match sudo_pair_open_real(
+    let plugin = sudo_plugin::IoPlugin::new(
+        version,
+        conversation,
+        plugin_printf,
         settings_ptr,
         user_info_ptr,
         command_info_ptr,
         user_env_ptr,
         plugin_options_ptr,
-    ) {
+    );
+
+    SUDO_PAIR_SESSION = match sudo_pair_open_real(&plugin) {
         Ok(sess) => Some(sess),
         Err(e)   => {
-            let _ = sudo::print(
-                sudo::SUDO_CONV_ERROR_MSG,
+            let _ = plugin.print_error(
                 &format!("{}", e),
             );
 
@@ -113,63 +105,54 @@ unsafe extern "C" fn sudo_pair_open(
         }
     };
 
+    SUDO_PLUGIN = Some(plugin);
+
     return 1;
 }
 
 unsafe fn sudo_pair_open_real(
-    settings_ptr:       *const *mut c_char,
-    user_info_ptr:      *const *mut c_char,
-    command_info_ptr:   *const *mut c_char,
-    user_env_ptr:       *const *mut c_char,
-    plugin_options_ptr: *const *mut c_char
+    plugin: &sudo_plugin::IoPlugin,
 ) -> Result<Session> {
-    // TODO: errors
-    let settings       = parse_option_vector(settings_ptr as _);
-    let user_info      = parse_option_vector(user_info_ptr as _);
-    let command_info   = parse_option_vector(command_info_ptr as _);
-    let _user_env      = parse_option_vector(user_env_ptr as _);
-    let plugin_options = parse_option_vector(plugin_options_ptr as _);
-
     // if `runas_user` wasn't provided (via the `-u` flag), it means
     // we're sudoing to root
-    let runas_user = settings.get("runas_user")
+    let runas_user = plugin.settings.get("runas_user")
         .map(|s| s.as_str() ).unwrap_or("root");
 
-    let user = user_info.get("user")
+    let user = plugin.user_info.get("user")
         .ok_or(Error::MissingSetting(SettingKind::UserInfo, "user"))?;
 
-    let pid = user_info.get("pid")
+    let pid = plugin.user_info.get("pid")
        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "pid"))?
        .parse::<pid_t>()?;
 
-    let uid = user_info.get("uid")
+    let uid = plugin.user_info.get("uid")
        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "uid"))?
        .parse()?;
 
-    let gids = user_info.get("groups")
+    let gids = plugin.user_info.get("groups")
         .ok_or(Error::MissingSetting(SettingKind::UserInfo, "groups"))?
         .split(',')
         .filter_map(|gid| gid.parse().ok())
         .collect();
 
-    let cwd = user_info.get("cwd")
+    let cwd = plugin.user_info.get("cwd")
         .ok_or(Error::MissingSetting(SettingKind::UserInfo, "cwd"))?;
 
-    let host = user_info.get("host")
+    let host = plugin.user_info.get("host")
         .ok_or(Error::MissingSetting(SettingKind::UserInfo, "host"))?;
 
-    let command = command_info.get("command")
+    let command = plugin.command_info.get("command")
         .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "command"))?;
 
-    let runas_uid = command_info.get("runas_uid")
+    let runas_uid = plugin.command_info.get("runas_uid")
         .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "runas_uid"))?
         .parse()?;
 
-    let runas_gid = command_info.get("runas_gid")
+    let runas_gid = plugin.command_info.get("runas_gid")
         .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "runas_gid"))?
         .parse()?;
 
-    let options = PluginOptions::from(plugin_options);
+    let options = PluginOptions::from(plugin.plugin_options.clone());
 
     // force the session to be exempt if we're running the approval
     // command
@@ -196,7 +179,7 @@ unsafe fn sudo_pair_open_real(
         return Ok(session);
     }
 
-    let _ = sudo::print(sudo::SUDO_CONV_INFO_MSG, &format!(
+    let _ = plugin.print_info(&format!(
         "Running this command requires another user to approve and watch \
         your session. Please have another user run\n\
         \n\
@@ -271,12 +254,15 @@ unsafe extern "C" fn sudo_pair_log_ttyout(
         None       => return -1, // no session means we didn't initialize
     };
 
+    let plugin = match SUDO_PLUGIN {
+        Some(ref p) => p,
+        None        => return -1, // no plugin means we didn't initialize
+    };
+
     match sess.write_all(std::slice::from_raw_parts(buf as _, len as _)) {
         Ok(_)  => return 1,
         Err(_) => {
-            let _ = sudo::print(sudo::SUDO_CONV_INFO_MSG,
-                "\r\nsudo: sudo_pair session terminated\r\n",
-            );
+            let _ = plugin.print_info("\r\nsudo: sudo_pair session terminated\r\n");
 
             // socket is closed, kill the command;
             return 0
@@ -293,38 +279,18 @@ unsafe extern "C" fn sudo_pair_log_disabled(
         None       => return -1, // no session means we didn't initialize
     };
 
+    let plugin = match SUDO_PLUGIN {
+        Some(ref p) => p,
+        None        => return -1, // no plugin means we didn't initialize
+    };
+
     if sess.is_exempt() {
         return 1;
     }
 
-    let _ = sudo::print(sudo::SUDO_CONV_ERROR_MSG,
-        "sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n"
-    );
+    let _ = plugin.print_info("sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n");
 
     return 0;
-}
-
-unsafe fn parse_option_vector(
-    mut ptr: *const *const c_char,
-) -> HashMap<String, String> {
-    let mut hash = HashMap::new();
-
-    if ptr.is_null() {
-        return hash;
-    }
-
-    while !(*ptr).is_null() {
-        let cstr      = CStr::from_ptr(*ptr).to_string_lossy();
-        let mut pair  = cstr.split('=');
-        let key       = pair.next().unwrap().to_string();
-        let value     = pair.collect::<String>();
-
-        let _ = hash.insert(key, value);
-
-        ptr = ptr.offset(1);
-    }
-
-    return hash;
 }
 
 fn parse_delimited_string<F, T>(
