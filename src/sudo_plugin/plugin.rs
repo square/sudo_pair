@@ -24,7 +24,7 @@ use std::str;
 
 use libc::{c_char, c_uint};
 
-pub struct IoPlugin {
+pub struct Plugin {
     version: Version,
 
     pub settings:       HashMap<String, String>,
@@ -37,7 +37,7 @@ pub struct IoPlugin {
     printf:        sudo_printf_t,
 }
 
-impl IoPlugin {
+impl Plugin {
     pub fn new(
         version:        c_uint,
         conversation:   sudo_conv_t,
@@ -47,8 +47,8 @@ impl IoPlugin {
         command_info:   *const *mut c_char,
         user_env:       *const *mut c_char,
         plugin_options: *const *mut c_char,
-    ) -> IoPlugin {
-        let plugin = IoPlugin {
+    ) -> Plugin {
+        let plugin = Plugin {
             version: Version::from(version),
 
             settings:       unsafe { parse_options(settings) },
