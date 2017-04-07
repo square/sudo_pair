@@ -56,9 +56,9 @@ static mut SUDO_PAIR_SESSION: Option<Session>               = None;
 
 /// The exported plugin function that hooks into sudo.
 #[no_mangle]
-pub static SUDO_PAIR_PLUGIN: sudo_plugin::io_plugin = sudo_plugin::io_plugin {
-    type_:            sudo_plugin::SUDO_PLUGIN::IO as u32,
-    version:          sudo_plugin::SUDO_API_VERSION,
+pub static SUDO_PAIR: sudo_plugin::ffi::io_plugin = sudo_plugin::ffi::io_plugin {
+    type_:            sudo_plugin::ffi::SUDO_PLUGIN::IO as u32,
+    version:          sudo_plugin::ffi::SUDO_API_VERSION,
     open:             Some(sudo_pair_open),
     close:            Some(sudo_pair_close),
     show_version:     None,
@@ -73,8 +73,8 @@ pub static SUDO_PAIR_PLUGIN: sudo_plugin::io_plugin = sudo_plugin::io_plugin {
 
 unsafe extern "C" fn sudo_pair_open(
     version:            c_uint,
-    conversation:       sudo_plugin::sudo_conv_t,
-    plugin_printf:      sudo_plugin::sudo_printf_t,
+    conversation:       sudo_plugin::ffi::sudo_conv_t,
+    plugin_printf:      sudo_plugin::ffi::sudo_printf_t,
     settings_ptr:       *const *mut c_char,
     user_info_ptr:      *const *mut c_char,
     command_info_ptr:   *const *mut c_char,
