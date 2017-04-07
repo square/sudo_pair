@@ -74,6 +74,7 @@ impl Socket {
         self.socket.shutdown(Shutdown::Both)
     }
 
+    // TODO: unlink when sudo_pair is ctrl-c'd
     fn unlink_socket<P: AsRef<Path>>(path: P) -> Result<()> {
         match fs::metadata(&path).map(|md| md.file_type().is_socket()) {
             // file exists, is a socket; delete it
