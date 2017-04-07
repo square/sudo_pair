@@ -1,11 +1,11 @@
-// TODO: remove once actually using this
-#![allow(dead_code)]
+// TODO: rename to io_plugin.rs
 
 use super::ffi::*;
+use super::result::{Result, Error, ErrorKind};
+use super::version::Version;
 
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
-use std::io::{Result, Error, ErrorKind};
 use std::str;
 
 use libc::{c_char, c_uint};
@@ -19,8 +19,8 @@ pub struct IoPlugin {
     pub command_info:   HashMap<String, String>,
     pub plugin_options: HashMap<String, String>,
 
-    conversation: sudo_conv_t,
-    printf:       sudo_printf_t,
+    _conversation: sudo_conv_t,
+    printf:        sudo_printf_t,
 }
 
 impl IoPlugin {
@@ -43,8 +43,8 @@ impl IoPlugin {
             user_env:       unsafe { parse_options(user_env) },
             plugin_options: unsafe { parse_options(plugin_options) },
 
-            conversation: conversation,
-            printf:       plugin_printf,
+            _conversation: conversation,
+            printf:        plugin_printf,
         };
 
         if plugin.version != Version::from(SUDO_API_VERSION) {
@@ -56,6 +56,26 @@ impl IoPlugin {
         }
 
         plugin
+    }
+
+    pub fn setting(&self, key: &str) -> Result<&str> {
+        Self::fetch(&self.settings, "settings", key)
+    }
+
+    pub fn user_info(&self, key: &str) -> Result<&str> {
+        Self::fetch(&self.user_info, "user_info", key)
+    }
+
+    pub fn _user_env(&self, key: &str) -> Result<&str> {
+        Self::fetch(&self.user_env, "user_env", key)
+    }
+
+    pub fn command_info(&self, key: &str) -> Result<&str> {
+        Self::fetch(&self.command_info, "command_info", key)
+    }
+
+    pub fn _plugin_options(&self, key: &str) -> Result<&str> {
+        Self::fetch(&self.plugin_options, "plugin_options", key)
     }
 
     pub fn print_info(&self, message: &str) -> Result<()> {
@@ -72,28 +92,17 @@ impl IoPlugin {
             let ret  = (self.printf)(level.bits(), cstr.as_ptr());
 
             if ret == -1 {
-                return Err(Error::new(
-                    ErrorKind::Other, "sudo_printf failed"
-                ));
+                return Err(Error::new(ErrorKind::Conversation))
             }
         }
 
         Ok(())
     }
-}
 
-#[derive(Debug, Eq, PartialEq)]
-struct Version {
-    major: u16,
-    minor: u16,
-}
-
-impl From<c_uint> for Version {
-    fn from(version: c_uint) -> Self {
-        Version{
-            major: (version >> 16)     as u16,
-            minor: (version &  0xffff) as u16,
-        }
+    fn fetch<'a>(map: &'a HashMap<String, String>, name: &str, key: &str) -> Result<&'a str> {
+        map.get(key).ok_or(
+            Error::new_missing_key(name, key)
+        ).map(|v| v.as_str())
     }
 }
 

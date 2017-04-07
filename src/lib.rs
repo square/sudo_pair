@@ -41,7 +41,7 @@ mod socket;
 #[macro_use]
 mod sudo_plugin;
 
-use result::{Result, Error, SettingKind};
+use result::{Result, Error};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
@@ -115,42 +115,20 @@ unsafe fn sudo_pair_open_real(
 ) -> Result<Session> {
     // if `runas_user` wasn't provided (via the `-u` flag), it means
     // we're sudoing to root
-    let runas_user = plugin.settings.get("runas_user")
-        .map(|s| s.as_str() ).unwrap_or("root");
+    let runas_user = plugin.setting("runas_user").unwrap_or("root");
+    let user       = plugin.user_info("user")?;
+    let pid        = plugin.user_info("pid")?.parse::<pid_t>()?;
+    let uid        = plugin.user_info("uid")?.parse::<uid_t>()?;
+    let cwd        = plugin.user_info("cwd")?;
+    let host       = plugin.user_info("host")?;
+    let command    = plugin.command_info("command")?;
+    let runas_uid  = plugin.command_info("runas_uid")?.parse::<uid_t>()?;
+    let runas_gid  = plugin.command_info("runas_gid")?.parse::<gid_t>()?;
 
-    let user = plugin.user_info.get("user")
-        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "user"))?;
-
-    let pid = plugin.user_info.get("pid")
-       .ok_or(Error::MissingSetting(SettingKind::UserInfo, "pid"))?
-       .parse::<pid_t>()?;
-
-    let uid = plugin.user_info.get("uid")
-       .ok_or(Error::MissingSetting(SettingKind::UserInfo, "uid"))?
-       .parse()?;
-
-    let gids = plugin.user_info.get("groups")
-        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "groups"))?
+    let gids = plugin.user_info("groups")?
         .split(',')
         .filter_map(|gid| gid.parse().ok())
         .collect();
-
-    let cwd = plugin.user_info.get("cwd")
-        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "cwd"))?;
-
-    let host = plugin.user_info.get("host")
-        .ok_or(Error::MissingSetting(SettingKind::UserInfo, "host"))?;
-
-    let command = plugin.command_info.get("command")
-        .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "command"))?;
-
-    let runas_uid = plugin.command_info.get("runas_uid")
-        .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "runas_uid"))?
-        .parse()?;
-
-    let runas_gid = plugin.command_info.get("runas_gid")
-        .ok_or(Error::MissingSetting(SettingKind::CommandInfo, "runas_gid"))?
-        .parse()?;
 
     let options = PluginOptions::from(plugin.plugin_options.clone());
 
