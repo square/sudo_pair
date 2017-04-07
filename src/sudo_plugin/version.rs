@@ -12,13 +12,19 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-mod ffi;
-mod plugin;
-mod result;
-mod version;
+use libc::c_uint;
 
-// TODO no longer pub use when FFI hidden
-pub use self::ffi::*;
+#[derive(Debug, Eq, PartialEq)]
+pub(super) struct Version {
+    major: u16,
+    minor: u16,
+}
 
-pub use self::plugin::*;
-pub use self::result::*;
+impl From<c_uint> for Version {
+    fn from(version: c_uint) -> Self {
+        Version{
+            major: (version >> 16)     as u16,
+            minor: (version &  0xffff) as u16,
+        }
+    }
+}
