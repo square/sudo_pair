@@ -21,10 +21,11 @@ pub(super) struct Version {
 }
 
 impl From<c_uint> for Version {
+    #[cfg_attr(feature="clippy", allow(cast_possible_truncation))]
     fn from(version: c_uint) -> Self {
-        Version{
-            major: (version >> 16)     as u16,
-            minor: (version &  0xffff) as u16,
+        Version {
+            major: (version >> 16)     as _,
+            minor: (version &  0xffff) as _,
         }
     }
 }

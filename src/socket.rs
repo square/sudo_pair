@@ -64,10 +64,10 @@ impl Socket {
         // to remain on the filesystem
         Self::unlink_socket(&path)?;
 
-        return Ok(Socket{
+        Ok(Socket{
             socket: connection.0,
             _peer:  connection.1,
-        });
+        })
     }
 
     pub fn close(&mut self) -> Result<()> {

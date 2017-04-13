@@ -15,8 +15,9 @@
 //  TODO: no longer pub when FFI hidden
 pub mod ffi;
 
-mod plugin;
-mod result;
+#[macro_use]
+pub mod plugin;
+pub mod result;
 mod version;
 
 pub use self::plugin::*;

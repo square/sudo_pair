@@ -86,6 +86,10 @@ impl Session {
         self.uid == 0
     }
 
+    pub fn close(&mut self) -> Result<()> {
+        self.socket.as_mut().map_or(Ok(()), |s| s.close() )
+    }
+
     fn connect(&mut self) -> Result<()> {
         if self.socket.is_some() {
             return Ok(())

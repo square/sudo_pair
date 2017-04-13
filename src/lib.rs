@@ -41,6 +41,7 @@
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", warn(clippy))]
 #![cfg_attr(feature="clippy", warn(clippy_pedantic))]
+#![cfg_attr(feature="clippy", allow(match_same_arms))]
 
 extern crate libc;
 extern crate unix_socket;
@@ -48,14 +49,13 @@ extern crate unix_socket;
 #[macro_use]
 extern crate bitflags;
 
-mod result;
 mod session;
 mod socket;
 
 #[macro_use]
 mod sudo_plugin;
 
-use result::{Result, Error};
+use sudo_plugin::{Result, Error, ErrorKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
@@ -65,224 +65,148 @@ use std::str;
 
 use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, pid_t, uid_t, gid_t};
 
-static mut SUDO_PLUGIN:       Option<sudo_plugin::Plugin> = None;
-static mut SUDO_PAIR_SESSION: Option<Session>             = None;
+sudo_io_plugin! {
+     sudo_pair: SudoPair {
+        close:      close,
+        log_ttyout: log_ttyout,
+        log_stdin:  log_disabled,
+        log_stdout: log_disabled,
+        log_stderr: log_disabled,
+     }
+}
 
-/// The exported plugin function that hooks into sudo.
-#[no_mangle]
-pub static SUDO_PAIR: sudo_plugin::ffi::io_plugin = sudo_plugin::ffi::io_plugin {
-    type_:            sudo_plugin::ffi::SUDO_PLUGIN::IO as u32,
-    version:          sudo_plugin::ffi::SUDO_API_VERSION,
-    open:             Some(sudo_pair_open),
-    close:            Some(sudo_pair_close),
-    show_version:     None,
-    log_ttyin:        None,
-    log_ttyout:       Some(sudo_pair_log_ttyout),
-    log_stdin:        Some(sudo_pair_log_disabled),
-    log_stdout:       Some(sudo_pair_log_disabled),
-    log_stderr:       Some(sudo_pair_log_disabled),
-    register_hooks:   None,
-    deregister_hooks: None,
-};
+struct SudoPair {
+    session: Session,
+}
 
-unsafe extern "C" fn sudo_pair_open(
-    version:            c_uint,
-    conversation:       sudo_plugin::ffi::sudo_conv_t,
-    plugin_printf:      sudo_plugin::ffi::sudo_printf_t,
-    settings_ptr:       *const *mut c_char,
-    user_info_ptr:      *const *mut c_char,
-    command_info_ptr:   *const *mut c_char,
-    _argc:              c_int,
-    _argv:              *const *mut c_char,
-    user_env_ptr:       *const *mut c_char,
-    plugin_options_ptr: *const *mut c_char,
-) -> c_int {
-    let plugin = sudo_plugin::Plugin::new(
-        version,
-        conversation,
-        plugin_printf,
-        settings_ptr,
-        user_info_ptr,
-        command_info_ptr,
-        user_env_ptr,
-        plugin_options_ptr,
-    );
+impl SudoPair {
+    fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
+        // if `runas_user` wasn't provided (via the `-u` flag), it means
+        // we're sudoing to root
+        let runas_user = plugin.setting("runas_user").unwrap_or("root");
+        let user       = plugin.user_info("user")?;
+        let pid        = plugin.user_info("pid")?.parse::<pid_t>()?;
+        let uid        = plugin.user_info("uid")?.parse::<uid_t>()?;
+        let cwd        = plugin.user_info("cwd")?;
+        let host       = plugin.user_info("host")?;
+        let command    = plugin.command_info("command")?;
+        let runas_uid  = plugin.command_info("runas_uid")?.parse::<uid_t>()?;
+        let runas_gid  = plugin.command_info("runas_gid")?.parse::<gid_t>()?;
 
-    SUDO_PAIR_SESSION = match sudo_pair_open_real(&plugin) {
-        Ok(sess) => Some(sess),
-        Err(e)   => {
-            let _ = plugin.print_error(
-                &format!("{}", e),
-            );
+        let gids = plugin.command_info("runas_groups")?
+            .split(',')
+            .filter_map(|gid| gid.parse().ok())
+            .collect();
 
-            return -1
+        let options = PluginOptions::from(&plugin.plugin_options);
+
+        // force the session to be exempt if we're running the approval
+        // command
+        let exempt = options.binary_path == PathBuf::from(&command);
+
+        // encode the original uid into the socket name
+        let sockfile = format!("{}.{}.sock", uid, pid);
+
+        let session = Session::new(
+            options.socket_dir.join(sockfile),
+            uid,
+            gids,
+            Options {
+                socket_uid:    options.socket_uid.unwrap_or(runas_uid),
+                socket_gid:    options.socket_gid.unwrap_or(runas_gid),
+                socket_mode:   options.socket_mode,
+                gids_enforced: options.gids_enforced,
+                gids_exempted: options.gids_exempted,
+                exempt:        exempt,
+            },
+        );
+
+        let mut pair = Self {
+            session: session,
+        };
+
+        if pair.session.is_exempt() {
+            return Ok(pair);
         }
-    };
 
-    SUDO_PLUGIN = Some(plugin);
-
-    return 1;
-}
-
-unsafe fn sudo_pair_open_real(
-    plugin: &sudo_plugin::Plugin,
-) -> Result<Session> {
-    // if `runas_user` wasn't provided (via the `-u` flag), it means
-    // we're sudoing to root
-    let runas_user = plugin.setting("runas_user").unwrap_or("root");
-    let user       = plugin.user_info("user")?;
-    let pid        = plugin.user_info("pid")?.parse::<pid_t>()?;
-    let uid        = plugin.user_info("uid")?.parse::<uid_t>()?;
-    let cwd        = plugin.user_info("cwd")?;
-    let host       = plugin.user_info("host")?;
-    let command    = plugin.command_info("command")?;
-    let runas_uid  = plugin.command_info("runas_uid")?.parse::<uid_t>()?;
-    let runas_gid  = plugin.command_info("runas_gid")?.parse::<gid_t>()?;
-
-    let gids = plugin.user_info("groups")?
-        .split(',')
-        .filter_map(|gid| gid.parse().ok())
-        .collect();
-
-    let options = PluginOptions::from(&plugin.plugin_options);
-
-    // force the session to be exempt if we're running the approval
-    // command
-    let exempt = options.binary_path == PathBuf::from(&command);
-
-    // encode the original uid into the socket name
-    let sockfile = format!("{}.{}.sock", uid, pid);
-
-    let mut session = Session::new(
-        options.socket_dir.join(sockfile),
-        uid,
-        gids,
-        Options {
-            socket_uid:    options.socket_uid.unwrap_or(runas_uid),
-            socket_gid:    options.socket_gid.unwrap_or(runas_gid),
-            socket_mode:   options.socket_mode,
-            gids_enforced: options.gids_enforced,
-            gids_exempted: options.gids_exempted,
-            exempt:        exempt,
-        },
-    );
-
-    if session.is_exempt() {
-        return Ok(session);
-    }
-
-    let _ = plugin.print_info(&format!(
-        "Running this command requires another user to approve and watch \
-        your session. Please have another user run\n\
-        \n\
-        \tsudo_pair_approve {} {} {} {}\n",
-        host,
-        user,
-        runas_user,
-        pid,
-    ));
-
-    // temporarily install a SIGINT handler while we block on accept()
-    // TODO: handle errors
-    let sigint = signal(libc::SIGINT, ctrl_c as _).unwrap();
-
-    // TODO: handle return value
-    let _ = session.write_all(
-        format!("\
-User {} is attempting to run
-
-\t<\x1b[1;34m{}\x1b[0m@\x1b[1;32m{}\x1b[0m:\x1b[01;34m{}\x1b[0m\x1b[1;32m $\x1b[0m > sudo -u {} {}
-
-If you approve, you will see the live session through this terminal. To \
-immediately abort the interactive session (and kill the running sudo \
-session), press Ctrl-D (EOF).
-
-Please note: if you abandon this session, it will kill the running sudo \
-session.
-
-Approve? y/n [n]: ",
-            user,
-            user,
+        let _ = plugin.print_info(format!(
+            "Running this command requires another user to approve and watch \
+            your session. Please have another user run\n\
+            \n\
+            \tsudo_pair_approve {} {} {} {}\n",
             host,
-            cwd,
+            user,
             runas_user,
-            command,
-        ).as_bytes()
-    );
+            pid,
+        ));
 
-    let mut response = [0];
+        // temporarily install a SIGINT handler while we block on accept()
+        // TODO: handle errors
+        let sigint = unsafe { signal(libc::SIGINT, ctrl_c as _).expect("Failed to install SIGINT handler") };
 
-    // read one byte from the socket
-    session.read_exact(&mut response)?;
+        // TODO: handle return value
+        let _ = pair.session.write_all(
+            format!("\
+    User {} is attempting to run
 
-    // echo back out the response, since it's noecho, raw on the client
-    let _ = session.write_all(&response[..]);
-    let _ = session.write_all(b"\n");
+    \t<\x1b[1;34m{}\x1b[0m@\x1b[1;32m{}\x1b[0m:\x1b[01;34m{}\x1b[0m\x1b[1;32m $\x1b[0m > sudo -u {} {}
 
-    // restore the original SIGINT handler
-    // TODO: handle errors
-    let _ = signal(libc::SIGINT, sigint).unwrap();
+    If you approve, you will see the live session through this terminal. To \
+    immediately abort the interactive session (and kill the running sudo \
+    session), press Ctrl-D (EOF).
 
-    // if those two bytes were a "yes", we're authorized to
-    // open a session; otherwise we've been declined
-    match &response {
-        b"y" => Ok(session),
-        b"Y" => Ok(session),
-        _    => Err(Error::Unauthorized),
-    }
-}
+    Please note: if you abandon this session, it will kill the running sudo \
+    session.
 
-unsafe extern "C" fn sudo_pair_close(_exit_status: c_int, _error: c_int) {
-    // TODO: exit status
-    SUDO_PAIR_SESSION = None
-}
+    Approve? y/n [n]: ",
+                user,
+                user,
+                host,
+                cwd,
+                runas_user,
+                command,
+            ).as_bytes()
+        );
 
-unsafe extern "C" fn sudo_pair_log_ttyout(
-    buf: *const c_char,
-    len: c_uint
-) -> c_int {
-    let mut sess = match SUDO_PAIR_SESSION.as_mut() {
-        Some(sess) => sess,
-        None       => return -1, // no session means we didn't initialize
-    };
+        let mut response = [0];
 
-    let plugin = match SUDO_PLUGIN {
-        Some(ref p) => p,
-        None        => return -1, // no plugin means we didn't initialize
-    };
+        // read one byte from the socket
+        pair.session.read_exact(&mut response)?;
 
-    match sess.write_all(std::slice::from_raw_parts(buf as _, len as _)) {
-        Ok(_)  => return 1,
-        Err(_) => {
-            let _ = plugin.print_info("\r\nsudo: sudo_pair session terminated\r\n");
+        // echo back out the response, since it's noecho, raw on the client
+        let _ = pair.session.write_all(&response[..]);
+        let _ = pair.session.write_all(b"\n");
 
-            // socket is closed, kill the command;
-            return 0
-        },
-    };
-}
+        // restore the original SIGINT handler
+        // TODO: handle errors
+        let _ = unsafe { signal(libc::SIGINT, sigint).expect("Failed to install SIGINT handler") };
 
-unsafe extern "C" fn sudo_pair_log_disabled(
-    _buf: *const c_char,
-    _len: c_uint
-) -> c_int {
-    let sess = match SUDO_PAIR_SESSION.as_mut() {
-        Some(sess) => sess,
-        None       => return -1, // no session means we didn't initialize
-    };
-
-    let plugin = match SUDO_PLUGIN {
-        Some(ref p) => p,
-        None        => return -1, // no plugin means we didn't initialize
-    };
-
-    if sess.is_exempt() {
-        return 1;
+        // if those two bytes were a "yes", we're authorized to
+        // open a session; otherwise we've been declined
+        match &response {
+            b"y" => Ok(pair)
+            b"Y" => Ok(pair),
+            _    => Err(Error::new(ErrorKind::Unauthorized, "denied by pair")),
+        }
     }
 
-    let _ = plugin.print_info("sudo: sudo_pair prohibits redirection of stdin, stdout, and stderr\n");
+    fn close(&mut self, _: i32, _: i32) {
+        let _ = self.session.close();
+    }
 
-    return 0;
+    fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
+        self.session.write_all(log).map_err(|_| {
+            Error::new(ErrorKind::Unauthorized, "pair abandoned session")
+        })
+    }
+
+    fn log_disabled(&mut self, _: &[u8]) -> Result<()> {
+        if self.session.is_exempt() {
+            return Ok(());
+        }
+
+        Err(Error::new(ErrorKind::Unauthorized, "redirection of stdin, stout, and stderr prohibited"))
+    }
 }
 
 fn parse_delimited_string<F, T>(
@@ -297,7 +221,7 @@ fn parse_delimited_string<F, T>(
 unsafe fn signal(signum: c_int, handler: sighandler_t) -> io::Result<sighandler_t> {
     match libc::signal(signum, handler) {
         libc::SIG_ERR => Err(io::Error::last_os_error()),
-        handler       => Ok(handler),
+        previous      => Ok(previous),
     }
 }
 
@@ -344,11 +268,11 @@ impl<'a> From<&'a HashMap<String, String>> for PluginOptions {
             match &key[..] {
                 "BinaryPath"   => options.binary_path   = PathBuf::from(value),
                 "SocketDir"    => options.socket_dir    = PathBuf::from(value),
-                "SocketUid"    => options.socket_uid    = Some(value.parse().unwrap()),
-                "SocketGid"    => options.socket_gid    = Some(value.parse().unwrap()),
-                "SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value, 8).unwrap(),
-                "GidsEnforced" => options.gids_enforced = parse_delimited_string(&value, ',', |s| s.parse().unwrap()),
-                "GidsExempted" => options.gids_exempted = parse_delimited_string(&value, ',', |s| s.parse().unwrap()),
+                "SocketUid"    => options.socket_uid    = Some(value.parse().expect("SocketUid must be an integer")),
+                "SocketGid"    => options.socket_gid    = Some(value.parse().expect("SocketGid must be an integer")),
+                "SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value, 8).expect("SocketMode must be a base-8 integer"),
+                "GidsEnforced" => options.gids_enforced = parse_delimited_string(value, ',', |s| s.parse().expect("GidsEnforced must be a comma-separated list of integers")),
+                "GidsExempted" => options.gids_exempted = parse_delimited_string(value, ',', |s| s.parse().expect("GidsExempted must be a comma-separated list of integers")),
                 _              => (), // TODO: warn
             }
         }
