@@ -1,65 +1,124 @@
-use std::error::{self, Error as StdError};
+use std::convert::From;
+use std::error;
+use std::io;
 use std::ffi;
 use std::fmt;
+use std::num;
 use std::result;
+
+use libc::c_int;
 
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
-pub struct Error {
-    kind: ErrorKind,
+pub enum Error {
+    Ffi(ffi::NulError),
+    Io(io::Error),
+    Simple(ErrorKind),
+    Custom(ErrorKind, Box<error::Error + Send + Sync>),
 }
 
 #[derive(Debug)]
 pub enum ErrorKind {
-    Conversation,
-    Ffi(ffi::NulError),
-    MissingKey(String, String),
+    // An option expected to be provided to the plugin was missing.
+    MissingOption,
+
+    // The plugin was not initialized properly.
+    Uninitialized,
+
+    // The command is not authorized.
+    Unauthorized,
+
+    // Unspecified error.
+    Other,
+}
+
+pub trait AsSudoPluginRetval {
+    fn as_sudo_plugin_retval(&self) -> c_int;
 }
 
 impl Error {
-    pub fn new(kind: ErrorKind) -> Error {
-        Error { kind: kind }
+    pub fn new<E>(kind: ErrorKind, error: E) -> Self
+        where E: Into<Box<error::Error + Send + Sync>>
+    {
+        Error::Custom(kind, error.into())
+    }
+}
+
+impl ErrorKind {
+    fn as_str(&self) -> &'static str {
+        match *self {
+            ErrorKind::MissingOption       => "expected an option that wasn't present",
+            ErrorKind::Uninitialized       => "the plugin failed to initialize",
+            ErrorKind::Unauthorized        => "command unauthorized",
+            ErrorKind::Other               => "unknown error",
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::Ffi(ref e)       => e.description(),
+            Error::Io(ref e)        => e.description(),
+            Error::Simple(ref k)    => k.as_str(),
+            Error::Custom(ref k, _) => k.as_str(),
+        }
     }
 
-    pub fn new_missing_key(key: &str, value: &str) -> Error {
-        Error { kind: ErrorKind::MissingKey(
-            key.to_string(), value.to_string(),
-        ) }
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            Error::Ffi(ref e)       => e.cause(),
+            Error::Io(ref e)        => e.cause(),
+            Error::Simple(_)        => None,
+            Error::Custom(_, ref e) => e.cause(),
+        }
+    }
+}
+
+impl From<ErrorKind> for Error {
+    fn from(kind: ErrorKind) -> Self {
+        Error::Simple(kind)
+    }
+}
+
+impl From<ffi::NulError> for Error {
+    fn from(err: ffi::NulError) -> Self {
+        Error::Ffi(err)
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        Error::Io(err)
+    }
+}
+
+// TODO: this one doesn't really belong here :(
+impl From<num::ParseIntError> for Error {
+    fn from(err: num::ParseIntError) -> Self {
+        Error::Custom(ErrorKind::Other, err.into())
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self.kind {
-            ErrorKind::Conversation             => self.description().fmt(fmt),
-            ErrorKind::Ffi(ref e)               => e.fmt(fmt),
-            ErrorKind::MissingKey(ref k, ref v) => write!(fmt, "{}[{}] missing", k, v),
+        match *self {
+            Error::Ffi(ref e)       => e.fmt(fmt),
+            Error::Io(ref e)        => e.fmt(fmt),
+            Error::Simple(ref k)    => write!(fmt, "{}", k.as_str()),
+            Error::Custom(_, ref e) => e.fmt(fmt),
         }
     }
 }
 
-
-impl StdError for Error {
-    fn description(&self) -> &str {
-        match self.kind {
-            ErrorKind::Conversation   => "couldn't print output",
-            ErrorKind::Ffi(ref e)     => e.description(),
-            ErrorKind::MissingKey(..) => "configuration option missing",
+impl<T> AsSudoPluginRetval for Result<T> {
+    fn as_sudo_plugin_retval(&self) -> c_int {
+        match *self {
+            Ok(_)                                          =>  1,
+            Err(Error::Simple(ErrorKind::Unauthorized))    =>  0,
+            Err(Error::Custom(ErrorKind::Unauthorized, _)) =>  0,
+            Err(_)                                         => -1,
         }
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        match self.kind {
-            ErrorKind::Conversation   => None,
-            ErrorKind::Ffi(ref e)     => e.cause(),
-            ErrorKind::MissingKey(..) => None,
-        }
-    }
-}
-
-impl From<ffi::NulError> for Error {
-    fn from(e: ffi::NulError) -> Self {
-        Error { kind: ErrorKind::Ffi(e) }
     }
 }

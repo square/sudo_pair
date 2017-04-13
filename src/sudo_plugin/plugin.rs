@@ -1,14 +1,157 @@
-// TODO: rename to io_plugin.rs
-
 use super::ffi::*;
 use super::result::{Result, Error, ErrorKind};
 use super::version::Version;
 
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
+use std::io;
 use std::str;
 
 use libc::{c_char, c_uint};
+
+#[macro_export]
+macro_rules! sudo_io_plugin {
+    ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {
+        use sudo_plugin::result::AsSudoPluginRetval;
+
+        static mut PLUGIN:   Option<sudo_plugin::Plugin> = None;
+        static mut INSTANCE: Option<$ty>                 = None;
+
+        #[no_mangle]
+        #[allow(non_upper_case_globals)]
+        #[allow(missing_docs)]
+        pub static $name: sudo_plugin::ffi::io_plugin = {
+            sudo_plugin::ffi::io_plugin {
+                open: sudo_io_static_fn!(open, $name, PLUGIN, INSTANCE, $ty, open),
+
+                $( $cb: sudo_io_fn!($cb, $name, PLUGIN, INSTANCE, $fn) ),*,
+
+                .. sudo_plugin::ffi::io_plugin {
+                    type_:            sudo_plugin::ffi::SUDO_IO_PLUGIN,
+                    version:          sudo_plugin::ffi::SUDO_API_VERSION,
+                    open:             None,
+                    close:            None,
+                    show_version:     None,
+                    log_ttyin:        None,
+                    log_ttyout:       None,
+                    log_stdin:        None,
+                    log_stdout:       None,
+                    log_stderr:       None,
+                    register_hooks:   None,
+                    deregister_hooks: None,
+                }
+            }
+        };
+    }
+}
+
+macro_rules! sudo_io_static_fn {
+    ( open , $name:tt , $plugin:expr , $instance:expr , $ty:ty , $fn:ident ) => {{
+        unsafe extern "C" fn sudo_plugin_open(
+            version:            c_uint,
+            conversation:       sudo_plugin::ffi::sudo_conv_t,
+            plugin_printf:      sudo_plugin::ffi::sudo_printf_t,
+            settings_ptr:       *const *mut c_char,
+            user_info_ptr:      *const *mut c_char,
+            command_info_ptr:   *const *mut c_char,
+            _argc:              c_int,
+            _argv:              *const *mut c_char,
+            user_env_ptr:       *const *mut c_char,
+            plugin_options_ptr: *const *mut c_char,
+        ) -> c_int {
+            $plugin = Some(sudo_plugin::Plugin::new(
+                version,
+                conversation,
+                plugin_printf,
+                settings_ptr,
+                user_info_ptr,
+                command_info_ptr,
+                user_env_ptr,
+                plugin_options_ptr,
+            ));
+
+            let plugin = $plugin.as_ref().unwrap();
+            let instance = <$ty>::$fn(plugin);
+
+            match instance {
+                Ok(i)  => { $instance = Some(i) },
+                Err(e) => { let _ = plugin.print_error(
+                    format!("{}: {}\n", stringify!($name), e)
+                ); },
+            };
+
+            match $instance {
+                Some(_) =>  1,
+                None    => -1,
+            }
+        }
+
+        Some(sudo_plugin_open)
+    }};
+}
+
+macro_rules! sudo_io_fn {
+    ( close , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
+        unsafe extern "C" fn close(
+            exit_status: c_int,
+            error: c_int
+        ) {
+            if let Some(ref mut i) = $instance {
+                i.$fn(exit_status, error)
+            }
+        }
+
+        Some(close)
+    }};
+
+    ( log_ttyin , $name:tt, $plugin:expr , $instance:expr , $fn:ident ) => {
+        sudo_io_fn!(log, log_ttyin, $name, $plugin, $instance, $fn)
+    };
+
+    ( log_ttyout , $name:tt, $plugin:expr , $instance:expr , $fn:ident ) => {
+        sudo_io_fn!(log, log_ttyout, $name, $plugin, $instance, $fn)
+    };
+
+    ( log_stdin , $name:tt, $plugin:expr , $instance:expr , $fn:ident ) => {
+        sudo_io_fn!(log, log_stdin, $name, $plugin, $instance, $fn)
+    };
+
+    ( log_stdout , $name:tt, $plugin:expr , $instance:expr , $fn:ident ) => {
+        sudo_io_fn!(log, log_stdout, $name, $plugin, $instance, $fn)
+    };
+
+    ( log_stderr , $name:tt, $plugin:expr , $instance:expr , $fn:ident ) => {
+        sudo_io_fn!(log, log_stderr, $name, $plugin, $instance, $fn)
+    };
+
+    ( log , $log_fn:ident , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
+        unsafe extern "C" fn $log_fn(
+            buf: *const c_char,
+            len: c_uint,
+        ) -> c_int {
+            let slice = std::slice::from_raw_parts(
+                buf as *const _,
+                len as _,
+            );
+
+            let result = $instance
+                .as_mut()
+                .ok_or(sudo_plugin::result::Error::Simple(sudo_plugin::result::ErrorKind::Uninitialized))
+                .and_then(|i| i.$fn(slice) );
+
+            let _ = result.as_ref().map_err(|err| {
+                $plugin.as_ref().map(|p| {
+                    p.print_error(format!("{}: {}\n", stringify!($name), err))
+                })
+            });
+
+            result.as_sudo_plugin_retval()
+        }
+
+        Some($log_fn)
+    }};
+}
 
 pub struct Plugin {
     version: Version,
@@ -24,6 +167,7 @@ pub struct Plugin {
 }
 
 impl Plugin {
+    #[cfg_attr(feature="clippy", allow(too_many_arguments))]
     pub fn new(
         version:        c_uint,
         conversation:   sudo_conv_t,
@@ -48,7 +192,7 @@ impl Plugin {
         };
 
         if plugin.version != Version::from(SUDO_API_VERSION) {
-            let _ = plugin.print_error(&format!(
+            let _ = plugin.print_error(format!(
                 "sudo: WARNING: API version {}, built against version {}\n",
                 version,
                 SUDO_API_VERSION,
@@ -66,7 +210,9 @@ impl Plugin {
         Self::fetch(&self.user_info, "user_info", key)
     }
 
-    pub fn _user_env(&self, key: &str) -> Result<&str> {
+    // TODO: remove
+    #[allow(dead_code)]
+    pub fn user_env(&self, key: &str) -> Result<&str> {
         Self::fetch(&self.user_env, "user_env", key)
     }
 
@@ -74,16 +220,18 @@ impl Plugin {
         Self::fetch(&self.command_info, "command_info", key)
     }
 
-    pub fn _plugin_options(&self, key: &str) -> Result<&str> {
+    // TODO: remove
+    #[allow(dead_code)]
+    pub fn plugin_options(&self, key: &str) -> Result<&str> {
         Self::fetch(&self.plugin_options, "plugin_options", key)
     }
 
-    pub fn print_info(&self, message: &str) -> Result<()> {
-        self.print(SUDO_CONV_INFO_MSG, message)
+    pub fn print_info<S: Borrow<str>>(&self, message: S) -> Result<()> {
+        self.print(SUDO_CONV_INFO_MSG, message.borrow())
     }
 
-    pub fn print_error(&self, message: &str) -> Result<()> {
-        self.print(SUDO_CONV_ERROR_MSG, message)
+    pub fn print_error<S: Borrow<str>>(&self, message: S) -> Result<()> {
+        self.print(SUDO_CONV_ERROR_MSG, message.borrow())
     }
 
     fn print(&self, level: SUDO_CONV_FLAGS, message: &str) -> Result<()>{
@@ -92,7 +240,10 @@ impl Plugin {
             let ret  = (self.printf)(level.bits(), cstr.as_ptr());
 
             if ret == -1 {
-                return Err(Error::new(ErrorKind::Conversation))
+                return Err(io::Error::new(
+                    io::ErrorKind::Interrupted,
+                    "failed to print to sudoer"
+                ).into());
             }
         }
 
@@ -100,8 +251,8 @@ impl Plugin {
     }
 
     fn fetch<'a>(map: &'a HashMap<String, String>, name: &str, key: &str) -> Result<&'a str> {
-        map.get(key).ok_or(
-            Error::new_missing_key(name, key)
+        map.get(key).ok_or_else(||
+            Error::new(ErrorKind::MissingOption, format!("missing expected option {}[{}]", name, key))
         ).map(|v| v.as_str())
     }
 }
@@ -117,20 +268,17 @@ unsafe fn parse_options(
 
     while !(*ptr).is_null() {
         let bytes   = CStr::from_ptr(*ptr).to_bytes();
-        let mid     = bytes.iter().position(|b| *b == b'=' ).unwrap_or(bytes.len());
+        let mid     = bytes.iter().position(|b| *b == b'=' ).unwrap_or_else(|| bytes.len());
         let (k, v)  = bytes.split_at(mid);
 
-        // if the keys or values aren't UTF-8, panic; I considered
-        // doing from_utf8_lossy here, but some values might
-        // in theory be attacker-controlled, so better to die than
-        // process something incorrectly
-        let key   = String::from_utf8(k     .to_vec()).unwrap();
-        let value = String::from_utf8(v[1..].to_vec()).unwrap();
+        // TODO: use [u8] instead of UTF-8 strings
+        let key   = String::from_utf8(k     .to_vec()).expect("plugin key was not UTF-8");
+        let value = String::from_utf8(v[1..].to_vec()).expect("plugin value was not UTF-8");
 
         let _ = hash.insert(key, value);
 
         ptr = ptr.offset(1);
     }
 
-    return hash;
+    hash
 }

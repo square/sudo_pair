@@ -1,5 +1,6 @@
 //! Rust bindings to sudo's plugin API.
 
+#![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
@@ -17,12 +18,8 @@ pub const SUDO_API_VERSION:       c_uint
     = SUDO_API_VERSION_MAJOR << 16
     | SUDO_API_VERSION_MINOR;
 
-pub enum SUDO_PLUGIN {
-    #[allow(dead_code)]
-
-    POLICY = 0x01, // policy plugin identifier
-    IO     = 0x02, // io plugin identifier
-}
+pub const SUDO_POLICY_PLUGIN : c_uint = 1; // policy plugin identifier
+pub const SUDO_IO_PLUGIN     : c_uint = 2; // io plugin identifier
 
 bitflags! {
     pub flags SUDO_CONV_FLAGS: c_int {
