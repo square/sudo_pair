@@ -36,6 +36,11 @@ error_chain! {
             description("expected an option that wasn't present"),
             display("expected the option {}[{}]", name, key),
         }
+
+        MissingCallback(name: String) {
+            description("a required sudo callback function wasn't provided")
+            display("the sudo callback {} wasn't provided", name)
+        }
     }
 }
 
