@@ -12,6 +12,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+#![allow(box_pointers)]
+#![allow(missing_copy_implementations)]
 #![cfg_attr(feature="clippy", allow(match_same_arms))]
 
 use std::convert::From;

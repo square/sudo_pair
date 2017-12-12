@@ -18,11 +18,14 @@
 
 #![deny(warnings)]
 
+#![warn(anonymous_parameters)]
+#![warn(box_pointers)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_docs)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
+#![warn(unstable_features)]
 #![warn(unused_extern_crates)]
 #![warn(unused_import_braces)]
 #![warn(unused_qualifications)]
@@ -44,13 +47,10 @@ extern crate libc;
 extern crate unix_socket;
 
 #[macro_use]
-extern crate bitflags;
+extern crate sudo_plugin;
 
 mod session;
 mod socket;
-
-#[macro_use]
-mod sudo_plugin;
 
 use sudo_plugin::{Result, Error, ErrorKind};
 use session::{Session, Options};

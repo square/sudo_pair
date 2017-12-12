@@ -1,0 +1,26 @@
+[package]
+name    = "sudo_plugin"
+version = "0.1.0"
+license = "Apache-2.0"
+
+authors     = ["Stephen Touset <stephen@squareup.com>"]
+description = "FFI wrapper around authoring a sudo_plugin"
+
+homepage      = "https://github.com/square/sudo_pair"
+repository    = "https://github.com/square/sudo_pair"
+documentation = "https://github.com/square/sudo_pair"
+readme        = "README.md"
+
+keywords = [ "sudo", "sudo plugin" ]
+
+[lib]
+name       = "sudo_plugin"
+crate-type = ["rlib"]
+
+[dependencies]
+libc        = '~0'
+bitflags    = '~1'
+clippy      = { version = "*", optional = true }
+
+[features]
+default = []
