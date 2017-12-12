@@ -34,13 +34,16 @@ extern crate libc;
 #[macro_use]
 extern crate bitflags;
 
+#[macro_use]
+extern crate error_chain;
+
 // TODO: no longer pub when FFI hidden
 pub mod ffi;
 
 #[macro_use]
 pub mod plugin;
-pub mod result;
+pub mod errors;
 mod version;
 
 pub use self::plugin::*;
-pub use self::result::*;
+pub use self::errors::*;

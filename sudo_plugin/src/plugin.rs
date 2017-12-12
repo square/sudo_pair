@@ -1,7 +1,7 @@
 #![allow(missing_debug_implementations)]
 
 use super::ffi::*;
-use super::result::{Result, Error, ErrorKind};
+use super::errors::*;
 use super::version::Version;
 
 use std::borrow::Borrow;
@@ -15,7 +15,7 @@ use libc::{c_char, c_uint};
 #[macro_export]
 macro_rules! sudo_io_plugin {
     ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {
-        use sudo_plugin::result::AsSudoPluginRetval;
+        use sudo_plugin::errors::AsSudoPluginRetval;
 
         static mut PLUGIN:   Option<sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                 = None;
@@ -141,7 +141,7 @@ macro_rules! sudo_io_fn {
 
             let result = $instance
                 .as_mut()
-                .ok_or(sudo_plugin::result::Error::Simple(sudo_plugin::result::ErrorKind::Uninitialized))
+                .ok_or(ErrorKind::Uninitialized.into())
                 .and_then(|i| i.$fn(slice) );
 
             let _ = result.as_ref().map_err(|err| {
@@ -240,7 +240,7 @@ impl Plugin {
 
     fn print(&self, level: SUDO_CONV_FLAGS, message: &str) -> Result<()>{
         unsafe {
-            let cstr = CString::new(message.as_bytes())?;
+            let cstr = CString::new(message)?;
             let ret  = (self.printf)(level.bits(), cstr.as_ptr());
 
             if ret == -1 {
@@ -256,7 +256,7 @@ impl Plugin {
 
     fn fetch<'a>(map: &'a HashMap<String, String>, name: &str, key: &str) -> Result<&'a str> {
         map.get(key).ok_or_else(||
-            Error::new(ErrorKind::MissingOption, format!("missing expected option {}[{}]", name, key))
+            ErrorKind::MissingOption(name.to_string(), key.to_string()).into()
         ).map(|v| v.as_str())
     }
 }

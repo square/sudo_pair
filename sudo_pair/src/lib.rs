@@ -33,12 +33,15 @@ extern crate libc;
 extern crate unix_socket;
 
 #[macro_use]
+extern crate error_chain;
+
+#[macro_use]
 extern crate sudo_plugin;
 
 mod session;
 mod socket;
 
-use sudo_plugin::{Result, Error, ErrorKind};
+use sudo_plugin::{Result, ResultExt, ErrorKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
@@ -68,13 +71,13 @@ impl SudoPair {
         // we're sudoing to root
         let runas_user = plugin.setting("runas_user").unwrap_or("root");
         let user       = plugin.user_info("user")?;
-        let pid        = plugin.user_info("pid")?.parse::<pid_t>()?;
-        let uid        = plugin.user_info("uid")?.parse::<uid_t>()?;
+        let pid        = plugin.user_info("pid")?.parse::<pid_t>().chain_err(|| "user_info['pid'] wasn't a pid" )?;
+        let uid        = plugin.user_info("uid")?.parse::<uid_t>().chain_err(|| "user_info['uid'] wasn't a uid" )?;
         let cwd        = plugin.user_info("cwd")?;
         let host       = plugin.user_info("host")?;
         let command    = plugin.command_info("command")?;
-        let runas_uid  = plugin.command_info("runas_uid")?.parse::<uid_t>()?;
-        let runas_gid  = plugin.command_info("runas_gid")?.parse::<gid_t>()?;
+        let runas_uid  = plugin.command_info("runas_uid")?.parse::<uid_t>().chain_err(|| "command_info['runas_uid'] wasn't a uid" )?;
+        let runas_gid  = plugin.command_info("runas_gid")?.parse::<gid_t>().chain_err(|| "command_info['runas_gid'] wasn't a gid" )?;
 
         let gids = plugin.command_info("runas_groups")?
             .split(',')
@@ -168,7 +171,7 @@ impl SudoPair {
         // open a session; otherwise we've been declined
         match &response {
             b"y" | b"Y" => Ok(pair),
-            _           => Err(Error::new(ErrorKind::Unauthorized, "denied by pair")),
+            _           => bail!(ErrorKind::Unauthorized("denied by pair".to_string())),
         }
     }
 
@@ -177,9 +180,7 @@ impl SudoPair {
     }
 
     fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
-        self.session.write_all(log).map_err(|_| {
-            Error::new(ErrorKind::Unauthorized, "pair abandoned session")
-        })
+        self.session.write_all(log).chain_err(|| ErrorKind::Unauthorized("pair abandoned session".to_string()))
     }
 
     fn log_disabled(&mut self, _: &[u8]) -> Result<()> {
@@ -187,7 +188,7 @@ impl SudoPair {
             return Ok(());
         }
 
-        Err(Error::new(ErrorKind::Unauthorized, "redirection of stdin, stout, and stderr prohibited"))
+        bail!(ErrorKind::Unauthorized("redirection of stdin, stout, and stderr prohibited".to_string()))
     }
 }
 

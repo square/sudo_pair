@@ -20,6 +20,7 @@ crate-type = ["rlib"]
 [dependencies]
 libc        = '~0'
 bitflags    = '~1'
+error-chain = '~0'
 clippy      = { version = "*", optional = true }
 
 [features]
