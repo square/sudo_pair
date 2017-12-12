@@ -191,8 +191,8 @@ impl Plugin {
         command_info:   *const *mut c_char,
         user_env:       *const *mut c_char,
         plugin_options: *const *mut c_char,
-    ) -> Plugin {
-        let plugin = Plugin {
+    ) -> Self {
+        let plugin = Self {
             version: Version::from(version),
 
             settings:       unsafe { parse_options(settings) },

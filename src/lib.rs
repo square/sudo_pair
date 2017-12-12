@@ -36,7 +36,9 @@
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", warn(clippy))]
 #![cfg_attr(feature="clippy", warn(clippy_pedantic))]
-#![cfg_attr(feature="clippy", allow(match_same_arms))]
+
+// TODO: disable
+#![cfg_attr(feature="clippy", allow(missing_docs_in_private_items))]
 
 extern crate libc;
 extern crate unix_socket;
@@ -179,9 +181,8 @@ impl SudoPair {
         // if those two bytes were a "yes", we're authorized to
         // open a session; otherwise we've been declined
         match &response {
-            b"y" => Ok(pair),
-            b"Y" => Ok(pair),
-            _    => Err(Error::new(ErrorKind::Unauthorized, "denied by pair")),
+            b"y" | b"Y" => Ok(pair),
+            _           => Err(Error::new(ErrorKind::Unauthorized, "denied by pair")),
         }
     }
 
@@ -243,7 +244,7 @@ struct PluginOptions {
 
 impl Default for PluginOptions {
     fn default() -> Self {
-        PluginOptions {
+        Self {
             binary_path:   PathBuf::from("/usr/bin/sudo_pair_approve"),
             socket_dir:    PathBuf::from("/var/run/sudo_pair"),
             socket_uid:    None,

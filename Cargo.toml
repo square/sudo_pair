@@ -21,7 +21,7 @@ crate-type = ["dylib"]
 libc        = '~0'
 unix_socket = '~0'
 bitflags    = '~1'
-clippy      = { version = "~0", optional = true }
+clippy      = { version = "*", optional = true }
 
 [features]
 default = []

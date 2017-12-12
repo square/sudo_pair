@@ -49,8 +49,8 @@ impl Session {
         uid:     uid_t,
         gids:    HashSet<gid_t>,
         options: Options,
-    ) -> Session {
-        Session {
+    ) -> Self {
+        Self {
             path:    path.as_ref().to_path_buf(),
             socket:  None,
             uid:     uid,
