@@ -7,9 +7,6 @@
 #![allow(missing_copy_implementations)]
 #![allow(missing_debug_implementations)]
 
-// bitflags crate creates these warnings
-#![allow(trivial_numeric_casts)]
-
 use libc::{c_char, c_int, c_uint, c_void};
 
 pub const SUDO_API_VERSION_MAJOR: c_uint = 1;

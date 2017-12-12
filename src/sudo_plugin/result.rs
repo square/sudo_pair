@@ -1,3 +1,5 @@
+#![cfg_attr(feature="clippy", allow(match_same_arms))]
+
 use std::convert::From;
 use std::error;
 use std::io;
