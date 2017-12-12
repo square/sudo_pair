@@ -1,8 +1,9 @@
 #![allow(missing_debug_implementations)]
 
-use super::ffi::*;
 use super::errors::*;
 use super::version::Version;
+
+use sudo_plugin_sys;
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -10,7 +11,7 @@ use std::ffi::{CStr, CString};
 use std::io;
 use std::str;
 
-use libc::{c_char, c_uint};
+use libc::{c_char, c_int, c_uint};
 
 #[macro_export]
 macro_rules! sudo_io_plugin {
@@ -23,15 +24,15 @@ macro_rules! sudo_io_plugin {
         #[no_mangle]
         #[allow(non_upper_case_globals)]
         #[allow(missing_docs)]
-        pub static $name: sudo_plugin::ffi::io_plugin = {
-            sudo_plugin::ffi::io_plugin {
+        pub static $name: sudo_plugin::sys::io_plugin = {
+            sudo_plugin::sys::io_plugin {
                 open: sudo_io_static_fn!(open, $name, PLUGIN, INSTANCE, $ty, open),
 
                 $( $cb: sudo_io_fn!($cb, $name, PLUGIN, INSTANCE, $fn) ),*,
 
-                .. sudo_plugin::ffi::io_plugin {
-                    type_:            sudo_plugin::ffi::SUDO_IO_PLUGIN,
-                    version:          sudo_plugin::ffi::SUDO_API_VERSION,
+                .. sudo_plugin::sys::io_plugin {
+                    type_:            sudo_plugin::sys::SUDO_IO_PLUGIN,
+                    version:          sudo_plugin::sys::SUDO_API_VERSION,
                     open:             None,
                     close:            None,
                     show_version:     None,
@@ -53,15 +54,15 @@ macro_rules! sudo_io_static_fn {
     ( open , $name:tt , $plugin:expr , $instance:expr , $ty:ty , $fn:ident ) => {{
         unsafe extern "C" fn sudo_plugin_open(
             version:            c_uint,
-            conversation:       sudo_plugin::ffi::sudo_conv_t,
-            plugin_printf:      sudo_plugin::ffi::sudo_printf_t,
-            settings_ptr:       *const *mut c_char,
-            user_info_ptr:      *const *mut c_char,
-            command_info_ptr:   *const *mut c_char,
+            conversation:       sudo_plugin::sys::sudo_conv_t,
+            plugin_printf:      sudo_plugin::sys::sudo_printf_t,
+            settings_ptr:       *const *const c_char,
+            user_info_ptr:      *const *const c_char,
+            command_info_ptr:   *const *const c_char,
             _argc:              c_int,
-            _argv:              *const *mut c_char,
-            user_env_ptr:       *const *mut c_char,
-            plugin_options_ptr: *const *mut c_char,
+            _argv:              *const *const c_char,
+            user_env_ptr:       *const *const c_char,
+            plugin_options_ptr: *const *const c_char,
         ) -> c_int {
             $plugin = Some(sudo_plugin::Plugin::new(
                 version,
@@ -166,21 +167,21 @@ pub struct Plugin {
     pub command_info:   HashMap<String, String>,
     pub plugin_options: HashMap<String, String>,
 
-    _conversation: sudo_conv_t,
-    printf:        sudo_printf_t,
+    _conversation: sudo_plugin_sys::sudo_conv_t,
+    printf:        sudo_plugin_sys::sudo_printf_t,
 }
 
 impl Plugin {
     #[cfg_attr(feature="clippy", allow(too_many_arguments))]
     pub fn new(
         version:        c_uint,
-        conversation:   sudo_conv_t,
-        plugin_printf:  sudo_printf_t,
-        settings:       *const *mut c_char,
-        user_info:      *const *mut c_char,
-        command_info:   *const *mut c_char,
-        user_env:       *const *mut c_char,
-        plugin_options: *const *mut c_char,
+        conversation:   sudo_plugin_sys::sudo_conv_t,
+        plugin_printf:  sudo_plugin_sys::sudo_printf_t,
+        settings:       *const *const c_char,
+        user_info:      *const *const c_char,
+        command_info:   *const *const c_char,
+        user_env:       *const *const c_char,
+        plugin_options: *const *const c_char,
     ) -> Self {
         let plugin = Self {
             version: Version::from(version),
@@ -195,11 +196,11 @@ impl Plugin {
             printf:        plugin_printf,
         };
 
-        if plugin.version != Version::from(SUDO_API_VERSION) {
+        if plugin.version != Version::from(sudo_plugin_sys::SUDO_API_VERSION) {
             let _ = plugin.print_error(format!(
                 "sudo: WARNING: API version {}, built against version {}\n",
                 version,
-                SUDO_API_VERSION,
+                sudo_plugin_sys::SUDO_API_VERSION,
             ));
         }
 
@@ -231,17 +232,18 @@ impl Plugin {
     }
 
     pub fn print_info<S: Borrow<str>>(&self, message: S) -> Result<()> {
-        self.print(SUDO_CONV_FLAGS::INFO_MSG, message.borrow())
+        self.print(sudo_plugin_sys::SUDO_CONV_INFO_MSG, message.borrow())
     }
 
     pub fn print_error<S: Borrow<str>>(&self, message: S) -> Result<()> {
-        self.print(SUDO_CONV_FLAGS::ERROR_MSG, message.borrow())
+        self.print(sudo_plugin_sys::SUDO_CONV_ERROR_MSG, message.borrow())
     }
 
-    fn print(&self, level: SUDO_CONV_FLAGS, message: &str) -> Result<()>{
+    fn print(&self, level: c_uint, message: &str) -> Result<()>{
         unsafe {
-            let cstr = CString::new(message)?;
-            let ret  = (self.printf)(level.bits(), cstr.as_ptr());
+            let cstr   = CString::new(message)?;
+            let printf = self.printf.ok_or(ErrorKind::MissingCallback("printf".to_string()))?;
+            let ret    = (printf)(level as c_int, cstr.as_ptr());
 
             if ret == -1 {
                 return Err(io::Error::new(
@@ -262,7 +264,7 @@ impl Plugin {
 }
 
 unsafe fn parse_options(
-    mut ptr: *const *mut c_char,
+    mut ptr: *const *const c_char,
 ) -> HashMap<String, String> {
     let mut hash = HashMap::new();
 
