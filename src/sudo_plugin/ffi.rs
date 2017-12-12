@@ -22,14 +22,14 @@ pub const SUDO_POLICY_PLUGIN : c_uint = 1; // policy plugin identifier
 pub const SUDO_IO_PLUGIN     : c_uint = 2; // io plugin identifier
 
 bitflags! {
-    pub flags SUDO_CONV_FLAGS: c_int {
-        const SUDO_CONV_PROMPT_ECHO_OFF = 0x0001, // do not echo user input
-        const SUDO_CONV_PROMPT_ECHO_ON  = 0x0002, // echo user input
-        const SUDO_CONV_ERROR_MSG       = 0x0003, // error message
-        const SUDO_CONV_INFO_MSG        = 0x0004, // informational message
-        const SUDO_CONV_PROMPT_MASK     = 0x0005, // mask user input
-        const SUDO_CONV_DEBUG_MSG       = 0x0006, // debugging message
-        const SUDO_CONV_PROMPT_ECHO_OK  = 0x1000, // flag: allow echo if no tty
+    pub struct SUDO_CONV_FLAGS: c_int {
+        const PROMPT_ECHO_OFF = 0x0001; // do not echo user input
+        const PROMPT_ECHO_ON  = 0x0002; // echo user input
+        const ERROR_MSG       = 0x0003; // error message
+        const INFO_MSG        = 0x0004; // informational message
+        const PROMPT_MASK     = 0x0005; // mask user input
+        const DEBUG_MSG       = 0x0006; // debugging message
+        const PROMPT_ECHO_OK  = 0x1000; // flag: allow echo if no tty
     }
 }
 

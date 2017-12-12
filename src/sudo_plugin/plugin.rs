@@ -227,11 +227,11 @@ impl Plugin {
     }
 
     pub fn print_info<S: Borrow<str>>(&self, message: S) -> Result<()> {
-        self.print(SUDO_CONV_INFO_MSG, message.borrow())
+        self.print(SUDO_CONV_FLAGS::INFO_MSG, message.borrow())
     }
 
     pub fn print_error<S: Borrow<str>>(&self, message: S) -> Result<()> {
-        self.print(SUDO_CONV_ERROR_MSG, message.borrow())
+        self.print(SUDO_CONV_FLAGS::ERROR_MSG, message.borrow())
     }
 
     fn print(&self, level: SUDO_CONV_FLAGS, message: &str) -> Result<()>{
