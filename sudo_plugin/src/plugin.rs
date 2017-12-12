@@ -1,3 +1,5 @@
+#![allow(missing_debug_implementations)]
+
 use super::ffi::*;
 use super::result::{Result, Error, ErrorKind};
 use super::version::Version;
@@ -46,6 +48,7 @@ macro_rules! sudo_io_plugin {
     }
 }
 
+#[macro_export]
 macro_rules! sudo_io_static_fn {
     ( open , $name:tt , $plugin:expr , $instance:expr , $ty:ty , $fn:ident ) => {{
         unsafe extern "C" fn sudo_plugin_open(
@@ -91,6 +94,7 @@ macro_rules! sudo_io_static_fn {
     }};
 }
 
+#[macro_export]
 macro_rules! sudo_io_fn {
     ( close , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
         unsafe extern "C" fn close(

@@ -1,3 +1,5 @@
+#![allow(box_pointers)]
+#![allow(missing_copy_implementations)]
 #![cfg_attr(feature="clippy", allow(match_same_arms))]
 
 use std::convert::From;
