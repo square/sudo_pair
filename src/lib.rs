@@ -4,7 +4,6 @@
 
 #![deny(warnings)]
 
-#![warn(fat_ptr_transmutes)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_docs)]
@@ -18,10 +17,6 @@
 
 // this entire crate is practically unsafe code
 #![allow(unsafe_code)]
-
-// UnixStream requires the drop_types_in_cost feature
-#![allow(unstable_features)]
-#![feature(drop_types_in_const)]
 
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
@@ -170,7 +165,7 @@ impl SudoPair {
         // if those two bytes were a "yes", we're authorized to
         // open a session; otherwise we've been declined
         match &response {
-            b"y" => Ok(pair)
+            b"y" => Ok(pair),
             b"Y" => Ok(pair),
             _    => Err(Error::new(ErrorKind::Unauthorized, "denied by pair")),
         }
