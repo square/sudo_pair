@@ -51,8 +51,11 @@ extern crate libc;
 extern crate error_chain;
 
 #[macro_use]
+pub mod macros;
+
 pub mod plugin;
 pub mod errors;
+
 mod version;
 
 pub use sudo_plugin_sys as sys;
