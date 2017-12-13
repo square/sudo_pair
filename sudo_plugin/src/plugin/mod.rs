@@ -14,8 +14,11 @@
 
 #![allow(missing_debug_implementations)]
 
+mod settings;
+
 use super::errors::*;
 use super::version::Version;
+use self::settings::Settings;
 
 use sudo_plugin_sys;
 
@@ -23,14 +26,13 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::io;
-use std::str;
 
 use libc::{c_char, c_int, c_uint};
 
 pub struct Plugin {
     version: Version,
 
-    pub settings:       HashMap<String, String>,
+    pub settings:       Settings,
     pub user_info:      HashMap<String, String>,
     pub user_env:       HashMap<String, String>,
     pub command_info:   HashMap<String, String>,
@@ -55,11 +57,12 @@ impl Plugin {
         let plugin = Self {
             version: Version::from(version),
 
-            settings:       unsafe { parse_options(settings) },
-            user_info:      unsafe { parse_options(user_info) },
-            command_info:   unsafe { parse_options(command_info) },
-            user_env:       unsafe { parse_options(user_env) },
-            plugin_options: unsafe { parse_options(plugin_options) },
+            // TODO: handle errors instead of dangerously unwrapping
+            settings:       Settings::new(settings).unwrap(),
+            user_info:      unsafe { parse_options_old(user_info) },
+            command_info:   unsafe { parse_options_old(command_info) },
+            user_env:       unsafe { parse_options_old(user_env) },
+            plugin_options: unsafe { parse_options_old(plugin_options) },
 
             _conversation: conversation,
             printf:        plugin_printf,
@@ -74,10 +77,6 @@ impl Plugin {
         }
 
         plugin
-    }
-
-    pub fn setting(&self, key: &str) -> Result<&str> {
-        Self::fetch(&self.settings, "settings", key)
     }
 
     pub fn user_info(&self, key: &str) -> Result<&str> {
@@ -132,7 +131,7 @@ impl Plugin {
     }
 }
 
-unsafe fn parse_options(
+unsafe fn parse_options_old(
     mut ptr: *const *const c_char,
 ) -> HashMap<String, String> {
     let mut hash = HashMap::new();

@@ -29,7 +29,7 @@ error_chain! {
 
         Unauthorized(reason: String) {
             description("command unauthorized"),
-            display("command unauthorized: {}", reason),
+            display("command unauthorized"),
         }
 
         MissingOption(name: String, key: String) {
