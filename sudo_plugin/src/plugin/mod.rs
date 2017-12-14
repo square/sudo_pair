@@ -1,10 +1,16 @@
 #![allow(missing_debug_implementations)]
 
+mod parsing;
+mod command_info;
 mod settings;
+mod user_info;
 
 use super::errors::*;
 use super::version::Version;
+
+use self::command_info::CommandInfo;
 use self::settings::Settings;
+use self::user_info::UserInfo;
 
 use sudo_plugin_sys;
 
@@ -19,9 +25,9 @@ pub struct Plugin {
     version: Version,
 
     pub settings:       Settings,
-    pub user_info:      HashMap<String, String>,
+    pub user_info:      UserInfo,
     pub user_env:       HashMap<String, String>,
-    pub command_info:   HashMap<String, String>,
+    pub command_info:   CommandInfo,
     pub plugin_options: HashMap<String, String>,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
@@ -43,10 +49,12 @@ impl Plugin {
         let plugin = Self {
             version: Version::from(version),
 
+            // TODO: bail if !(version >= 1.2)
+
             // TODO: handle errors instead of dangerously unwrapping
-            settings:       Settings::new(settings).unwrap(),
-            user_info:      unsafe { parse_options_old(user_info) },
-            command_info:   unsafe { parse_options_old(command_info) },
+            settings:       Settings::new(settings)       .unwrap(),
+            user_info:      UserInfo::new(user_info)      .unwrap(),
+            command_info:   CommandInfo::new(command_info).unwrap(),
             user_env:       unsafe { parse_options_old(user_env) },
             plugin_options: unsafe { parse_options_old(plugin_options) },
 
@@ -65,18 +73,10 @@ impl Plugin {
         plugin
     }
 
-    pub fn user_info(&self, key: &str) -> Result<&str> {
-        Self::fetch(&self.user_info, "user_info", key)
-    }
-
     // TODO: remove
     #[allow(dead_code)]
     pub fn user_env(&self, key: &str) -> Result<&str> {
         Self::fetch(&self.user_env, "user_env", key)
-    }
-
-    pub fn command_info(&self, key: &str) -> Result<&str> {
-        Self::fetch(&self.command_info, "command_info", key)
     }
 
     // TODO: remove
