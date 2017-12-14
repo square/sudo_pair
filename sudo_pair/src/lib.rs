@@ -60,10 +60,11 @@ use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
 use std::io::{self, Read, Write};
+use std::iter::FromIterator;
 use std::path::PathBuf;
 use std::str;
 
-use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, pid_t, uid_t, gid_t};
+use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, uid_t, gid_t};
 
 sudo_io_plugin! {
      sudo_pair: SudoPair {
@@ -84,19 +85,18 @@ impl SudoPair {
         // if `runas_user` wasn't provided (via the `-u` flag), it means
         // we're sudoing to root
         let runas_user = plugin.settings.runas_user.as_ref().map_or("root", String::as_str);
-        let user       = plugin.user_info("user")?;
-        let pid        = plugin.user_info("pid")?.parse::<pid_t>().chain_err(|| "user_info['pid'] wasn't a pid" )?;
-        let uid        = plugin.user_info("uid")?.parse::<uid_t>().chain_err(|| "user_info['uid'] wasn't a uid" )?;
-        let cwd        = plugin.user_info("cwd")?;
-        let host       = plugin.user_info("host")?;
-        let command    = plugin.command_info("command")?;
-        let runas_uid  = plugin.command_info("runas_uid")?.parse::<uid_t>().chain_err(|| "command_info['runas_uid'] wasn't a uid" )?;
-        let runas_gid  = plugin.command_info("runas_gid")?.parse::<gid_t>().chain_err(|| "command_info['runas_gid'] wasn't a gid" )?;
+        let user       = &plugin.user_info.user;
+        let cwd        = &plugin.user_info.cwd;
+        let host       = &plugin.user_info.host;
+        let pid        = plugin.user_info.pid;
+        let uid        = plugin.user_info.uid;
+        let command    = &plugin.command_info.command;
+        let runas_uid  = plugin.command_info.runas_uid;
+        let runas_gid  = plugin.command_info.runas_gid;
 
-        let gids = plugin.command_info("runas_groups")?
-            .split(',')
-            .filter_map(|gid| gid.parse().ok())
-            .collect();
+        let gids : HashSet<gid_t> = HashSet::from_iter(
+            plugin.command_info.runas_groups.iter().cloned()
+        );
 
         let options = PluginOptions::from(&plugin.plugin_options);
 
