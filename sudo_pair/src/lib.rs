@@ -83,7 +83,7 @@ impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
         // if `runas_user` wasn't provided (via the `-u` flag), it means
         // we're sudoing to root
-        let runas_user = &plugin.settings.runas_user;
+        let runas_user = plugin.settings.runas_user.as_ref().map_or("root", String::as_str);
         let user       = plugin.user_info("user")?;
         let pid        = plugin.user_info("pid")?.parse::<pid_t>().chain_err(|| "user_info['pid'] wasn't a pid" )?;
         let uid        = plugin.user_info("uid")?.parse::<uid_t>().chain_err(|| "user_info['uid'] wasn't a uid" )?;
@@ -136,7 +136,7 @@ impl SudoPair {
             \tsudo_pair_approve {} {} {} {}\n",
             host,
             user,
-            runas_user.to_string_lossy(),
+            runas_user,
             pid,
         ));
 
@@ -163,7 +163,7 @@ impl SudoPair {
                 user,
                 host,
                 cwd,
-                runas_user.to_string_lossy(),
+                runas_user,
                 command,
             ).as_bytes()
         );
