@@ -63,7 +63,7 @@ macro_rules! sudo_io_static_fn {
             user_env_ptr:       *const *const c_char,
             plugin_options_ptr: *const *const c_char,
         ) -> c_int {
-            $plugin = Some(sudo_plugin::Plugin::new(
+            let plugin = sudo_plugin::Plugin::new(
                 version,
                 conversation,
                 plugin_printf,
@@ -72,15 +72,21 @@ macro_rules! sudo_io_static_fn {
                 command_info_ptr,
                 user_env_ptr,
                 plugin_options_ptr,
-            ));
+            );
 
-            let plugin = $plugin.as_ref().unwrap();
-            let instance = <$ty>::$fn(plugin);
+            match plugin {
+                Ok(_)  => { },
+                Err(ref e) => { println!("died: {}", e.cause().unwrap().description()); },
+            };
+
+            $plugin = plugin.ok();
+
+            let instance = <$ty>::$fn($plugin.as_ref().unwrap());
 
             match instance {
                 Ok(i)  => { $instance = Some(i) },
-                Err(e) => { let _ = plugin.print_error(
-                    format!("{}: {}\n", stringify!($name), e)
+                Err(e) => { let _ = $plugin.as_ref().unwrap().print_error(
+                    &format!("{}: {}\n", stringify!($name), e)
                 ); },
             };
 
@@ -146,7 +152,7 @@ macro_rules! sudo_io_fn {
 
             let _ = result.as_ref().map_err(|err| {
                 $plugin.as_ref().map(|p| {
-                    p.print_error(format!("{}: {}\n", stringify!($name), err))
+                    p.print_error(&format!("{}: {}\n", stringify!($name), err))
                 })
             });
 
