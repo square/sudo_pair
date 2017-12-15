@@ -16,7 +16,7 @@ use super::super::errors::*;
 use super::parsing;
 
 use std::collections::HashMap;
-use std::ffi::CString;
+use std::ffi::OsString;
 use std::os::unix::io::RawFd;
 
 use libc::{c_char, gid_t, mode_t, uid_t};
@@ -57,7 +57,7 @@ pub struct CommandInfo {
     pub use_pty:           bool,
     pub utmp_user:         Option<String>,
 
-    pub raw: HashMap<Vec<u8>, CString>,
+    pub raw: HashMap<OsString, OsString>,
 }
 
 impl CommandInfo {

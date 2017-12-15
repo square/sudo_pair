@@ -59,6 +59,7 @@ use sudo_plugin::{Result, ResultExt, ErrorKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::iter::FromIterator;
 use std::path::PathBuf;
@@ -88,11 +89,11 @@ impl SudoPair {
         let user       = &plugin.user_info.user;
         let cwd        = &plugin.user_info.cwd;
         let host       = &plugin.user_info.host;
-        let pid        = plugin.user_info.pid;
-        let uid        = plugin.user_info.uid;
+        let pid        = &plugin.user_info.pid;
+        let uid        = &plugin.user_info.uid;
         let command    = &plugin.command_info.command;
-        let runas_uid  = plugin.command_info.runas_uid;
-        let runas_gid  = plugin.command_info.runas_gid;
+        let runas_uid  = &plugin.command_info.runas_uid;
+        let runas_gid  = &plugin.command_info.runas_gid;
 
         let gids : HashSet<gid_t> = HashSet::from_iter(
             plugin.command_info.runas_groups.iter().cloned()
@@ -105,15 +106,15 @@ impl SudoPair {
         let exempt = options.binary_path == PathBuf::from(&command);
 
         // encode the original uid into the socket name
-        let sockfile = format!("{}.{}.sock", uid, pid);
+        let sockfile = format!("{}.{}.sock", *uid, *pid);
 
         let session = Session::new(
             options.socket_dir.join(sockfile),
-            uid,
+            *uid,
             gids,
             Options {
-                socket_uid:    options.socket_uid.unwrap_or(runas_uid),
-                socket_gid:    options.socket_gid.unwrap_or(runas_gid),
+                socket_uid:    options.socket_uid.unwrap_or(*runas_uid),
+                socket_gid:    options.socket_gid.unwrap_or(*runas_gid),
                 socket_mode:   options.socket_mode,
                 gids_enforced: options.gids_enforced,
                 gids_exempted: options.gids_exempted,
@@ -257,19 +258,19 @@ impl Default for PluginOptions {
     }
 }
 
-impl<'a> From<&'a HashMap<String, String>> for PluginOptions {
-    fn from(map: &'a HashMap<String, String>) -> Self {
+impl<'a> From<&'a HashMap<OsString, OsString>> for PluginOptions {
+    fn from(map: &'a HashMap<OsString, OsString>) -> Self {
         let mut options = Self::default();
 
         for (key, value) in map {
-            match &key[..] {
+            match key.as_os_str().to_str().unwrap() {
                 "BinaryPath"   => options.binary_path   = PathBuf::from(value),
                 "SocketDir"    => options.socket_dir    = PathBuf::from(value),
-                "SocketUid"    => options.socket_uid    = Some(value.parse().expect("SocketUid must be an integer")),
-                "SocketGid"    => options.socket_gid    = Some(value.parse().expect("SocketGid must be an integer")),
-                "SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value, 8).expect("SocketMode must be a base-8 integer"),
-                "GidsEnforced" => options.gids_enforced = parse_delimited_string(value, ',', |s| s.parse().expect("GidsEnforced must be a comma-separated list of integers")),
-                "GidsExempted" => options.gids_exempted = parse_delimited_string(value, ',', |s| s.parse().expect("GidsExempted must be a comma-separated list of integers")),
+                "SocketUid"    => options.socket_uid    = Some(value.to_str().unwrap().parse().expect("SocketUid must be an integer")),
+                "SocketGid"    => options.socket_gid    = Some(value.to_str().unwrap().parse().expect("SocketGid must be an integer")),
+                "SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value.to_str().unwrap(), 8).expect("SocketMode must be a base-8 integer"),
+                "GidsEnforced" => options.gids_enforced = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsEnforced must be a comma-separated list of integers")),
+                "GidsExempted" => options.gids_exempted = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsExempted must be a comma-separated list of integers")),
                 _              => (), // TODO: warn
             }
         }

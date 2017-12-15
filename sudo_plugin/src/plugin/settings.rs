@@ -17,7 +17,7 @@ use super::parsing;
 use super::parsing::NetAddr;
 
 use std::collections::HashMap;
-use std::ffi::CString;
+use std::ffi::OsString;
 
 use libc::c_char;
 
@@ -49,7 +49,7 @@ pub struct Settings {
     pub set_home:             bool,
     pub sudoedit:             bool,
 
-    pub raw: HashMap<Vec<u8>, CString>,
+    pub raw: HashMap<OsString, OsString>,
 }
 
 impl Settings {
