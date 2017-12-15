@@ -2,7 +2,7 @@ use super::super::errors::*;
 use super::parsing;
 
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::CString;
 
 use libc::{c_char, gid_t, pid_t, uid_t};
 
@@ -25,7 +25,7 @@ pub struct UserInfo {
     pub uid:    uid_t,
     pub user:   String,
 
-    pub raw: HashMap<OsString, OsString>,
+    pub raw: HashMap<CString, CString>,
 }
 
 impl UserInfo {
@@ -35,23 +35,23 @@ impl UserInfo {
         }?;
 
         Ok(UserInfo {
-            cwd:    parsing::parse_raw(&raw, "cwd",    parsing::parse)?,
-            egid:   parsing::parse_raw(&raw, "egid",   parsing::parse)?,
-            euid:   parsing::parse_raw(&raw, "euid",   parsing::parse)?,
-            gid:    parsing::parse_raw(&raw, "gid",    parsing::parse)?,
-            groups: parsing::parse_raw(&raw, "groups", parsing::parse_gids)?,
-            host:   parsing::parse_raw(&raw, "host",   parsing::parse)?,
-            pgid:   parsing::parse_raw(&raw, "pgid",   parsing::parse)?,
-            pid:    parsing::parse_raw(&raw, "pid",    parsing::parse)?,
-            ppid:   parsing::parse_raw(&raw, "ppid",   parsing::parse)?,
-            uid:    parsing::parse_raw(&raw, "uid",    parsing::parse)?,
-            user:   parsing::parse_raw(&raw, "user",   parsing::parse)?,
+            cwd:    parsing::parse_raw(&raw, b"cwd\0",    parsing::parse)?,
+            egid:   parsing::parse_raw(&raw, b"egid\0",   parsing::parse)?,
+            euid:   parsing::parse_raw(&raw, b"euid\0",   parsing::parse)?,
+            gid:    parsing::parse_raw(&raw, b"gid\0",    parsing::parse)?,
+            groups: parsing::parse_raw(&raw, b"groups\0", parsing::parse_gids)?,
+            host:   parsing::parse_raw(&raw, b"host\0",   parsing::parse)?,
+            pgid:   parsing::parse_raw(&raw, b"pgid\0",   parsing::parse)?,
+            pid:    parsing::parse_raw(&raw, b"pid\0",    parsing::parse)?,
+            ppid:   parsing::parse_raw(&raw, b"ppid\0",   parsing::parse)?,
+            uid:    parsing::parse_raw(&raw, b"uid\0",    parsing::parse)?,
+            user:   parsing::parse_raw(&raw, b"user\0",   parsing::parse)?,
 
-            cols:   parsing::parse_raw(&raw, "cols",   parsing::parse).unwrap_or(80),
-            lines:  parsing::parse_raw(&raw, "lines",  parsing::parse).unwrap_or(24),
-            sid:    parsing::parse_raw(&raw, "sid",    parsing::parse).unwrap_or(0),
-            tcpgid: parsing::parse_raw(&raw, "tcpgid", parsing::parse).unwrap_or(-1),
-            tty:    parsing::parse_raw(&raw, "tty",    parsing::parse).ok(),
+            cols:   parsing::parse_raw(&raw, b"cols\0",   parsing::parse).unwrap_or(80),
+            lines:  parsing::parse_raw(&raw, b"lines\0",  parsing::parse).unwrap_or(24),
+            sid:    parsing::parse_raw(&raw, b"sid\0",    parsing::parse).unwrap_or(0),
+            tcpgid: parsing::parse_raw(&raw, b"tcpgid\0", parsing::parse).unwrap_or(-1),
+            tty:    parsing::parse_raw(&raw, b"tty\0",    parsing::parse).ok(),
 
             raw:    raw,
         })

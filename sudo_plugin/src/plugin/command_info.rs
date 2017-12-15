@@ -2,7 +2,7 @@ use super::super::errors::*;
 use super::parsing;
 
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::CString;
 use std::os::unix::io::RawFd;
 
 use libc::{c_char, gid_t, mode_t, uid_t};
@@ -43,7 +43,7 @@ pub struct CommandInfo {
     pub use_pty:           bool,
     pub utmp_user:         Option<String>,
 
-    pub raw: HashMap<OsString, OsString>,
+    pub raw: HashMap<CString, CString>,
 }
 
 impl CommandInfo {
@@ -53,42 +53,42 @@ impl CommandInfo {
         }?;
 
         Ok(CommandInfo {
-            command:       parsing::parse_raw(&raw, "command",      parsing::parse)?,
-            runas_gid:     parsing::parse_raw(&raw, "runas_gid",    parsing::parse)?,
-            runas_groups:  parsing::parse_raw(&raw, "runas_groups", parsing::parse_gids)?,
-            runas_uid:     parsing::parse_raw(&raw, "runas_uid",    parsing::parse)?,
-            runas_egid:    parsing::parse_raw(&raw, "runas_egid",   parsing::parse)
-                .unwrap_or(parsing::parse_raw(&raw, "runas_gid",    parsing::parse)?),
-            runas_euid:    parsing::parse_raw(&raw, "runas_euid",   parsing::parse)
-                .unwrap_or(parsing::parse_raw(&raw, "runas_uid",    parsing::parse)?),
-            umask:         parsing::parse_raw(&raw, "umask",        parsing::parse)?,
+            command:       parsing::parse_raw(&raw, b"command\0",      parsing::parse)?,
+            runas_gid:     parsing::parse_raw(&raw, b"runas_gid\0",    parsing::parse)?,
+            runas_groups:  parsing::parse_raw(&raw, b"runas_groups\0", parsing::parse_gids)?,
+            runas_uid:     parsing::parse_raw(&raw, b"runas_uid\0",    parsing::parse)?,
+            runas_egid:    parsing::parse_raw(&raw, b"runas_egid\0",   parsing::parse)
+                .unwrap_or(parsing::parse_raw(&raw, b"runas_gid\0",    parsing::parse)?),
+            runas_euid:    parsing::parse_raw(&raw, b"runas_euid\0",   parsing::parse)
+                .unwrap_or(parsing::parse_raw(&raw, b"runas_uid\0",    parsing::parse)?),
+            umask:         parsing::parse_raw(&raw, b"umask\0",        parsing::parse)?,
 
-            chroot:            parsing::parse_raw(&raw, "chroot",            parsing::parse)    .ok(),
-            close_from:        parsing::parse_raw(&raw, "close_from",        parsing::parse)    .ok(),
-            cwd:               parsing::parse_raw(&raw, "cwd",               parsing::parse)    .ok(),
-            exec_background:   parsing::parse_raw(&raw, "exec_background",   parsing::parse)    .unwrap_or(false),
-            exec_fd:           parsing::parse_raw(&raw, "exec_fd",           parsing::parse)    .ok(),
-            iolog_compress:    parsing::parse_raw(&raw, "iolog_compress",    parsing::parse)    .unwrap_or(false),
-            iolog_path:        parsing::parse_raw(&raw, "iolog_path",        parsing::parse)    .ok(),
-            iolog_stdin:       parsing::parse_raw(&raw, "iolog_stdin",       parsing::parse)    .unwrap_or(false),
-            iolog_stdout:      parsing::parse_raw(&raw, "iolog_stdout",      parsing::parse)    .unwrap_or(false),
-            iolog_stderr:      parsing::parse_raw(&raw, "iolog_stderr",      parsing::parse)    .unwrap_or(false),
-            iolog_ttyin:       parsing::parse_raw(&raw, "iolog_ttyin",       parsing::parse)    .unwrap_or(false),
-            iolog_ttyout:      parsing::parse_raw(&raw, "iolog_ttyout",      parsing::parse)    .unwrap_or(false),
-            login_class:       parsing::parse_raw(&raw, "login_class",       parsing::parse)    .ok(),
-            nice:              parsing::parse_raw(&raw, "nice",              parsing::parse)    .ok(),
-            noexec:            parsing::parse_raw(&raw, "noexec",            parsing::parse)    .unwrap_or(false),
-            preserve_fds:      parsing::parse_raw(&raw, "preserve_fds",      parsing::parse_fds).unwrap_or(vec![]),
-            preserve_groups:   parsing::parse_raw(&raw, "preserve_groups",   parsing::parse)    .unwrap_or(false),
-            selinux_role:      parsing::parse_raw(&raw, "selinux_role",      parsing::parse)    .ok(),
-            selinux_type:      parsing::parse_raw(&raw, "selinux_type",      parsing::parse)    .ok(),
-            set_utmp:          parsing::parse_raw(&raw, "set_utmp",          parsing::parse)    .unwrap_or(false),
-            sudoedit:          parsing::parse_raw(&raw, "sudoedit",          parsing::parse)    .unwrap_or(false),
-            sudoedit_checkdir: parsing::parse_raw(&raw, "sudoedit_checkdir", parsing::parse)    .unwrap_or(true),
-            sudoedit_follow:   parsing::parse_raw(&raw, "sudoedit_follow",   parsing::parse)    .unwrap_or(false),
-            timeout:           parsing::parse_raw(&raw, "timeout",           parsing::parse)    .ok(),
-            use_pty:           parsing::parse_raw(&raw, "use_pty",           parsing::parse)    .unwrap_or(false),
-            utmp_user:         parsing::parse_raw(&raw, "utmp_user",         parsing::parse)    .ok(),
+            chroot:            parsing::parse_raw(&raw, b"chroot\0",            parsing::parse)    .ok(),
+            close_from:        parsing::parse_raw(&raw, b"close_from\0",        parsing::parse)    .ok(),
+            cwd:               parsing::parse_raw(&raw, b"cwd\0",               parsing::parse)    .ok(),
+            exec_background:   parsing::parse_raw(&raw, b"exec_background\0",   parsing::parse)    .unwrap_or(false),
+            exec_fd:           parsing::parse_raw(&raw, b"exec_fd\0",           parsing::parse)    .ok(),
+            iolog_compress:    parsing::parse_raw(&raw, b"iolog_compress\0",    parsing::parse)    .unwrap_or(false),
+            iolog_path:        parsing::parse_raw(&raw, b"iolog_path\0",        parsing::parse)    .ok(),
+            iolog_stdin:       parsing::parse_raw(&raw, b"iolog_stdin\0",       parsing::parse)    .unwrap_or(false),
+            iolog_stdout:      parsing::parse_raw(&raw, b"iolog_stdout\0",      parsing::parse)    .unwrap_or(false),
+            iolog_stderr:      parsing::parse_raw(&raw, b"iolog_stderr\0",      parsing::parse)    .unwrap_or(false),
+            iolog_ttyin:       parsing::parse_raw(&raw, b"iolog_ttyin\0",       parsing::parse)    .unwrap_or(false),
+            iolog_ttyout:      parsing::parse_raw(&raw, b"iolog_ttyout\0",      parsing::parse)    .unwrap_or(false),
+            login_class:       parsing::parse_raw(&raw, b"login_class\0",       parsing::parse)    .ok(),
+            nice:              parsing::parse_raw(&raw, b"nice\0",              parsing::parse)    .ok(),
+            noexec:            parsing::parse_raw(&raw, b"noexec\0",            parsing::parse)    .unwrap_or(false),
+            preserve_fds:      parsing::parse_raw(&raw, b"preserve_fds\0",      parsing::parse_fds).unwrap_or(vec![]),
+            preserve_groups:   parsing::parse_raw(&raw, b"preserve_groups\0",   parsing::parse)    .unwrap_or(false),
+            selinux_role:      parsing::parse_raw(&raw, b"selinux_role\0",      parsing::parse)    .ok(),
+            selinux_type:      parsing::parse_raw(&raw, b"selinux_type\0",      parsing::parse)    .ok(),
+            set_utmp:          parsing::parse_raw(&raw, b"set_utmp\0",          parsing::parse)    .unwrap_or(false),
+            sudoedit:          parsing::parse_raw(&raw, b"sudoedit\0",          parsing::parse)    .unwrap_or(false),
+            sudoedit_checkdir: parsing::parse_raw(&raw, b"sudoedit_checkdir\0", parsing::parse)    .unwrap_or(true),
+            sudoedit_follow:   parsing::parse_raw(&raw, b"sudoedit_follow\0",   parsing::parse)    .unwrap_or(false),
+            timeout:           parsing::parse_raw(&raw, b"timeout\0",           parsing::parse)    .ok(),
+            use_pty:           parsing::parse_raw(&raw, b"use_pty\0",           parsing::parse)    .unwrap_or(false),
+            utmp_user:         parsing::parse_raw(&raw, b"utmp_user\0",         parsing::parse)    .ok(),
 
             raw: raw,
         })

@@ -1,9 +1,8 @@
 use super::super::errors::*;
 
 use std::collections::HashMap;
-use std::ffi::{CStr, OsString, OsStr};
+use std::ffi::{CString, CStr};
 use std::net::{IpAddr, AddrParseError};
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::RawFd;
 use std::result::Result as StdResult;
 use std::str::FromStr;
@@ -36,7 +35,7 @@ impl FromStr for NetAddr {
 
 pub(crate) unsafe fn parse_options(
     mut ptr: *const *const c_char
-) -> Result<HashMap<OsString, OsString>> {
+) -> Result<HashMap<CString, CString>> {
     let mut map = HashMap::new();
 
     if ptr.is_null() {
@@ -44,16 +43,17 @@ pub(crate) unsafe fn parse_options(
     }
 
     while !(*ptr).is_null() {
-        let cstr  = CStr::from_ptr(*ptr);
-        let bytes = cstr.to_bytes();
-        let sep   = bytes.iter().position(|b| *b == OPTIONS_SEPARATOR )
+        let mut bytes = CStr::from_ptr(*ptr).to_bytes_with_nul().to_owned();
+        let sep       = bytes.iter().position(|b| *b == OPTIONS_SEPARATOR )
             .chain_err(|| "setting received by plugin has no separator" )?;
 
-        let k = &bytes[        .. sep];
-        let v = &bytes[sep + 1 ..    ];
+        bytes[sep] = 0;
 
-        let key   = OsStr::from_bytes(k).to_os_string();
-        let value = OsStr::from_bytes(v).to_os_string();
+        let k = &bytes[        .. sep + 1];
+        let v = &bytes[sep + 1 ..        ];
+
+        let key   = CStr::from_bytes_with_nul_unchecked(k).to_owned();
+        let value = CStr::from_bytes_with_nul_unchecked(v).to_owned();
 
         let _ = map.insert(key, value);
 
@@ -64,47 +64,52 @@ pub(crate) unsafe fn parse_options(
 }
 
 pub(crate) fn parse_raw<T, F>(
-    map:    &HashMap<OsString, OsString>,
-    key:    &str,
+    map:    &HashMap<CString, CString>,
+    key:    &[u8],
     parser: F,
 ) -> Result<T>
-    where F: FnOnce(&OsStr) -> Option<T>
+    where F: FnOnce(&CStr) -> Option<T>
 {
+    let key = CStr::from_bytes_with_nul(key)
+        .chain_err(|| "plugin author forgot a NUL" )?;
+
     map
-        .get(OsStr::new(key))
-        .map(OsString::as_os_str)
+        .get(key)
+        .map(CString::as_c_str)
         .and_then(parser)
-        .chain_err(|| format!("option {} wasn't provided to sudo_plugin", key) )
+        .chain_err(|| format!("option {} wasn't provided to sudo_plugin", key.to_string_lossy()) )
 }
 
-pub(crate) fn parse<T: FromStr>(str: &OsStr) -> Option<T> {
+pub(crate) fn parse<T: FromStr>(str: &CStr) -> Option<T> {
     str
-        .to_str()
+        .to_str().ok()
         .and_then(|s| s.parse::<T>().ok() )
 }
 
-pub(crate) fn parse_fds(str: &OsStr) -> Option<Vec<RawFd>> {
+pub(crate) fn parse_fds(str: &CStr) -> Option<Vec<RawFd>> {
     parse_list(str, b',')
 }
 
-pub(crate) fn parse_gids(str: &OsStr) -> Option<Vec<gid_t>> {
+pub(crate) fn parse_gids(str: &CStr) -> Option<Vec<gid_t>> {
     parse_list(str, b',')
 }
 
-pub(crate) fn parse_net_addrs(str: &OsStr) -> Option<Vec<NetAddr>> {
+pub(crate) fn parse_net_addrs(str: &CStr) -> Option<Vec<NetAddr>> {
     parse_list(str, b' ')
 }
 
-fn parse_list<T: FromStr>(str: &OsStr, sep: u8) -> Option<Vec<T>> {
-    let list : Vec<&OsStr> = str.as_bytes()
+fn parse_list<T: FromStr>(str: &CStr, sep: u8) -> Option<Vec<T>> {
+    let list : Vec<&[u8]> = str.to_bytes()
         .split (|b| *b == sep )
-        .map(OsStr::from_bytes)
         .collect();
 
     let mut items = Vec::with_capacity(list.len());
 
     for element in list {
-        items.push(element.to_str()?.parse().ok()?);
+        let str  = ::std::str::from_utf8(element).ok()?;
+        let item = str.parse().ok()?;
+
+        items.push(item);
     }
 
     Some(items)

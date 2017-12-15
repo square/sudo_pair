@@ -15,9 +15,8 @@ use self::user_info::UserInfo;
 use sudo_plugin_sys;
 
 use std::collections::HashMap;
-use std::ffi::{OsString, OsStr};
+use std::ffi::CString;
 use std::io;
-use std::os::unix::ffi::OsStrExt;
 
 use libc::{c_char, c_int, c_uint};
 
@@ -26,9 +25,9 @@ pub struct Plugin {
 
     pub settings:       Settings,
     pub user_info:      UserInfo,
-    pub user_env:       HashMap<OsString, OsString>,
+    pub user_env:       HashMap<CString, CString>,
     pub command_info:   CommandInfo,
-    pub plugin_options: HashMap<OsString, OsString>,
+    pub plugin_options: HashMap<CString, CString>,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
     printf:        sudo_plugin_sys::sudo_printf_t,
