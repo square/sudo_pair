@@ -60,26 +60,32 @@ macro_rules! sudo_io_static_fn {
                 plugin_options_ptr,
             );
 
-            match plugin {
-                Ok(_)  => { },
-                Err(ref e) => { println!("died: {}", e.cause().unwrap().description()); },
+            let instance = match plugin {
+                Ok(p)  => {
+                    $plugin = Some(p);
+                    <$ty>::$fn($plugin.as_ref().unwrap())
+                }
+
+                Err(e) => Err(e),
             };
 
-            $plugin = plugin.ok();
-
-            let instance = <$ty>::$fn($plugin.as_ref().unwrap());
+            let ret = instance.as_sudo_plugin_retval();
 
             match instance {
-                Ok(i)  => { $instance = Some(i) },
-                Err(e) => { let _ = $plugin.as_ref().unwrap().print_error(
-                    &format!("{}: {}\n", stringify!($name), e)
-                ); },
-            };
+                Ok(i) => {
+                    $instance = Some(i);
+                },
 
-            match $instance {
-                Some(_) =>  1,
-                None    => -1,
+                Err(e) => {
+                    let _ = sudo_plugin::Plugin::printf(
+                        plugin_printf,
+                        3,
+                        e.description(),
+                    );
+                }
             }
+
+            ret
         }
 
         Some(sudo_plugin_open)
