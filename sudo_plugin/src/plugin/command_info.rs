@@ -67,9 +67,18 @@ impl CommandInfo {
         }?;
 
         Ok(CommandInfo {
+            command:       parsing::parse_raw(&raw, "command",      parsing::parse)?,
+            runas_gid:     parsing::parse_raw(&raw, "runas_gid",    parsing::parse)?,
+            runas_groups:  parsing::parse_raw(&raw, "runas_groups", parsing::parse_gids)?,
+            runas_uid:     parsing::parse_raw(&raw, "runas_uid",    parsing::parse)?,
+            runas_egid:    parsing::parse_raw(&raw, "runas_egid",   parsing::parse)
+                .unwrap_or(parsing::parse_raw(&raw, "runas_gid",    parsing::parse)?),
+            runas_euid:    parsing::parse_raw(&raw, "runas_euid",   parsing::parse)
+                .unwrap_or(parsing::parse_raw(&raw, "runas_uid",    parsing::parse)?),
+            umask:         parsing::parse_raw(&raw, "umask",        parsing::parse)?,
+
             chroot:            parsing::parse_raw(&raw, "chroot",            parsing::parse)    .ok(),
             close_from:        parsing::parse_raw(&raw, "close_from",        parsing::parse)    .ok(),
-            command:           parsing::parse_raw(&raw, "command",           parsing::parse)?,
             cwd:               parsing::parse_raw(&raw, "cwd",               parsing::parse)    .ok(),
             exec_background:   parsing::parse_raw(&raw, "exec_background",   parsing::parse)    .unwrap_or(false),
             exec_fd:           parsing::parse_raw(&raw, "exec_fd",           parsing::parse)    .ok(),
@@ -85,13 +94,6 @@ impl CommandInfo {
             noexec:            parsing::parse_raw(&raw, "noexec",            parsing::parse)    .unwrap_or(false),
             preserve_fds:      parsing::parse_raw(&raw, "preserve_fds",      parsing::parse_fds).unwrap_or(vec![]),
             preserve_groups:   parsing::parse_raw(&raw, "preserve_groups",   parsing::parse)    .unwrap_or(false),
-            runas_egid:        parsing::parse_raw(&raw, "runas_egid",        parsing::parse)    .unwrap_or(
-                               parsing::parse_raw(&raw, "runas_gid",         parsing::parse)?),
-            runas_euid:        parsing::parse_raw(&raw, "runas_euid",        parsing::parse)    .unwrap_or(
-                               parsing::parse_raw(&raw, "runas_uid",         parsing::parse)?),
-            runas_gid:         parsing::parse_raw(&raw, "runas_gid",         parsing::parse)?,
-            runas_groups:      parsing::parse_raw(&raw, "runas_groups",      parsing::parse_gids)?,
-            runas_uid:         parsing::parse_raw(&raw, "runas_uid",         parsing::parse)?,
             selinux_role:      parsing::parse_raw(&raw, "selinux_role",      parsing::parse)    .ok(),
             selinux_type:      parsing::parse_raw(&raw, "selinux_type",      parsing::parse)    .ok(),
             set_utmp:          parsing::parse_raw(&raw, "set_utmp",          parsing::parse)    .unwrap_or(false),
@@ -99,7 +101,6 @@ impl CommandInfo {
             sudoedit_checkdir: parsing::parse_raw(&raw, "sudoedit_checkdir", parsing::parse)    .unwrap_or(true),
             sudoedit_follow:   parsing::parse_raw(&raw, "sudoedit_follow",   parsing::parse)    .unwrap_or(false),
             timeout:           parsing::parse_raw(&raw, "timeout",           parsing::parse)    .ok(),
-            umask:             parsing::parse_raw(&raw, "umask",             parsing::parse)?,
             use_pty:           parsing::parse_raw(&raw, "use_pty",           parsing::parse)    .unwrap_or(false),
             utmp_user:         parsing::parse_raw(&raw, "utmp_user",         parsing::parse)    .ok(),
 
