@@ -2,7 +2,7 @@ use super::super::errors::*;
 use super::parsing;
 
 use std::collections::HashMap;
-use std::ffi::CString;
+use std::ffi::OsString;
 
 use libc::{c_char, gid_t, pid_t, uid_t};
 
@@ -18,7 +18,6 @@ pub struct UserInfo {
     pub lines:  u64,
     pub pgid:   pid_t,
     pub pid:    pid_t,
-    // plugin_options
     pub ppid:   pid_t,
     pub sid:    pid_t,
     pub tcpgid: pid_t,
@@ -26,7 +25,7 @@ pub struct UserInfo {
     pub uid:    uid_t,
     pub user:   String,
 
-    pub raw: HashMap<Vec<u8>, CString>,
+    pub raw: HashMap<OsString, OsString>,
 }
 
 impl UserInfo {
