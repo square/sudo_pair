@@ -116,7 +116,7 @@ impl SudoPair {
             return Ok(pair);
         }
 
-        let _ = plugin.print_info(format!(
+        let _ = plugin.print_info(&format!(
             "Running this command requires another user to approve and watch \
             your session. Please have another user run\n\
             \n\

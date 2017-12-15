@@ -1,3 +1,5 @@
+use super::version::Version;
+
 use libc::c_int;
 
 // create the Error, ErrorKind, ResultExt, and Result types
@@ -8,6 +10,11 @@ error_chain! {
     }
 
     errors {
+        UnsupportedApiVersion(cur: Version) {
+            description("sudo doesn't support the minimum plugin API version required by this plugin"),
+            display("sudo called this plugin with an API version of {}, but a minimum of {} is required", cur, Version::minimum())
+        }
+
         Uninitialized {
             description("the plugin failed to initialize"),
             display("the plugin failed to initialize"),
