@@ -220,12 +220,44 @@ unsafe extern "C" fn ctrl_c(_sig: c_int) {
 }
 
 struct PluginOptions {
+    // `BinaryPath` is the location of the approval binary, so that we
+    // can bypass the approval process for invoking it
+    //
+    // Default: `"/usr/bin/sudo_pair_approve"`
     binary_path: PathBuf,
-    socket_dir:  PathBuf,
-    socket_uid:  Option<uid_t>,
-    socket_gid:  Option<gid_t>,
+
+    // `SocketDir` is the path where this plugin will store sockets for
+    // sessions that are pending approval
+    //
+    // Default: `"/var/run/sudo_pair"`
+    socket_dir: PathBuf,
+
+    // `SocketUid` is the owner uid for sockets for sessions that are
+    // pending approval. If `None`, will be set to the uid of the user
+    // being sudoed to. This allows a use-case where approval can only
+    // be granted by someone also authorized to sudo to the target user.
+    //
+    // Default: `None`
+    socket_uid: Option<uid_t>,
+
+    // `SocketGid` is the owner gid for sockets for sessions that are
+    // pending approval. If `None`, will be set to the gid of the user
+    // being sudoed to. This allows a use-case where approval can only
+    // be granted by someone also authorized to sudo to the target
+    // users' group.
+    //
+    // Default: `None`
+    socket_gid: Option<gid_t>,
+
+    // `SocketMode` is the mode permissions for the socket on disk.
+    // Changing this to be user-writable or group-writable allows anyone
+    // in the target user or target user's group to approve the session,
+    // respectively.
+    //
+    // Default: `0o700`
     socket_mode: mode_t,
 
+    // TODO: doc
     gids_enforced: HashSet<gid_t>,
     gids_exempted: HashSet<gid_t>,
 }
