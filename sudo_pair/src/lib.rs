@@ -59,9 +59,10 @@ use sudo_plugin::{Result, ResultExt, ErrorKind};
 use session::{Session, Options};
 
 use std::collections::{HashMap, HashSet};
-use std::ffi::OsString;
+use std::ffi::{CString, OsStr};
 use std::io::{self, Read, Write};
 use std::iter::FromIterator;
+use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::str;
 
@@ -290,19 +291,19 @@ impl Default for PluginOptions {
     }
 }
 
-impl<'a> From<&'a HashMap<OsString, OsString>> for PluginOptions {
-    fn from(map: &'a HashMap<OsString, OsString>) -> Self {
+impl<'a> From<&'a HashMap<CString, CString>> for PluginOptions {
+    fn from(map: &'a HashMap<CString, CString>) -> Self {
         let mut options = Self::default();
 
         for (key, value) in map {
-            match key.as_os_str().to_str().unwrap() {
-                "BinaryPath"   => options.binary_path   = PathBuf::from(value),
-                "SocketDir"    => options.socket_dir    = PathBuf::from(value),
-                "SocketUid"    => options.socket_uid    = Some(value.to_str().unwrap().parse().expect("SocketUid must be an integer")),
-                "SocketGid"    => options.socket_gid    = Some(value.to_str().unwrap().parse().expect("SocketGid must be an integer")),
-                "SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value.to_str().unwrap(), 8).expect("SocketMode must be a base-8 integer"),
-                "GidsEnforced" => options.gids_enforced = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsEnforced must be a comma-separated list of integers")),
-                "GidsExempted" => options.gids_exempted = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsExempted must be a comma-separated list of integers")),
+            match key.to_bytes() {
+                b"BinaryPath"   => options.binary_path   = OsStr::from_bytes(&value.to_bytes()).into(),
+                b"SocketDir"    => options.socket_dir    = OsStr::from_bytes(&value.to_bytes()).into(),
+                b"SocketUid"    => options.socket_uid    = Some(value.to_str().unwrap().parse().expect("SocketUid must be an integer")),
+                b"SocketGid"    => options.socket_gid    = Some(value.to_str().unwrap().parse().expect("SocketGid must be an integer")),
+                b"SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value.to_str().unwrap(), 8).expect("SocketMode must be a base-8 integer"),
+                b"GidsEnforced" => options.gids_enforced = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsEnforced must be a comma-separated list of integers")),
+                b"GidsExempted" => options.gids_exempted = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsExempted must be a comma-separated list of integers")),
                 _              => (), // TODO: warn
             }
         }
