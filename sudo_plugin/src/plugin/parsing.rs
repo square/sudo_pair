@@ -61,11 +61,16 @@ pub(crate) unsafe fn parse_options(
         let sep       = bytes.iter().position(|b| *b == OPTIONS_SEPARATOR )
             .chain_err(|| "setting received by plugin has no separator" )?;
 
+        // replace the separator with a NUL so we have two CStrings
         bytes[sep] = 0;
 
         let k = &bytes[        .. sep + 1];
         let v = &bytes[sep + 1 ..        ];
 
+        // we don't need to check for NUL bytes in the key because we
+        // put one there ourselves (in place of the separator), and
+        // we don't need to check in the value because we're using the
+        // one that was already there
         let key   = CStr::from_bytes_with_nul_unchecked(k).to_owned();
         let value = CStr::from_bytes_with_nul_unchecked(v).to_owned();
 
