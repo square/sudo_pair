@@ -1,9 +1,8 @@
 use super::super::errors::*;
-use super::parsing;
-use super::parsing::NetAddr;
+use super::parsing::*;
 
-use std::collections::HashMap;
-use std::ffi::CString;
+use std::net::{IpAddr, AddrParseError};
+use std::str;
 
 use libc::c_char;
 
@@ -35,44 +34,70 @@ pub struct Settings {
     pub set_home:             bool,
     pub sudoedit:             bool,
 
-    pub raw: HashMap<CString, CString>,
+    pub raw: RawOptions,
 }
 
 impl Settings {
     pub fn new(ptr: *const *const c_char) -> Result<Self> {
         let raw = unsafe {
-            parsing::parse_options(ptr)
+            RawOptions::new(ptr)
         }?;
 
         Ok(Settings {
-            plugin_dir:  parsing::parse_raw(&raw, b"plugin_dir\0",  parsing::parse)?,
-            plugin_path: parsing::parse_raw(&raw, b"plugin_path\0", parsing::parse)?,
-            progname:    parsing::parse_raw(&raw, b"progname\0",    parsing::parse)?,
+            plugin_dir:  raw.get_parsed("plugin_dir")?,
+            plugin_path: raw.get_parsed("plugin_path")?,
+            progname:    raw.get_parsed("progname")?,
 
-            bsd_auth_type:        parsing::parse_raw(&raw, b"bsd_auth_type\0",        parsing::parse)          .ok(),
-            close_from:           parsing::parse_raw(&raw, b"close_from\0",           parsing::parse)          .ok(),
-            debug_flags:          parsing::parse_raw(&raw, b"debug_flags\0",          parsing::parse)          .ok(),
-            debug_level:          parsing::parse_raw(&raw, b"debug_level\0",          parsing::parse)          .ok(),
-            ignore_ticket:        parsing::parse_raw(&raw, b"ignore_ticket\0",        parsing::parse)          .unwrap_or(false),
-            implied_shell:        parsing::parse_raw(&raw, b"implied_shell\0",        parsing::parse)          .unwrap_or(false),
-            login_class:          parsing::parse_raw(&raw, b"login_class\0",          parsing::parse)          .ok(),
-            login_shell:          parsing::parse_raw(&raw, b"login_shell\0",          parsing::parse)          .unwrap_or(false),
-            max_groups:           parsing::parse_raw(&raw, b"max_groups\0",           parsing::parse)          .ok(),
-            network_addrs:        parsing::parse_raw(&raw, b"network_addrs\0",        parsing::parse_net_addrs).unwrap_or(vec![]),
-            noninteractive:       parsing::parse_raw(&raw, b"noninteractive\0",       parsing::parse)          .unwrap_or(false),
-            preserve_environment: parsing::parse_raw(&raw, b"preserve_environment\0", parsing::parse)          .unwrap_or(false),
-            preserve_groups:      parsing::parse_raw(&raw, b"preserve_groups\0",      parsing::parse)          .unwrap_or(false),
-            prompt:               parsing::parse_raw(&raw, b"prompt\0",               parsing::parse)          .ok(),
-            remote_host:          parsing::parse_raw(&raw, b"remote_host\0",          parsing::parse)          .ok(),
-            run_shell:            parsing::parse_raw(&raw, b"run_shell\0",            parsing::parse)          .unwrap_or(false),
-            runas_group:          parsing::parse_raw(&raw, b"runas_group\0",          parsing::parse)          .ok(),
-            runas_user:           parsing::parse_raw(&raw, b"runas_user\0",           parsing::parse)          .ok(),
-            selinux_role:         parsing::parse_raw(&raw, b"selinux_role\0",         parsing::parse)          .ok(),
-            selinux_type:         parsing::parse_raw(&raw, b"selinux_type\0",         parsing::parse)          .ok(),
-            set_home:             parsing::parse_raw(&raw, b"set_home\0",             parsing::parse)          .unwrap_or(false),
-            sudoedit:             parsing::parse_raw(&raw, b"sudoedit\0",             parsing::parse)          .unwrap_or(false),
+            bsd_auth_type:        raw.get_parsed("bsd_auth_type")       .ok(),
+            close_from:           raw.get_parsed("close_from")          .ok(),
+            debug_flags:          raw.get_parsed("debug_flags")         .ok(),
+            debug_level:          raw.get_parsed("debug_level")         .ok(),
+            ignore_ticket:        raw.get_parsed("ignore_ticket")       .unwrap_or(false),
+            implied_shell:        raw.get_parsed("implied_shell")       .unwrap_or(false),
+            login_class:          raw.get_parsed("login_class")         .ok(),
+            login_shell:          raw.get_parsed("login_shell")         .unwrap_or(false),
+            max_groups:           raw.get_parsed("max_groups")          .ok(),
+            network_addrs:        raw.get_parsed("network_addrs")       .unwrap_or(vec![]),
+            noninteractive:       raw.get_parsed("noninteractive")      .unwrap_or(false),
+            preserve_environment: raw.get_parsed("preserve_environment").unwrap_or(false),
+            preserve_groups:      raw.get_parsed("preserve_groups")     .unwrap_or(false),
+            prompt:               raw.get_parsed("prompt")              .ok(),
+            remote_host:          raw.get_parsed("remote_host")         .ok(),
+            run_shell:            raw.get_parsed("run_shell")           .unwrap_or(false),
+            runas_group:          raw.get_parsed("runas_group")         .ok(),
+            runas_user:           raw.get_parsed("runas_user")          .ok(),
+            selinux_role:         raw.get_parsed("selinux_role")        .ok(),
+            selinux_type:         raw.get_parsed("selinux_type")        .ok(),
+            set_home:             raw.get_parsed("set_home")            .unwrap_or(false),
+            sudoedit:             raw.get_parsed("sudoedit")            .unwrap_or(false),
 
             raw: raw,
         })
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NetAddr {
+    pub addr: IpAddr,
+    pub mask: IpAddr,
+}
+
+impl FromSudoOption for NetAddr {
+    type Err = AddrParseError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        let bytes = s.as_bytes();
+        let mid   = bytes.iter()
+            .position(|b| *b == b'/' )
+            .unwrap_or(bytes.len());
+
+        let addr = s[        .. mid].parse()?;
+        let mask = s[mid + 1 ..    ].parse()?;
+
+        Ok(Self { addr, mask })
+    }
+}
+
+impl FromSudoOptionList for NetAddr {
+    const SEPARATOR : char = ' ';
 }
