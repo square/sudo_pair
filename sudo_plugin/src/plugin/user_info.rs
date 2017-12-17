@@ -13,10 +13,7 @@
 // permissions and limitations under the License.
 
 use super::super::errors::*;
-use super::parsing;
-
-use std::collections::HashMap;
-use std::ffi::CString;
+use super::parsing::*;
 
 use libc::{c_char, gid_t, pid_t, uid_t};
 
@@ -39,33 +36,33 @@ pub struct UserInfo {
     pub uid:    uid_t,
     pub user:   String,
 
-    pub raw: HashMap<CString, CString>,
+    pub raw: RawOptions,
 }
 
 impl UserInfo {
    pub fn new(ptr: *const *const c_char) -> Result<Self> {
         let raw = unsafe {
-            parsing::parse_options(ptr)
+            RawOptions::new(ptr)
         }?;
 
         Ok(UserInfo {
-            cwd:    parsing::parse_raw(&raw, b"cwd\0",    parsing::parse)?,
-            egid:   parsing::parse_raw(&raw, b"egid\0",   parsing::parse)?,
-            euid:   parsing::parse_raw(&raw, b"euid\0",   parsing::parse)?,
-            gid:    parsing::parse_raw(&raw, b"gid\0",    parsing::parse)?,
-            groups: parsing::parse_raw(&raw, b"groups\0", parsing::parse_gids)?,
-            host:   parsing::parse_raw(&raw, b"host\0",   parsing::parse)?,
-            pgid:   parsing::parse_raw(&raw, b"pgid\0",   parsing::parse)?,
-            pid:    parsing::parse_raw(&raw, b"pid\0",    parsing::parse)?,
-            ppid:   parsing::parse_raw(&raw, b"ppid\0",   parsing::parse)?,
-            uid:    parsing::parse_raw(&raw, b"uid\0",    parsing::parse)?,
-            user:   parsing::parse_raw(&raw, b"user\0",   parsing::parse)?,
+            cwd:    raw.get_parsed("cwd")?,
+            egid:   raw.get_parsed("egid")?,
+            euid:   raw.get_parsed("euid")?,
+            gid:    raw.get_parsed("gid")?,
+            groups: raw.get_parsed("groups")?,
+            host:   raw.get_parsed("host")?,
+            pgid:   raw.get_parsed("pgid")?,
+            pid:    raw.get_parsed("pid")?,
+            ppid:   raw.get_parsed("ppid")?,
+            uid:    raw.get_parsed("uid")?,
+            user:   raw.get_parsed("user")?,
 
-            cols:   parsing::parse_raw(&raw, b"cols\0",   parsing::parse).unwrap_or(80),
-            lines:  parsing::parse_raw(&raw, b"lines\0",  parsing::parse).unwrap_or(24),
-            sid:    parsing::parse_raw(&raw, b"sid\0",    parsing::parse).unwrap_or(0),
-            tcpgid: parsing::parse_raw(&raw, b"tcpgid\0", parsing::parse).unwrap_or(-1),
-            tty:    parsing::parse_raw(&raw, b"tty\0",    parsing::parse).ok(),
+            cols:   raw.get_parsed("cols")  .unwrap_or(80),
+            lines:  raw.get_parsed("lines") .unwrap_or(24),
+            sid:    raw.get_parsed("sid")   .unwrap_or(0),
+            tcpgid: raw.get_parsed("tcpgid").unwrap_or(-1),
+            tty:    raw.get_parsed("tty")   .ok(),
 
             raw:    raw,
         })

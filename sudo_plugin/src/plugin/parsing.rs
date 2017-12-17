@@ -16,36 +16,146 @@ use super::super::errors::*;
 
 use std::collections::HashMap;
 use std::ffi::{CString, CStr};
-use std::net::{IpAddr, AddrParseError};
-use std::os::unix::io::RawFd;
-use std::result::Result as StdResult;
-use std::str::FromStr;
+use std::str::{self, FromStr};
 
-use libc::{c_char, gid_t};
+use libc::c_char;
 
 const OPTIONS_SEPARATOR : u8 = b'=';
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct NetAddr {
-    pub addr: IpAddr,
-    pub mask: IpAddr,
-}
+#[derive(Clone, Debug)]
+pub struct RawOptions(HashMap<Vec<u8>, Vec<u8>>);
 
-impl FromStr for NetAddr {
-    type Err = AddrParseError;
+#[derive(Clone, Copy)]
+pub struct ParseListError();
 
-    fn from_str(s: &str) -> StdResult<Self, Self::Err> {
-        let bytes = s.as_bytes();
-        let mid   = bytes.iter()
-            .position(|b| *b == b'/' )
-            .unwrap_or(bytes.len());
+impl RawOptions {
+    pub unsafe fn new(mut ptr: *const *const c_char) -> Result<Self> {
+        let mut map = HashMap::new();
 
-        let addr = s[        .. mid].parse()?;
-        let mask = s[mid + 1 ..    ].parse()?;
+        if ptr.is_null() {
+            bail!("no settings were provided to the plugin")
+        }
 
-        Ok(Self { addr, mask })
+        while !(*ptr).is_null() {
+            let bytes = CStr::from_ptr(*ptr).to_bytes();
+            let sep   = bytes.iter().position(|b| *b == OPTIONS_SEPARATOR )
+                .chain_err(|| "setting received by plugin has no separator" )?;
+
+            let key   = bytes[        .. sep].to_owned();
+            let value = bytes[sep + 1 ..    ].to_owned();
+
+            let _ = map.insert(key, value);
+
+            ptr = ptr.offset(1);
+        }
+
+        Ok(RawOptions(map))
+    }
+
+    pub fn get(&self, k: &str) -> Option<&str> {
+        self.get_raw(k.as_bytes())
+            .and_then(|b| str::from_utf8(b).ok() )
+    }
+
+    pub fn get_parsed<T: FromSudoOption>(&self, k: &str) -> Result<T> {
+        let v = self.get(k)
+            .chain_err(|| format!("option {} wasn't provided to the plugin", k) )?;
+
+        FromSudoOption::from_sudo_option(v).ok()
+            .chain_err(|| format!("option {} couldn't be parsed", k) )
+    }
+
+    pub fn get_raw(&self, k: &[u8]) -> Option<&[u8]> {
+        self.0
+            .get(k)
+            .map(Vec::as_slice)
     }
 }
+
+pub trait FromSudoOption : Sized {
+    type Err;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err>;
+}
+
+impl FromSudoOption for bool {
+    type Err = ::std::str::ParseBoolError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for u16 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for i32 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for u32 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for u64 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for String {
+    type Err = ::std::string::ParseError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl<T> FromSudoOption for Vec<T> where T: FromSudoOption + FromSudoOptionList {
+    type Err = ParseListError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        let      list = <T as FromSudoOptionList>::from_sudo_option_list(s);
+        let mut items = Vec::with_capacity(list.len());
+
+        for element in list {
+            let item = FromSudoOption::from_sudo_option(element)
+                .map_err(|_| ParseListError() )?;
+
+            items.push(item);
+        }
+
+        Ok(items)
+    }
+}
+
+pub trait FromSudoOptionList : Sized {
+    const SEPARATOR: char = ',';
+
+    fn from_sudo_option_list(s: &str) -> Vec<&str> {
+        s
+            .split (|b| b == Self::SEPARATOR )
+            .collect()
+    }
+}
+
+impl FromSudoOptionList for i32 {}
+impl FromSudoOptionList for u32 {}
 
 pub(crate) unsafe fn parse_options(
     mut ptr: *const *const c_char
@@ -80,56 +190,4 @@ pub(crate) unsafe fn parse_options(
     }
 
     Ok(map)
-}
-
-pub(crate) fn parse_raw<T, F>(
-    map:    &HashMap<CString, CString>,
-    key:    &[u8],
-    parser: F,
-) -> Result<T>
-    where F: FnOnce(&CStr) -> Option<T>
-{
-    let key = CStr::from_bytes_with_nul(key)
-        .chain_err(|| "plugin author forgot a NUL" )?;
-
-    map
-        .get(key)
-        .map(CString::as_c_str)
-        .and_then(parser)
-        .chain_err(|| format!("option {} wasn't provided to sudo_plugin", key.to_string_lossy()) )
-}
-
-pub(crate) fn parse<T: FromStr>(str: &CStr) -> Option<T> {
-    str
-        .to_str().ok()
-        .and_then(|s| s.parse::<T>().ok() )
-}
-
-pub(crate) fn parse_fds(str: &CStr) -> Option<Vec<RawFd>> {
-    parse_list(str, b',')
-}
-
-pub(crate) fn parse_gids(str: &CStr) -> Option<Vec<gid_t>> {
-    parse_list(str, b',')
-}
-
-pub(crate) fn parse_net_addrs(str: &CStr) -> Option<Vec<NetAddr>> {
-    parse_list(str, b' ')
-}
-
-fn parse_list<T: FromStr>(str: &CStr, sep: u8) -> Option<Vec<T>> {
-    let list : Vec<&[u8]> = str.to_bytes()
-        .split (|b| *b == sep )
-        .collect();
-
-    let mut items = Vec::with_capacity(list.len());
-
-    for element in list {
-        let str  = ::std::str::from_utf8(element).ok()?;
-        let item = str.parse().ok()?;
-
-        items.push(item);
-    }
-
-    Some(items)
 }
