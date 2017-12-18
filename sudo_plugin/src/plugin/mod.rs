@@ -1,6 +1,6 @@
 #![allow(missing_debug_implementations)]
 
-mod parsing;
+mod option_map;
 mod command_info;
 mod settings;
 mod user_info;
@@ -8,13 +8,14 @@ mod user_info;
 use super::errors::*;
 use super::version::Version;
 
+pub use self::option_map::OptionMap;
+
 use self::command_info::CommandInfo;
 use self::settings::Settings;
 use self::user_info::UserInfo;
 
 use sudo_plugin_sys;
 
-use std::collections::HashMap;
 use std::ffi::CString;
 use std::io;
 
@@ -25,9 +26,9 @@ pub struct Plugin {
 
     pub settings:       Settings,
     pub user_info:      UserInfo,
-    pub user_env:       HashMap<CString, CString>,
     pub command_info:   CommandInfo,
-    pub plugin_options: HashMap<CString, CString>,
+    pub user_env:       OptionMap,
+    pub plugin_options: OptionMap,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
     printf:        sudo_plugin_sys::sudo_printf_t,
@@ -53,11 +54,11 @@ impl Plugin {
         let _ = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
         let _ = conversation .ok_or(ErrorKind::Uninitialized)?;
 
-        let settings       = Settings::new(settings)?;
-        let user_info      = UserInfo::new(user_info)?;
-        let command_info   = CommandInfo::new(command_info)?;
-        let user_env       = parsing::parse_options(user_env)?;
-        let plugin_options = parsing::parse_options(plugin_options)?;
+        let settings       = Settings::new(OptionMap::new(settings)?)?;
+        let user_info      = UserInfo::new(OptionMap::new(user_info)?)?;
+        let command_info   = CommandInfo::new(OptionMap::new(command_info)?)?;
+        let user_env       = OptionMap::new(user_env)?;
+        let plugin_options = OptionMap::new(plugin_options)?;
 
         let plugin = Self {
             version,

@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! sudo_io_plugin {
     ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {
-        use sudo_plugin::errors::AsSudoPluginRetval;
+        use sudo_plugin::errors::*;
 
         static mut PLUGIN:   Option<sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                 = None;

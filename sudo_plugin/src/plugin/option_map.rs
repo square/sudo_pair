@@ -1,7 +1,8 @@
 use super::super::errors::*;
 
 use std::collections::HashMap;
-use std::ffi::{CString, CStr};
+use std::ffi::CStr;
+use std::path::PathBuf;
 use std::str::{self, FromStr};
 
 use libc::c_char;
@@ -9,12 +10,12 @@ use libc::c_char;
 const OPTIONS_SEPARATOR : u8 = b'=';
 
 #[derive(Clone, Debug)]
-pub struct RawOptions(HashMap<Vec<u8>, Vec<u8>>);
+pub struct OptionMap(HashMap<Vec<u8>, Vec<u8>>);
 
 #[derive(Clone, Copy)]
 pub struct ParseListError();
 
-impl RawOptions {
+impl OptionMap {
     pub unsafe fn new(mut ptr: *const *const c_char) -> Result<Self> {
         let mut map = HashMap::new();
 
@@ -35,7 +36,7 @@ impl RawOptions {
             ptr = ptr.offset(1);
         }
 
-        Ok(RawOptions(map))
+        Ok(OptionMap(map))
     }
 
     pub fn get(&self, k: &str) -> Option<&str> {
@@ -112,6 +113,14 @@ impl FromSudoOption for String {
     }
 }
 
+impl FromSudoOption for PathBuf {
+    type Err = ::std::string::ParseError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        Ok(s.into())
+    }
+}
+
 impl<T> FromSudoOption for Vec<T> where T: FromSudoOption + FromSudoOptionList {
     type Err = ParseListError;
 
@@ -142,38 +151,3 @@ pub trait FromSudoOptionList : Sized {
 
 impl FromSudoOptionList for i32 {}
 impl FromSudoOptionList for u32 {}
-
-pub(crate) unsafe fn parse_options(
-    mut ptr: *const *const c_char
-) -> Result<HashMap<CString, CString>> {
-    let mut map = HashMap::new();
-
-    if ptr.is_null() {
-         bail!("no settings were provided to the plugin")
-    }
-
-    while !(*ptr).is_null() {
-        let mut bytes = CStr::from_ptr(*ptr).to_bytes_with_nul().to_owned();
-        let sep       = bytes.iter().position(|b| *b == OPTIONS_SEPARATOR )
-            .chain_err(|| "setting received by plugin has no separator" )?;
-
-        // replace the separator with a NUL so we have two CStrings
-        bytes[sep] = 0;
-
-        let k = &bytes[        .. sep + 1];
-        let v = &bytes[sep + 1 ..        ];
-
-        // we don't need to check for NUL bytes in the key because we
-        // put one there ourselves (in place of the separator), and
-        // we don't need to check in the value because we're using the
-        // one that was already there
-        let key   = CStr::from_bytes_with_nul_unchecked(k).to_owned();
-        let value = CStr::from_bytes_with_nul_unchecked(v).to_owned();
-
-        let _ = map.insert(key, value);
-
-        ptr = ptr.offset(1);
-    }
-
-    Ok(map)
-}
