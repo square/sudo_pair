@@ -41,18 +41,19 @@ extern crate sudo_plugin;
 mod session;
 mod socket;
 
-use sudo_plugin::{Result, ResultExt, ErrorKind};
 use session::{Session, Options};
 
-use std::collections::{HashMap, HashSet};
-use std::ffi::{CString, OsStr};
+use std::collections::HashSet;
 use std::io::{self, Read, Write};
 use std::iter::FromIterator;
-use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
-use std::str;
 
 use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, uid_t, gid_t};
+
+use sudo_plugin::OptionMap;
+
+const DEFAULT_BINARY_PATH : &'static str = "/usr/bin/sudo_pair_approve";
+const DEFAULT_SOCKET_DIR  : &'static str = "/var/run/sudo_pair";
 
 sudo_io_plugin! {
      sudo_pair: SudoPair {
@@ -103,8 +104,8 @@ impl SudoPair {
                 socket_uid:    options.socket_uid.unwrap_or(*runas_uid),
                 socket_gid:    options.socket_gid.unwrap_or(*runas_gid),
                 socket_mode:   options.socket_mode,
-                gids_enforced: options.gids_enforced,
-                gids_exempted: options.gids_exempted,
+                gids_enforced: HashSet::from_iter(options.gids_enforced.iter().cloned()),
+                gids_exempted: HashSet::from_iter(options.gids_exempted.iter().cloned()),
                 exempt:        exempt,
             },
         );
@@ -194,15 +195,6 @@ impl SudoPair {
     }
 }
 
-fn parse_delimited_string<F, T>(
-    string: &str,
-    delimiter: char,
-    parser: F,
-) -> HashSet<T>
-    where F: FnMut(&str) -> T, T: Eq + std::hash::Hash {
-    string.split(delimiter).map(parser).collect()
-}
-
 unsafe fn signal(signum: c_int, handler: sighandler_t) -> io::Result<sighandler_t> {
     match libc::signal(signum, handler) {
         libc::SIG_ERR => Err(io::Error::last_os_error()),
@@ -220,6 +212,7 @@ unsafe extern "C" fn ctrl_c(_sig: c_int) {
     libc::_exit(1);
 }
 
+#[derive(Debug)]
 struct PluginOptions {
     // `BinaryPath` is the location of the approval binary, so that we
     // can bypass the approval process for invoking it
@@ -259,41 +252,20 @@ struct PluginOptions {
     socket_mode: mode_t,
 
     // TODO: doc
-    gids_enforced: HashSet<gid_t>,
-    gids_exempted: HashSet<gid_t>,
+    gids_enforced: Vec<gid_t>,
+    gids_exempted: Vec<gid_t>,
 }
 
-impl Default for PluginOptions {
-    fn default() -> Self {
+impl<'a> From<&'a OptionMap> for PluginOptions {
+    fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path:   PathBuf::from("/usr/bin/sudo_pair_approve"),
-            socket_dir:    PathBuf::from("/var/run/sudo_pair"),
-            socket_uid:    None,
-            socket_gid:    None,
-            socket_mode:   0o700,
-            gids_enforced: HashSet::new(),
-            gids_exempted: HashSet::new(),
+            binary_path:   map.get_parsed("BinaryPath")  .unwrap_or(DEFAULT_BINARY_PATH.into()),
+            socket_dir:    map.get_parsed("SocketDir")   .unwrap_or(DEFAULT_SOCKET_DIR.into()),
+            socket_uid:    map.get_parsed("SocketUid")   .ok(),
+            socket_gid:    map.get_parsed("SocketGid")   .ok(),
+            socket_mode:   map.get_parsed("SocketMode")  .unwrap_or(0o700),
+            gids_enforced: map.get_parsed("GidsEnforced").unwrap_or(vec![]),
+            gids_exempted: map.get_parsed("GidsExempted").unwrap_or(vec![]),
         }
-    }
-}
-
-impl<'a> From<&'a HashMap<CString, CString>> for PluginOptions {
-    fn from(map: &'a HashMap<CString, CString>) -> Self {
-        let mut options = Self::default();
-
-        for (key, value) in map {
-            match key.to_bytes() {
-                b"BinaryPath"   => options.binary_path   = OsStr::from_bytes(&value.to_bytes()).into(),
-                b"SocketDir"    => options.socket_dir    = OsStr::from_bytes(&value.to_bytes()).into(),
-                b"SocketUid"    => options.socket_uid    = Some(value.to_str().unwrap().parse().expect("SocketUid must be an integer")),
-                b"SocketGid"    => options.socket_gid    = Some(value.to_str().unwrap().parse().expect("SocketGid must be an integer")),
-                b"SocketMode"   => options.socket_mode   = mode_t::from_str_radix(value.to_str().unwrap(), 8).expect("SocketMode must be a base-8 integer"),
-                b"GidsEnforced" => options.gids_enforced = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsEnforced must be a comma-separated list of integers")),
-                b"GidsExempted" => options.gids_exempted = parse_delimited_string(value.to_str().unwrap(), ',', |s| s.parse().expect("GidsExempted must be a comma-separated list of integers")),
-                _              => (), // TODO: warn
-            }
-        }
-
-        options
     }
 }
