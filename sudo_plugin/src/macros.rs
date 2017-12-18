@@ -1,3 +1,48 @@
+//! Macros to simplify the process of correctly wiring up a sudo plugin.
+
+/// Emits the boilerplate stanza for creating and initializing a custom
+/// sudo I/O plugin.
+///
+/// # Example
+///
+/// ```rust
+/// # #[macro_use] extern crate sudo_plugin;
+///
+/// sudo_io_plugin! {
+///     example : Example {
+///         close:      close,
+///         log_stdout: log_stdout,
+///     }
+/// }
+///
+/// struct Example {
+/// }
+///
+/// impl Example {
+///     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
+///         plugin.print_info("example sudo plugin initialized");
+///
+///         Ok(Example {})
+///     }
+///
+///     fn close(&mut self, _: i32, _: i32) {
+///         plugin.print_info("example sudo plugin exited");
+///     }
+///
+///     fn log_stdout(&mut self, _: &[u8]) -> Result<()> {
+///         plugin.print_info("example sudo plugin received output on stdout");
+///     }
+/// }
+/// ```
+///
+/// The generated plugin will have the entry point `example`, so to
+/// enable it, you'd copy the library to `example.so` in sudo's plugin
+/// directory (on macOS, `/usr/local/libexec/sudo`) and add the following
+/// to `/etc/sudo.conf`:
+///
+/// ```
+/// Plugin example example.so
+/// ```
 #[macro_export]
 macro_rules! sudo_io_plugin {
     ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {

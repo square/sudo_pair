@@ -1,3 +1,6 @@
+//! Utilities for wrapping sudo plugins and the values they're
+//! configured with.
+
 mod option_map;
 mod command_info;
 mod settings;
@@ -18,14 +21,32 @@ use std::ffi::CString;
 
 use libc::{c_char, c_int, c_uint};
 
+/// An implementation of a sudo plugin, initialized and parsed from the
+/// values passed to the underlying `open` callback.
 #[allow(missing_debug_implementations)]
 pub struct Plugin {
+    /// The plugin API version supported by the invoked `sudo` command.
     pub version: Version,
 
+    /// A map of user-supplied sudo settings. These settings correspond
+    /// to flags the user specified when running sudo. As such, they
+    /// will only be present when the corresponding flag has been specified
+    /// on the command line.
     pub settings:       Settings,
+
+    /// A map of information about the user running the command.
     pub user_info:      UserInfo,
+
+    /// A map of information about the command being run.
     pub command_info:   CommandInfo,
+
+    /// A map of the user's environment variables.
     pub user_env:       OptionMap,
+
+    /// A map of options provided to the plugin after the its path in
+    /// sudo.conf.
+    //
+    // TODO: support non key=value options
     pub plugin_options: OptionMap,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
@@ -33,6 +54,13 @@ pub struct Plugin {
 }
 
 impl Plugin {
+    /// Initializes a `Plugin` from the arguments provided to the
+    /// underlying C `open` callback function. Verifies the API version
+    /// advertised by the underlying `sudo` is supported by this library,
+    /// parses all provided options, and wires up communication
+    /// facilities.
+    ///
+    /// Returns an error if there was a problem initializing the plugin.
     #[cfg_attr(feature="clippy", allow(too_many_arguments))]
     pub unsafe fn new(
         version:        c_uint,
@@ -46,7 +74,7 @@ impl Plugin {
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
 
-        // verify we've been given needed callbacks; we store the
+        // verify we've been given needed callbacks; we actually store the
         // Option-wrapped variants (instead of unwrapping them) because
         // those are the types the `sudo_plugin_sys` crate exports
         let _ = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
@@ -74,33 +102,46 @@ impl Plugin {
         Ok(plugin)
     }
 
+    /// Prints an informational message (which must not contain interior
+    /// NUL bytes) to the plugin's `printf` facility.
     pub fn print_info(&self, message: &str) -> Result<c_int> {
         self.print(sudo_plugin_sys::SUDO_CONV_INFO_MSG, message)
     }
 
+    /// Prints an error message (which must not contain interior NUL
+    /// bytes) to the plugin's `printf` facility.
     pub fn print_error(&self, message: &str) -> Result<c_int> {
         self.print(sudo_plugin_sys::SUDO_CONV_ERROR_MSG, message)
     }
 
+    /// Prints a message (which must not contain interior NUL bytes) to
+    /// the plugin's `printf` facility using the requested severity
+    /// level.
     fn print(&self, level: c_uint, message: &str) -> Result<c_int> {
         unsafe {
             Self::printf(self.printf, level, message)
         }
     }
 
-    // TODO: level should be bitflags
+    /// Prints a message (which must not contain interior NUL bytes) to
+    /// the plugin's `printf` facility using the requested flags. This
+    /// is provided as a static function in order to facilitate printing
+    /// error messages before the plugin is fully initialized (for
+    /// example, in the event of an initialization failure).
     pub unsafe fn printf<T: Into<Vec<u8>>>(
         printf:  sudo_plugin_sys::sudo_printf_t,
-        level:   c_uint,
+        flags:   c_uint,
         message: T,
     ) -> Result<c_int> {
+        // TODO: level should be bitflags
         let printf  = printf.ok_or(ErrorKind::Uninitialized)?;
-        let cstring = CString::new(message.into())?;
-        let ptr     = cstring.as_ptr();
-        let ret     = (printf)(level as c_int, ptr);
+        let cstring = CString::new(message.into())
+            .chain_err(|| ErrorKind::IoError(IoFacility::PluginPrintf))?;
+
+        let ret = (printf)(flags as c_int, cstring.as_ptr());
 
         if ret == -1 {
-            bail!(ErrorKind::IoError("plugin_printf".into()))
+            bail!(ErrorKind::IoError(IoFacility::PluginPrintf))
         }
 
         Ok(ret)
