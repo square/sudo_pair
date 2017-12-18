@@ -43,7 +43,7 @@ impl Settings {
             progname:    raw.get_parsed("progname")?,
 
             bsd_auth_type:        raw.get_parsed("bsd_auth_type")       .ok(),
-            close_from:           raw.get_parsed("close_from")          .ok(),
+            close_from:           raw.get_parsed("closefrom")           .ok(),
             debug_flags:          raw.get_parsed("debug_flags")         .ok(),
             debug_level:          raw.get_parsed("debug_level")         .ok(),
             ignore_ticket:        raw.get_parsed("ignore_ticket")       .unwrap_or(false),

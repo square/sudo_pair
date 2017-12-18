@@ -58,10 +58,10 @@ impl CommandInfo {
             umask:         raw.get_parsed("umask")?,
 
             chroot:            raw.get_parsed("chroot")            .ok(),
-            close_from:        raw.get_parsed("close_from")        .ok(),
+            close_from:        raw.get_parsed("closefrom")         .ok(),
             cwd:               raw.get_parsed("cwd")               .ok(),
             exec_background:   raw.get_parsed("exec_background")   .unwrap_or(false),
-            exec_fd:           raw.get_parsed("exec_fd")           .ok(),
+            exec_fd:           raw.get_parsed("execfd")            .ok(),
             iolog_compress:    raw.get_parsed("iolog_compress")    .unwrap_or(false),
             iolog_path:        raw.get_parsed("iolog_path")        .ok(),
             iolog_stdin:       raw.get_parsed("iolog_stdin")       .unwrap_or(false),
