@@ -5,9 +5,9 @@
 #![deny(warnings)]
 
 #![warn(anonymous_parameters)]
-#![warn(box_pointers)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
+#![warn(missing_docs)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
 #![warn(unreachable_pub)]
@@ -25,9 +25,6 @@
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", warn(clippy))]
 #![cfg_attr(feature="clippy", warn(clippy_pedantic))]
-
-// TODO: disable
-#![cfg_attr(feature="clippy", allow(missing_docs_in_private_items))]
 
 pub extern crate sudo_plugin_sys;
 
