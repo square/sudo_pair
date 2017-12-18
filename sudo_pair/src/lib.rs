@@ -174,7 +174,8 @@ impl SudoPair {
         let mut response = [0];
 
         // read one byte from the socket
-        pair.session.read_exact(&mut response)?;
+        pair.session.read_exact(&mut response)
+            .chain_err(|| "failed to read approval from the pair" )?;
 
         // echo back out the response, since it's noecho, raw on the client
         let _ = pair.session.write_all(&response[..]);
