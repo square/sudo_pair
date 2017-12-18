@@ -82,7 +82,7 @@ macro_rules! sudo_io_plugin {
 #[macro_export]
 macro_rules! sudo_io_static_fn {
     ( open , $name:tt , $plugin:expr , $instance:expr , $ty:ty , $fn:ident ) => {{
-        unsafe extern "C" fn sudo_plugin_open(
+        unsafe extern "C" fn open(
             version:            c_uint,
             conversation:       sudo_plugin::sys::sudo_conv_t,
             plugin_printf:      sudo_plugin::sys::sudo_printf_t,
@@ -133,7 +133,7 @@ macro_rules! sudo_io_static_fn {
             ret
         }
 
-        Some(sudo_plugin_open)
+        Some(open)
     }};
 }
 
