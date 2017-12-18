@@ -26,7 +26,7 @@ const OPTIONS_SEPARATOR : u8 = b'=';
 #[derive(Clone, Debug)]
 pub struct OptionMap(HashMap<Vec<u8>, Vec<u8>>);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct ParseListError();
 
 impl OptionMap {

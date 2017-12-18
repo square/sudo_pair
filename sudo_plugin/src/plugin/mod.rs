@@ -12,8 +12,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-#![allow(missing_debug_implementations)]
-
 mod option_map;
 mod command_info;
 mod settings;
@@ -31,10 +29,10 @@ use self::user_info::UserInfo;
 use sudo_plugin_sys;
 
 use std::ffi::CString;
-use std::io;
 
 use libc::{c_char, c_int, c_uint};
 
+#[allow(missing_debug_implementations)]
 pub struct Plugin {
     pub version: Version,
 
@@ -116,7 +114,7 @@ impl Plugin {
         let ret     = (printf)(level as c_int, ptr);
 
         if ret == -1 {
-            bail!(io::Error::new(io::ErrorKind::Other, "printing failed"))
+            bail!(ErrorKind::IoError("plugin_printf".into()))
         }
 
         Ok(ret)

@@ -20,13 +20,17 @@ use libc::c_int;
 error_chain! {
     foreign_links {
         FfiNulError(::std::ffi::NulError);
-        Io(::std::io::Error);
     }
 
     errors {
         ParseFailure(name: String) {
             description("sudo plugin was invoked with malformed options"),
             display("sudo plugin was invoked with a malformed {}", name),
+        }
+
+        IoError(facility: String) {
+            description("sudo plugin was unable to perform I/O"),
+            display("sudo plugin was unable to perform I/O using {}", facility),
         }
 
         UnsupportedApiVersion(cur: Version) {

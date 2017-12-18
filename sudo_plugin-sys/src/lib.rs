@@ -19,6 +19,7 @@
 #![deny(warnings)]
 
 #![warn(anonymous_parameters)]
+#![warn(box_pointers)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
 #![warn(trivial_numeric_casts)]
