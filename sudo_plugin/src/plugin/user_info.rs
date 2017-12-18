@@ -13,9 +13,9 @@
 // permissions and limitations under the License.
 
 use super::super::errors::*;
-use super::parsing::*;
+use super::option_map::*;
 
-use libc::{c_char, gid_t, pid_t, uid_t};
+use libc::{gid_t, pid_t, uid_t};
 
 #[derive(Debug)]
 pub struct UserInfo {
@@ -36,15 +36,11 @@ pub struct UserInfo {
     pub uid:    uid_t,
     pub user:   String,
 
-    pub raw: RawOptions,
+    pub raw: OptionMap,
 }
 
 impl UserInfo {
-   pub fn new(ptr: *const *const c_char) -> Result<Self> {
-        let raw = unsafe {
-            RawOptions::new(ptr)
-        }?;
-
+   pub fn new(raw: OptionMap) -> Result<Self> {
         Ok(UserInfo {
             cwd:    raw.get_parsed("cwd")?,
             egid:   raw.get_parsed("egid")?,

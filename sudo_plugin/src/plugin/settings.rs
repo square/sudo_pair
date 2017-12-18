@@ -13,12 +13,10 @@
 // permissions and limitations under the License.
 
 use super::super::errors::*;
-use super::parsing::*;
+use super::option_map::*;
 
 use std::net::{IpAddr, AddrParseError};
 use std::str;
-
-use libc::c_char;
 
 #[derive(Debug)]
 pub struct Settings {
@@ -48,15 +46,11 @@ pub struct Settings {
     pub set_home:             bool,
     pub sudoedit:             bool,
 
-    pub raw: RawOptions,
+    pub raw: OptionMap,
 }
 
 impl Settings {
-    pub fn new(ptr: *const *const c_char) -> Result<Self> {
-        let raw = unsafe {
-            RawOptions::new(ptr)
-        }?;
-
+    pub fn new(raw: OptionMap) -> Result<Self> {
         Ok(Settings {
             plugin_dir:  raw.get_parsed("plugin_dir")?,
             plugin_path: raw.get_parsed("plugin_path")?,

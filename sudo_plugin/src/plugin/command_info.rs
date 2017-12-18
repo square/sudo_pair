@@ -13,11 +13,11 @@
 // permissions and limitations under the License.
 
 use super::super::errors::*;
-use super::parsing::*;
+use super::option_map::*;
 
 use std::os::unix::io::RawFd;
 
-use libc::{c_char, gid_t, mode_t, uid_t};
+use libc::{gid_t, mode_t, uid_t};
 
 #[derive(Debug)]
 pub struct CommandInfo {
@@ -55,15 +55,11 @@ pub struct CommandInfo {
     pub use_pty:           bool,
     pub utmp_user:         Option<String>,
 
-    pub raw: RawOptions,
+    pub raw: OptionMap,
 }
 
 impl CommandInfo {
-   pub fn new(ptr: *const *const c_char) -> Result<Self> {
-        let raw = unsafe {
-            RawOptions::new(ptr)
-        }?;
-
+   pub fn new(raw: OptionMap) -> Result<Self> {
         Ok(CommandInfo {
             command:       raw.get_parsed("command")?,
             runas_gid:     raw.get_parsed("runas_gid")?,
