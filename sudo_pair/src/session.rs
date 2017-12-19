@@ -48,21 +48,21 @@ impl Session {
     pub fn is_exempt(&self) -> bool {
         // root never requires a pair to deescalate privileges
         if self.is_root() {
-            return true
+            return true;
         }
 
         if self.options.exempt {
-            return true
+            return true;
         }
 
         // exempt if none of our gids are in the set of enforced gids
         if self.gids.is_disjoint(&self.options.gids_enforced) {
-            return true
+            return true;
         }
 
         // exempt if any of our gids are in the set of exempted gids
         if !self.gids.is_disjoint(&self.options.gids_exempted) {
-            return true
+            return true;
         }
 
         false
@@ -73,16 +73,16 @@ impl Session {
     }
 
     pub fn close(&mut self) -> Result<()> {
-        self.socket.as_mut().map_or(Ok(()), |s| s.close() )
+        self.socket.as_mut().map_or(Ok(()), |s| s.close())
     }
 
     fn connect(&mut self) -> Result<()> {
         if self.socket.is_some() {
-            return Ok(())
+            return Ok(());
         }
 
         if self.is_exempt() {
-            return Ok(())
+            return Ok(());
         }
 
         self.socket = Some(Socket::open(

@@ -45,7 +45,7 @@ pub struct CommandInfo {
 }
 
 impl CommandInfo {
-   pub fn new(raw: OptionMap) -> Result<Self> {
+    pub fn new(raw: OptionMap) -> Result<Self> {
         Ok(CommandInfo {
             command:       raw.get_parsed("command")?,
             runas_gid:     raw.get_parsed("runas_gid")?,
@@ -86,5 +86,5 @@ impl CommandInfo {
 
             raw: raw,
         })
-   }
+    }
 }

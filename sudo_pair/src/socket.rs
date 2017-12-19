@@ -1,14 +1,14 @@
 use std::os::unix::ffi::OsStrExt;
 use std::ffi::CString;
 use std::fs;
-use std::io::{Read, Write, Result, Error, ErrorKind};
+use std::io::{Error, ErrorKind, Read, Result, Write};
 use std::net::Shutdown;
 use std::os::unix::fs::FileTypeExt;
 use std::path::Path;
 
-use libc::{self, uid_t, gid_t, mode_t};
+use libc::{self, gid_t, mode_t, uid_t};
 
-use unix_socket::{UnixListener, UnixStream, SocketAddr};
+use unix_socket::{SocketAddr, UnixListener, UnixStream};
 
 pub struct Socket {
     socket: UnixStream,
@@ -27,18 +27,11 @@ impl Socket {
             unsafe {
                 let cpath = CString::new(path.as_ref().as_os_str().as_bytes())?;
 
-                if libc::chown(
-                    cpath.as_ptr(),
-                    uid,
-                    gid,
-                ) == -1 {
+                if libc::chown(cpath.as_ptr(), uid, gid) == -1 {
                     return Err(Error::last_os_error());
                 };
 
-                if libc::chmod(
-                    cpath.as_ptr(),
-                    mode
-                ) == -1 {
+                if libc::chmod(cpath.as_ptr(), mode) == -1 {
                     return Err(Error::last_os_error());
                 }
             }
@@ -72,7 +65,7 @@ impl Socket {
                 format!(
                     "{} exists and is not a socket",
                     path.as_ref().to_string_lossy()
-                )
+                ),
             )),
 
             // file doesn't exist; nothing to do

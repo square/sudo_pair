@@ -1,7 +1,7 @@
 use super::super::errors::*;
 use super::option_map::*;
 
-use std::net::{IpAddr, AddrParseError};
+use std::net::{AddrParseError, IpAddr};
 use std::str;
 
 #[derive(Debug)]
@@ -93,5 +93,5 @@ impl FromSudoOption for NetAddr {
 }
 
 impl FromSudoOptionList for NetAddr {
-    const SEPARATOR : char = ' ';
+    const SEPARATOR: char = ' ';
 }
