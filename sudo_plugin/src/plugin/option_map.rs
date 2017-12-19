@@ -50,15 +50,17 @@ impl OptionMap {
 
         while !(*ptr).is_null() {
             let bytes = CStr::from_ptr(*ptr).to_bytes();
-            let sep = bytes
-                .iter()
-                .position(|b| *b == OPTIONS_SEPARATOR)
-                .chain_err(|| "setting received by plugin has no separator")?;
+            let sep = bytes.iter().position(|b| *b == OPTIONS_SEPARATOR);
 
-            let key   = bytes[        .. sep].to_owned();
-            let value = bytes[sep + 1 ..    ].to_owned();
+            let (k, v) = match sep {
+                Some(s) => { ( &bytes[..s], &bytes[s+1..] ) }
+                None    => { ( &bytes[..],  &bytes[..] ) }
+            };
 
-            let _ = map.insert(key, value);
+            let _ = map.insert(
+                k.to_owned(),
+                v.to_owned(),
+            );
 
             ptr = ptr.offset(1);
         }

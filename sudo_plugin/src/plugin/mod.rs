@@ -59,8 +59,11 @@ pub struct Plugin {
 
     /// A map of options provided to the plugin after the its path in
     /// sudo.conf.
-    //
-    // TODO: support non key=value options
+    ///
+    /// Settings that aren't of the form `key=value` will have a key
+    /// in the map whose value is the same as the key, similar to how
+    /// HTML handles valueless attributes (e.g., `disabled` will become
+    /// `plugin_options["disabled"] => "disabled"`).
     pub plugin_options: OptionMap,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
@@ -94,20 +97,14 @@ impl Plugin {
         let _ = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
         let _ = conversation .ok_or(ErrorKind::Uninitialized)?;
 
-        let settings       = Settings::new(OptionMap::new(settings)?)?;
-        let user_info      = UserInfo::new(OptionMap::new(user_info)?)?;
-        let command_info   = CommandInfo::new(OptionMap::new(command_info)?)?;
-        let user_env       = OptionMap::new(user_env)?;
-        let plugin_options = OptionMap::new(plugin_options)?;
-
         let plugin = Self {
             version,
 
-            settings,
-            user_info,
-            command_info,
-            user_env,
-            plugin_options,
+            settings:       OptionMap::new(settings)    .and_then(Settings::new)?,
+            user_info:      OptionMap::new(user_info)   .and_then(UserInfo::new)?,
+            command_info:   OptionMap::new(command_info).and_then(CommandInfo::new)?,
+            user_env:       OptionMap::new(user_env)?,
+            plugin_options: OptionMap::new(plugin_options)?,
 
             _conversation: conversation,
             printf:        plugin_printf,
