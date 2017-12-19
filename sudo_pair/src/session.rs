@@ -23,7 +23,7 @@ use libc::{gid_t, mode_t, uid_t};
 
 type Result<T> = result::Result<T, Error>;
 
-pub struct Session {
+pub(crate) struct Session {
     path:   PathBuf,
     socket: Option<Socket>,
     uid:    uid_t,
@@ -32,19 +32,19 @@ pub struct Session {
     options: Options,
 }
 
-pub struct Options {
-    pub socket_uid:  uid_t,
-    pub socket_gid:  gid_t,
-    pub socket_mode: mode_t,
+pub(crate) struct Options {
+    pub(crate) socket_uid:  uid_t,
+    pub(crate) socket_gid:  gid_t,
+    pub(crate) socket_mode: mode_t,
 
-    pub gids_enforced: HashSet<gid_t>,
-    pub gids_exempted: HashSet<gid_t>,
+    pub(crate) gids_enforced: HashSet<gid_t>,
+    pub(crate) gids_exempted: HashSet<gid_t>,
 
-    pub exempt: bool,
+    pub(crate) exempt: bool,
 }
 
 impl Session {
-    pub fn new<P: AsRef<Path>>(
+    pub(crate) fn new<P: AsRef<Path>>(
         path:    P,
         uid:     uid_t,
         gids:    HashSet<gid_t>,
@@ -59,7 +59,7 @@ impl Session {
         }
     }
 
-    pub fn is_exempt(&self) -> bool {
+    pub(crate) fn is_exempt(&self) -> bool {
         // root never requires a pair to deescalate privileges
         if self.is_root() {
             return true;
@@ -82,11 +82,11 @@ impl Session {
         false
     }
 
-    pub fn is_root(&self) -> bool {
+    pub(crate) fn is_root(&self) -> bool {
         self.uid == 0
     }
 
-    pub fn close(&mut self) -> Result<()> {
+    pub(crate) fn close(&mut self) -> Result<()> {
         self.socket.as_mut().map_or(Ok(()), |s| s.close())
     }
 

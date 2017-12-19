@@ -24,13 +24,13 @@ use libc::{self, gid_t, mode_t, uid_t};
 
 use unix_socket::{SocketAddr, UnixListener, UnixStream};
 
-pub struct Socket {
+pub(crate) struct Socket {
     socket: UnixStream,
     _peer:  SocketAddr,
 }
 
 impl Socket {
-    pub fn open<P: AsRef<Path>>(
+    pub(crate) fn open<P: AsRef<Path>>(
         path: P,
         uid:  uid_t,
         gid:  gid_t,
@@ -68,7 +68,7 @@ impl Socket {
         })
     }
 
-    pub fn close(&mut self) -> Result<()> {
+    pub(crate) fn close(&mut self) -> Result<()> {
         self.socket.shutdown(Shutdown::Both)
     }
 
