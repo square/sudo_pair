@@ -70,8 +70,7 @@ impl OptionMap {
     /// key/value-pair was provided during initialization. Also returns
     /// `None` if the value was not interpretable as a UTF-8 string.
     pub fn get(&self, k: &str) -> Option<&str> {
-        self.get_raw(k.as_bytes())
-            .and_then(|b| str::from_utf8(b).ok())
+        self.get_raw(k.as_bytes()).and_then(|b| str::from_utf8(b).ok())
     }
 
     /// Gets the value of a key as any arbitrary type that implements the
@@ -159,7 +158,10 @@ impl FromSudoOption for PathBuf {
     }
 }
 
-impl<T> FromSudoOption for Vec<T> where T: FromSudoOption + FromSudoOptionList {
+impl<T> FromSudoOption for Vec<T>
+where
+    T: FromSudoOption + FromSudoOptionList,
+{
     type Err = ParseListError;
 
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {

@@ -15,19 +15,19 @@
 use super::socket::Socket;
 
 use std::collections::HashSet;
-use std::io::{Read, Write, Error};
+use std::io::{Error, Read, Write};
 use std::path::{Path, PathBuf};
 use std::result;
 
-use libc::{uid_t, gid_t, mode_t};
+use libc::{gid_t, mode_t, uid_t};
 
 type Result<T> = result::Result<T, Error>;
 
 pub struct Session {
-    path:    PathBuf,
-    socket:  Option<Socket>,
-    uid:     uid_t,
-    gids:    HashSet<gid_t>,
+    path:   PathBuf,
+    socket: Option<Socket>,
+    uid:    uid_t,
+    gids:   HashSet<gid_t>,
 
     options: Options,
 }

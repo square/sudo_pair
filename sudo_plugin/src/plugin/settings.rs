@@ -102,7 +102,10 @@ impl FromSudoOption for NetAddr {
         let addr = s[        .. mid].parse()?;
         let mask = s[mid + 1 ..    ].parse()?;
 
-        Ok(Self { addr, mask })
+        Ok(Self {
+            addr,
+            mask,
+        })
     }
 }
 

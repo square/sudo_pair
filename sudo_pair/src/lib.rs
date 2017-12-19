@@ -134,9 +134,9 @@ impl SudoPair {
 
         let _ = plugin.print_info(&format!(
             "Running this command requires another user to approve and watch \
-            your session. Please have another user run\n\
-            \n\
-            \tsudo_pair_approve {} {} {} {}\n",
+             your session. Please have another user run\n\
+             \n\
+             \tsudo_pair_approve {} {} {} {}\n",
             host,
             user,
             runas_user,
@@ -221,7 +221,10 @@ impl SudoPair {
     }
 }
 
-unsafe fn signal(signum: c_int, handler: sighandler_t) -> io::Result<sighandler_t> {
+unsafe fn signal(
+    signum:  c_int,
+    handler: sighandler_t,
+) -> io::Result<sighandler_t> {
     match libc::signal(signum, handler) {
         libc::SIG_ERR => Err(io::Error::last_os_error()),
         previous      => Ok(previous),
