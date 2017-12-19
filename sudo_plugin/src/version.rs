@@ -18,10 +18,10 @@ use std::fmt;
 
 use libc::c_uint;
 
-const MINIMUM_MAJOR : u16 = 1;
-const MINIMUM_MINOR : u16 = 9;
+const MINIMUM_MAJOR: u16 = 1;
+const MINIMUM_MINOR: u16 = 9;
 
-const MINIMUM : Version = Version {
+const MINIMUM: Version = Version {
     major: MINIMUM_MAJOR,
     minor: MINIMUM_MINOR,
 };
@@ -42,7 +42,7 @@ impl Version {
     }
 
     pub fn check(self) -> Result<Self> {
-        if ! self.supported() {
+        if !self.supported() {
             bail!(ErrorKind::UnsupportedApiVersion(self))
         }
 

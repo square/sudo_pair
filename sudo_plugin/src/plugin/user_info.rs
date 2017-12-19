@@ -40,7 +40,7 @@ pub struct UserInfo {
 }
 
 impl UserInfo {
-   pub fn new(raw: OptionMap) -> Result<Self> {
+    pub fn new(raw: OptionMap) -> Result<Self> {
         Ok(UserInfo {
             cwd:    raw.get_parsed("cwd")?,
             egid:   raw.get_parsed("egid")?,
@@ -60,7 +60,7 @@ impl UserInfo {
             tcpgid: raw.get_parsed("tcpgid").unwrap_or(-1),
             tty:    raw.get_parsed("tty")   .ok(),
 
-            raw:    raw,
+            raw: raw,
         })
     }
 }

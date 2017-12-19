@@ -35,10 +35,10 @@
 // this entire crate is practically unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", warn(clippy))]
-#![cfg_attr(feature="clippy", warn(clippy_pedantic))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", warn(clippy))]
+#![cfg_attr(feature = "clippy", warn(clippy_pedantic))]
 
 pub extern crate sudo_plugin_sys;
 

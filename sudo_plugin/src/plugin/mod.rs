@@ -46,16 +46,16 @@ pub struct Plugin {
     /// to flags the user specified when running sudo. As such, they
     /// will only be present when the corresponding flag has been specified
     /// on the command line.
-    pub settings:       Settings,
+    pub settings: Settings,
 
     /// A map of information about the user running the command.
-    pub user_info:      UserInfo,
+    pub user_info: UserInfo,
 
     /// A map of information about the command being run.
-    pub command_info:   CommandInfo,
+    pub command_info: CommandInfo,
 
     /// A map of the user's environment variables.
-    pub user_env:       OptionMap,
+    pub user_env: OptionMap,
 
     /// A map of options provided to the plugin after the its path in
     /// sudo.conf.
@@ -64,7 +64,7 @@ pub struct Plugin {
     pub plugin_options: OptionMap,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
-    printf:        sudo_plugin_sys::sudo_printf_t,
+    printf: sudo_plugin_sys::sudo_printf_t,
 }
 
 impl Plugin {
@@ -75,7 +75,7 @@ impl Plugin {
     /// facilities.
     ///
     /// Returns an error if there was a problem initializing the plugin.
-    #[cfg_attr(feature="clippy", allow(too_many_arguments))]
+    #[cfg_attr(feature = "clippy", allow(too_many_arguments))]
     pub unsafe fn new(
         version:        c_uint,
         conversation:   sudo_plugin_sys::sudo_conv_t,

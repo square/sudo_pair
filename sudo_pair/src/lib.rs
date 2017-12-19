@@ -35,13 +35,13 @@
 // this entire crate is practically unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", warn(clippy))]
-#![cfg_attr(feature="clippy", warn(clippy_pedantic))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", warn(clippy))]
+#![cfg_attr(feature = "clippy", warn(clippy_pedantic))]
 
 // TODO: disable
-#![cfg_attr(feature="clippy", allow(missing_docs_in_private_items))]
+#![cfg_attr(feature = "clippy", allow(missing_docs_in_private_items))]
 
 extern crate libc;
 extern crate unix_socket;
@@ -55,14 +55,14 @@ extern crate sudo_plugin;
 mod session;
 mod socket;
 
-use session::{Session, Options};
+use session::{Options, Session};
 
 use std::collections::HashSet;
 use std::io::{self, Read, Write};
 use std::iter::FromIterator;
 use std::path::PathBuf;
 
-use libc::{c_char, c_int, c_uint, sighandler_t, mode_t, uid_t, gid_t};
+use libc::{c_char, c_int, c_uint, gid_t, mode_t, sighandler_t, uid_t};
 
 use sudo_plugin::OptionMap;
 
@@ -97,8 +97,8 @@ impl SudoPair {
         let runas_uid  = &plugin.command_info.runas_uid;
         let runas_gid  = &plugin.command_info.runas_gid;
 
-        let gids : HashSet<gid_t> = HashSet::from_iter(
-            plugin.command_info.runas_groups.iter().cloned()
+        let gids: HashSet<gid_t> = HashSet::from_iter(
+            plugin.command_info.runas_groups.iter().cloned(),
         );
 
         let options = PluginOptions::from(&plugin.plugin_options);
@@ -145,7 +145,10 @@ impl SudoPair {
 
         // temporarily install a SIGINT handler while we block on accept()
         // TODO: handle errors
-        let sigint = unsafe { signal(libc::SIGINT, ctrl_c as _).expect("Failed to install SIGINT handler") };
+        let sigint = unsafe {
+            signal(libc::SIGINT, ctrl_c as _)
+                .expect("Failed to install SIGINT handler")
+        };
 
         // TODO: handle return value
         let _ = pair.session.write_all(
@@ -174,8 +177,9 @@ impl SudoPair {
         let mut response = [0];
 
         // read one byte from the socket
-        pair.session.read_exact(&mut response)
-            .chain_err(|| "failed to read approval from the pair" )?;
+        pair.session
+            .read_exact(&mut response)
+            .chain_err(|| "failed to read approval from the pair")?;
 
         // echo back out the response, since it's noecho, raw on the client
         let _ = pair.session.write_all(&response[..]);
@@ -183,7 +187,10 @@ impl SudoPair {
 
         // restore the original SIGINT handler
         // TODO: handle errors
-        let _ = unsafe { signal(libc::SIGINT, sigint).expect("Failed to install SIGINT handler") };
+        let _ = unsafe {
+            signal(libc::SIGINT, sigint)
+                .expect("Failed to install SIGINT handler")
+        };
 
         // if those two bytes were a "yes", we're authorized to
         // open a session; otherwise we've been declined
@@ -198,7 +205,9 @@ impl SudoPair {
     }
 
     fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
-        self.session.write_all(log).chain_err(|| ErrorKind::Unauthorized("pair abandoned session".to_string()))
+        self.session.write_all(log).chain_err(|| {
+            ErrorKind::Unauthorized("pair abandoned session".to_string())
+        })
     }
 
     fn log_disabled(&mut self, _: &[u8]) -> Result<()> {
@@ -206,7 +215,9 @@ impl SudoPair {
             return Ok(());
         }
 
-        bail!(ErrorKind::Unauthorized("redirection of stdin, stout, and stderr prohibited".to_string()))
+        bail!(ErrorKind::Unauthorized(
+            "redirection of stdin, stout, and stderr prohibited".to_string()
+        ))
     }
 }
 
