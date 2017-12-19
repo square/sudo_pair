@@ -70,7 +70,9 @@ macro_rules! sudo_io_plugin {
         #[allow(missing_docs)]
         pub static $name: sudo_plugin::sys::io_plugin = {
             sudo_plugin::sys::io_plugin {
-                open: sudo_io_static_fn!(open, $name, PLUGIN, INSTANCE, $ty, open),
+                open: sudo_io_static_fn!(
+                    open, $name, PLUGIN, INSTANCE, $ty, open
+                ),
 
                 $( $cb: sudo_io_fn!($cb, $name, PLUGIN, INSTANCE, $fn) ),*,
 
@@ -95,7 +97,14 @@ macro_rules! sudo_io_plugin {
 
 #[macro_export]
 macro_rules! sudo_io_static_fn {
-    ( open , $name:tt , $plugin:expr , $instance:expr , $ty:ty , $fn:ident ) => {{
+    (
+        open ,
+        $name:tt ,
+        $plugin:expr ,
+        $instance:expr ,
+        $ty:ty ,
+        $fn:ident
+    ) => {{
         unsafe extern "C" fn open(
             version:            c_uint,
             conversation:       sudo_plugin::sys::sudo_conv_t,
@@ -186,7 +195,14 @@ macro_rules! sudo_io_fn {
         sudo_io_fn!(log, log_stderr, $name, $plugin, $instance, $fn)
     };
 
-    ( log , $log_fn:ident , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
+    (
+        log ,
+        $log_fn:ident ,
+        $name:tt ,
+        $plugin:expr ,
+        $instance:expr ,
+        $fn:ident
+    ) => {{
         unsafe extern "C" fn $log_fn(
             buf: *const c_char,
             len: c_uint,
