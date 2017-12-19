@@ -1,0 +1,27 @@
+### stable features ###
+
+max_width = 80
+
+normalize_comments = true
+wrap_comments      = true
+
+### unstable features ##
+
+unstable_features = true
+
+## disabled until it stops reordering imports separated by an empty
+## line
+# reorder_imports        = true
+# reorder_imported_names = true
+
+#fn_arg_indent    = "Tabbed"
+#fn_args_layout   = "Block"
+#fn_args_density  = "CompressedIfEmpty"
+#fn_brace_style   = "PreferSameLine"
+
+#item_brace_style = "PreferSameLine"
+
+#use_try_shorthand = true
+
+#generics_ident    = "Tabbed"
+#where_pred_indent = "Tabbed"
