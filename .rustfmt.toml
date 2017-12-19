@@ -9,19 +9,11 @@ wrap_comments      = true
 
 unstable_features = true
 
-## disabled until it stops reordering imports separated by an empty
-## line
-# reorder_imports        = true
-# reorder_imported_names = true
+#reorder_imports        = true
+reorder_imported_names = true
 
-#fn_arg_indent    = "Tabbed"
-#fn_args_layout   = "Block"
-#fn_args_density  = "CompressedIfEmpty"
-#fn_brace_style   = "PreferSameLine"
+struct_field_align_threshold = 64
 
-#item_brace_style = "PreferSameLine"
+use_try_shorthand = true
 
-#use_try_shorthand = true
-
-#generics_ident    = "Tabbed"
-#where_pred_indent = "Tabbed"
+use_small_heuristics = false

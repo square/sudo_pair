@@ -50,7 +50,7 @@ pub struct Plugin {
     pub plugin_options: OptionMap,
 
     _conversation: sudo_plugin_sys::sudo_conv_t,
-    printf: sudo_plugin_sys::sudo_printf_t,
+    printf:        sudo_plugin_sys::sudo_printf_t,
 }
 
 impl Plugin {
@@ -118,9 +118,7 @@ impl Plugin {
     /// the plugin's `printf` facility using the requested severity
     /// level.
     fn print(&self, level: c_uint, message: &str) -> Result<c_int> {
-        unsafe {
-            Self::printf(self.printf, level, message)
-        }
+        unsafe { Self::printf(self.printf, level, message) }
     }
 
     /// Prints a message (which must not contain interior NUL bytes) to

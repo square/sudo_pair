@@ -12,11 +12,16 @@ use unix_socket::{SocketAddr, UnixListener, UnixStream};
 
 pub struct Socket {
     socket: UnixStream,
-    _peer:   SocketAddr,
+    _peer:  SocketAddr,
 }
 
 impl Socket {
-    pub fn open<P: AsRef<Path>>(path: P, uid: uid_t, gid: gid_t, mode: mode_t) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(
+        path: P,
+        uid:  uid_t,
+        gid:  gid_t,
+        mode: mode_t,
+    ) -> Result<Self> {
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
         Self::unlink_socket(&path)?;
@@ -43,7 +48,7 @@ impl Socket {
         // to remain on the filesystem
         Self::unlink_socket(&path)?;
 
-        Ok(Self{
+        Ok(Self {
             socket: connection.0,
             _peer:  connection.1,
         })

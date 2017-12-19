@@ -83,7 +83,8 @@ pub trait AsSudoPluginRetval {
     fn as_sudo_plugin_retval(&self) -> c_int;
 }
 
-impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval for ::std::result::Result<T, E> {
+impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval
+    for ::std::result::Result<T, E> {
     fn as_sudo_plugin_retval(&self) -> c_int {
         match *self {
             Ok(_)      => 1,

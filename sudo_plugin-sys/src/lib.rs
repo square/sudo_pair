@@ -35,6 +35,5 @@ use libc::c_uint;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-pub const SUDO_API_VERSION: c_uint
-    = SUDO_API_VERSION_MAJOR << 16
-    | SUDO_API_VERSION_MINOR;
+pub const SUDO_API_VERSION: c_uint =
+    SUDO_API_VERSION_MAJOR << 16 | SUDO_API_VERSION_MINOR;
