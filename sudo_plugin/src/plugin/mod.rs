@@ -31,7 +31,8 @@ use self::user_info::UserInfo;
 
 use sudo_plugin_sys;
 
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
+use std::slice;
 
 use libc::{c_char, c_int, c_uint};
 
@@ -41,6 +42,10 @@ use libc::{c_char, c_int, c_uint};
 pub struct Plugin {
     /// The plugin API version supported by the invoked `sudo` command.
     pub version: Version,
+
+    /// The command being executed, in the same form as would be passed
+    /// to the `execve(2)` system call.
+    pub command: Vec<CString>,
 
     /// A map of user-supplied sudo settings. These settings correspond
     /// to flags the user specified when running sudo. As such, they
@@ -81,6 +86,8 @@ impl Plugin {
     #[cfg_attr(feature = "clippy", allow(too_many_arguments))]
     pub unsafe fn new(
         version:        c_uint,
+        argc:           c_int,
+        argv:           *const *const c_char,
         conversation:   sudo_plugin_sys::sudo_conv_t,
         plugin_printf:  sudo_plugin_sys::sudo_printf_t,
         settings:       *const *const c_char,
@@ -97,8 +104,17 @@ impl Plugin {
         let _ = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
         let _ = conversation .ok_or(ErrorKind::Uninitialized)?;
 
+        // parse the argv into the command being run
+        let mut argv    = slice::from_raw_parts(argv, argc as usize).to_vec();
+        let     command = argv
+            .drain(..)
+            .map(|ptr| CStr::from_ptr(ptr).to_owned())
+            .collect();
+
         let plugin = Self {
             version,
+
+            command,
 
             settings:       OptionMap::new(settings)    .and_then(Settings::new)?,
             user_info:      OptionMap::new(user_info)   .and_then(UserInfo::new)?,

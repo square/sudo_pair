@@ -112,13 +112,14 @@ macro_rules! sudo_io_static_fn {
             settings_ptr:       *const *const c_char,
             user_info_ptr:      *const *const c_char,
             command_info_ptr:   *const *const c_char,
-            _argc:              c_int,
-            _argv:              *const *const c_char,
+            argc:               c_int,
+            argv:               *const *const c_char,
             user_env_ptr:       *const *const c_char,
             plugin_options_ptr: *const *const c_char,
         ) -> c_int {
             let plugin = sudo_plugin::Plugin::new(
                 version,
+                argc, argv,
                 conversation,
                 plugin_printf,
                 settings_ptr,
