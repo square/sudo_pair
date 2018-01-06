@@ -15,7 +15,7 @@
 use std::os::unix::ffi::OsStrExt;
 use std::ffi::CString;
 use std::fs;
-use std::io::{Error, ErrorKind, Read, Result, Write};
+use std::io::{self, Read, Write};
 use std::net::Shutdown;
 use std::os::unix::fs::FileTypeExt;
 use std::path::Path;
@@ -31,11 +31,12 @@ pub(crate) struct Socket {
 
 impl Socket {
     pub(crate) fn open<P: AsRef<Path>>(
-        path: P,
-        uid:  uid_t,
-        gid:  gid_t,
-        mode: mode_t,
-    ) -> Result<Self> {
+        path:   P,
+        uid:    uid_t,
+        gid:    gid_t,
+        mode:   mode_t,
+        ctrl_c: sighandler_t,
+    ) -> io::Result<Self> {
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
         Self::unlink_socket(&path)?;
@@ -68,19 +69,19 @@ impl Socket {
         })
     }
 
-    pub(crate) fn close(&mut self) -> Result<()> {
+    pub(crate) fn close(&mut self) -> io::Result<()> {
         self.socket.shutdown(Shutdown::Both)
     }
 
     // TODO: unlink when sudo_pair is ctrl-c'd
-    fn unlink_socket<P: AsRef<Path>>(path: P) -> Result<()> {
+    fn unlink_socket<P: AsRef<Path>>(path: P) -> io::Result<()> {
         match fs::metadata(&path).map(|md| md.file_type().is_socket()) {
             // file exists, is a socket; delete it
             Ok(true) => fs::remove_file(&path),
 
             // file exists, is not a socket; abort
-            Ok(false) => Err(Error::new(
-                ErrorKind::AlreadyExists,
+            Ok(false) => Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
                 format!(
                     "{} exists and is not a socket",
                     path.as_ref().to_string_lossy()
@@ -100,17 +101,17 @@ impl Drop for Socket {
 }
 
 impl Read for Socket {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.socket.read(buf)
     }
 }
 
 impl Write for Socket {
-    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.socket.write(buf)
     }
 
-    fn flush(&mut self) -> Result<()> {
+    fn flush(&mut self) -> io::Result<()> {
         self.socket.flush()
     }
 }
