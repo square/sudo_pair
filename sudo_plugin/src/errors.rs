@@ -95,22 +95,41 @@ error_chain! {
 /// * -1: General error
 /// * -2: Usage error
 pub trait AsSudoPluginRetval {
-    /// Converts the error to its corresponding integer error code.
-    fn as_sudo_plugin_retval(&self) -> c_int;
+    /// Converts the error to its corresponding integer error code for
+    /// the I/O plugin `open` function.
+    fn as_sudo_io_plugin_open_retval(&self) -> c_int;
+
+    /// Converts the error to its corresponding integer error code for
+    /// the I/O plugin `log_*` suite of functions.
+    fn as_sudo_io_plugin_log_retval(&self) -> c_int;
 }
 
 impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval
     for ::std::result::Result<T, E> {
-    fn as_sudo_plugin_retval(&self) -> c_int {
+    fn as_sudo_io_plugin_open_retval(&self) -> c_int {
         match *self {
             Ok(_)      => 1,
-            Err(ref e) => e.as_sudo_plugin_retval(),
+            Err(ref e) => e.as_sudo_io_plugin_open_retval(),
+        }
+    }
+
+    fn as_sudo_io_plugin_log_retval(&self) -> c_int {
+        match *self {
+            Ok(_)      => 1,
+            Err(ref e) => e.as_sudo_io_plugin_log_retval(),
         }
     }
 }
 
 impl AsSudoPluginRetval for Error {
-    fn as_sudo_plugin_retval(&self) -> c_int {
+    fn as_sudo_io_plugin_open_retval(&self) -> c_int {
+        match *self {
+            Error(ErrorKind::Unauthorized(_), _) => -1,
+            Error(_, _)                          =>  0,
+        }
+    }
+
+    fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
             Error(ErrorKind::Unauthorized(_), _) =>  0,
             Error(_, _)                          => -1,
