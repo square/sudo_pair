@@ -62,7 +62,7 @@ use std::ffi::CStr;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
-use libc::{c_int, gid_t, mode_t, pid_t, sighandler_t, uid_t};
+use libc::{gid_t, mode_t, pid_t, uid_t};
 
 use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
@@ -164,7 +164,6 @@ impl SudoPair {
             self.socket_uid(),
             self.socket_gid(),
             self.socket_mode(),
-            ctrl_c as sighandler_t,
         ).chain_err(|| ErrorKind::Uninitialized)?;
 
         self.socket = Some(socket);
@@ -310,15 +309,6 @@ impl SudoPair {
         // be exempted, but for now I'm erring on the side of caution
         unreachable!()
     }
-}
-
-// TODO: There's not much we can do in a signal handler, but
-// _exit(3) is safe (exit(3) isn't!). Ideally we'd unlink(2) the socket
-// we created, but this will do for now.
-unsafe extern "C" fn ctrl_c(_sig: c_int) {
-    // sudo normally exits with exit code 1 if you Ctrl-C during
-    // password entry, so we retain that convention
-    libc::_exit(1);
 }
 
 #[derive(Debug)]
