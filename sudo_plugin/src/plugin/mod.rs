@@ -99,7 +99,6 @@ impl Plugin {
 
         let plugin = Self {
             version,
-
             command,
 
             settings:       OptionMap::new(settings)    .and_then(Settings::new)?,

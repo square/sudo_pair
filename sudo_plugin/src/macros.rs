@@ -129,11 +129,12 @@ macro_rules! sudo_io_static_fn {
                     $instance = Some(i);
                 },
 
+                // TODO: print nested errors
                 Err(e) => {
                     let _ = sudo_plugin::Plugin::printf(
                         plugin_printf,
-                        3,
-                        e.description(),
+                        3, // TODO: replace hardcoded value
+                        format!("{}: {}\n", stringify!($name), e),
                     );
                 }
             }
@@ -153,7 +154,7 @@ macro_rules! sudo_io_fn {
             error:       ::libc::c_int
         ) {
             if let Some(ref mut i) = $instance {
-                i.$fn(exit_status, error)
+                i.$fn(exit_status as _, error as _)
             }
         }
 
