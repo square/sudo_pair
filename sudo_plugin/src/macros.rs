@@ -122,7 +122,7 @@ macro_rules! sudo_io_static_fn {
                 Err(e) => Err(e),
             };
 
-            let ret = instance.as_sudo_plugin_retval();
+            let ret = instance.as_sudo_io_plugin_open_retval();
 
             match instance {
                 Ok(i) => {
@@ -202,13 +202,14 @@ macro_rules! sudo_io_fn {
                 .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
                 .and_then(|i| i.$fn(slice) );
 
+            // TODO: print nested errors
             let _ = result.as_ref().map_err(|err| {
                 $plugin.as_ref().map(|p| {
                     p.print_error(&format!("{}: {}\n", stringify!($name), err))
                 })
             });
 
-            result.as_sudo_plugin_retval()
+            result.as_sudo_io_plugin_log_retval()
         }
 
         Some($log_fn)
