@@ -2,6 +2,10 @@
 //!
 //! TODO: explain
 
+// TODO: remove all unwraps
+// TODO: remove all to_string_lossy
+// TODO: switch from error_chain to failure crate?
+
 #![deny(warnings)]
 
 #![warn(anonymous_parameters)]
@@ -25,9 +29,6 @@
 
 // this library is fundamentally built upon unsafe code
 #![allow(unsafe_code)]
-
-// TODO: disable
-#![cfg_attr(feature = "clippy", allow(missing_docs_in_private_items))]
 
 extern crate libc;
 extern crate unix_socket;

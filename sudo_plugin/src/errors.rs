@@ -1,5 +1,7 @@
 //! The collection of `Error` types used by this library.
 
+// TODO: use error types as directly defined by sudo_plugin(8).
+
 use super::version::Version;
 
 use std::fmt;
