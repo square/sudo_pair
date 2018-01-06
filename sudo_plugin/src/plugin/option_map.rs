@@ -30,8 +30,10 @@ impl OptionMap {
     pub unsafe fn new(mut ptr: *const *const c_char) -> Result<Self> {
         let mut map = HashMap::new();
 
+        // if the pointer is null, we weren't given a list of settings,
+        // so go ahead and return the empty map
         if ptr.is_null() {
-            bail!("no settings were provided to the plugin")
+            return Ok(OptionMap(map));
         }
 
         while !(*ptr).is_null() {
