@@ -44,4 +44,3 @@ mod version;
 pub use sudo_plugin_sys as sys;
 
 pub use self::plugin::*;
-pub use self::errors::*;

@@ -46,8 +46,6 @@
 #[macro_export]
 macro_rules! sudo_io_plugin {
     ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {
-        use sudo_plugin::errors::*;
-
         static mut PLUGIN:   Option<sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                 = None;
 
@@ -92,17 +90,17 @@ macro_rules! sudo_io_static_fn {
         $fn:ident
     ) => {{
         unsafe extern "C" fn open(
-            version:            c_uint,
+            version:            ::libc::c_uint,
             conversation:       sudo_plugin::sys::sudo_conv_t,
             plugin_printf:      sudo_plugin::sys::sudo_printf_t,
-            settings_ptr:       *const *const c_char,
-            user_info_ptr:      *const *const c_char,
-            command_info_ptr:   *const *const c_char,
-            argc:               c_int,
-            argv:               *const *const c_char,
-            user_env_ptr:       *const *const c_char,
-            plugin_options_ptr: *const *const c_char,
-        ) -> c_int {
+            settings_ptr:       *const *const ::libc::c_char,
+            user_info_ptr:      *const *const ::libc::c_char,
+            command_info_ptr:   *const *const ::libc::c_char,
+            argc:               ::libc::c_int,
+            argv:               *const *const ::libc::c_char,
+            user_env_ptr:       *const *const ::libc::c_char,
+            plugin_options_ptr: *const *const ::libc::c_char,
+        ) -> ::libc::c_int {
             let plugin = sudo_plugin::Plugin::new(
                 version,
                 argc, argv,
@@ -151,8 +149,8 @@ macro_rules! sudo_io_static_fn {
 macro_rules! sudo_io_fn {
     ( close , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
         unsafe extern "C" fn close(
-            exit_status: c_int,
-            error: c_int
+            exit_status: ::libc::c_int,
+            error:       ::libc::c_int
         ) {
             if let Some(ref mut i) = $instance {
                 i.$fn(exit_status, error)
@@ -191,9 +189,9 @@ macro_rules! sudo_io_fn {
         $fn:ident
     ) => {{
         unsafe extern "C" fn $log_fn(
-            buf: *const c_char,
-            len: c_uint,
-        ) -> c_int {
+            buf: *const ::libc::c_char,
+            len: ::libc::c_uint,
+        ) -> ::libc::c_int {
             let slice = std::slice::from_raw_parts(
                 buf as *const _,
                 len as _,
@@ -201,7 +199,7 @@ macro_rules! sudo_io_fn {
 
             let result = $instance
                 .as_mut()
-                .ok_or(ErrorKind::Uninitialized.into())
+                .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
                 .and_then(|i| i.$fn(slice) );
 
             let _ = result.as_ref().map_err(|err| {

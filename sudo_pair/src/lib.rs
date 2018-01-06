@@ -49,8 +49,9 @@ use std::io::{self, Read, Write};
 use std::iter::FromIterator;
 use std::path::PathBuf;
 
-use libc::{c_char, c_int, c_uint, gid_t, mode_t, sighandler_t, uid_t};
+use libc::{c_int, gid_t, mode_t, pid_t, sighandler_t, uid_t};
 
+use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
 
 const DEFAULT_BINARY_PATH : &'static str = "/usr/bin/sudo_pair_approve";
