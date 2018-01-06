@@ -12,15 +12,15 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use std::os::unix::ffi::OsStrExt;
 use std::ffi::CString;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::net::Shutdown;
+use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::FileTypeExt;
 use std::path::Path;
 
-use libc::{self, gid_t, mode_t, uid_t};
+use libc::{self, c_int, gid_t, mode_t, sighandler_t, uid_t};
 
 use unix_socket::{SocketAddr, UnixListener, UnixStream};
 
@@ -44,19 +44,27 @@ impl Socket {
         // accept() on the socket will block until someone connects on
         // the other side of the socket
         let connection = UnixListener::bind(&path).and_then(|sock| {
-            unsafe {
-                let cpath = CString::new(path.as_ref().as_os_str().as_bytes())?;
+            let cpath = CString::new(
+                path.as_ref().as_os_str().as_bytes()
+            )?;
 
+            unsafe {
                 if libc::chown(cpath.as_ptr(), uid, gid) == -1 {
-                    return Err(Error::last_os_error());
+                    return Err(io::Error::last_os_error());
                 };
 
                 if libc::chmod(cpath.as_ptr(), mode) == -1 {
-                    return Err(Error::last_os_error());
+                    return Err(io::Error::last_os_error());
                 }
-            }
 
-            sock.accept()
+                // temporarily install the provided SIGINT handler while we
+                // block on accept()
+                let sigint = signal(libc::SIGINT, ctrl_c)?;
+                let result = sock.accept();
+                let _      = signal(libc::SIGINT, sigint)?;
+
+                result
+            }
         })?;
 
         // once the connection has been made, we don't need the socket
@@ -113,5 +121,15 @@ impl Write for Socket {
 
     fn flush(&mut self) -> io::Result<()> {
         self.socket.flush()
+    }
+}
+
+unsafe fn signal(
+    signum:  c_int,
+    handler: sighandler_t,
+) -> io::Result<sighandler_t> {
+    match libc::signal(signum, handler) {
+        libc::SIG_ERR => Err(io::Error::last_os_error()),
+        previous      => Ok(previous),
     }
 }

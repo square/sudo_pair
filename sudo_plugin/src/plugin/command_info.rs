@@ -42,7 +42,7 @@ pub struct CommandInfo {
     pub runas_egid:        gid_t,
     pub runas_euid:        uid_t,
     pub runas_gid:         gid_t,
-    pub runas_groups:      Vec<gid_t>,
+    pub runas_groups:      Option<Vec<gid_t>>,
     pub runas_uid:         uid_t,
     pub selinux_role:      Option<String>,
     pub selinux_type:      Option<String>,
@@ -63,7 +63,6 @@ impl CommandInfo {
         Ok(CommandInfo {
             command:       raw.get_parsed("command")?,
             runas_gid:     raw.get_parsed("runas_gid")?,
-            runas_groups:  raw.get_parsed("runas_groups")?,
             runas_uid:     raw.get_parsed("runas_uid")?,
             runas_egid:    raw.get_parsed("runas_egid")
                 .unwrap_or(raw.get_parsed("runas_gid")?),
@@ -88,6 +87,7 @@ impl CommandInfo {
             noexec:            raw.get_parsed("noexec")            .unwrap_or(false),
             preserve_fds:      raw.get_parsed("preserve_fds")      .unwrap_or(vec![]),
             preserve_groups:   raw.get_parsed("preserve_groups")   .unwrap_or(false),
+            runas_groups:      raw.get_parsed("runas_groups")      .ok(),
             selinux_role:      raw.get_parsed("selinux_role")      .ok(),
             selinux_type:      raw.get_parsed("selinux_type")      .ok(),
             set_utmp:          raw.get_parsed("set_utmp")          .unwrap_or(false),

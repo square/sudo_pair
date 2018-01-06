@@ -82,6 +82,26 @@ impl Settings {
             raw: raw,
         })
     }
+
+    // fn flags(&self) -> Vec<String> {
+    //     let mut flags = vec![];
+
+    //     if self.login_shell {
+    //         flags.push("-i".into());
+    //     }
+
+    //     if self.runas_user.is_some() {
+    //         flags.push("-u".into());
+    //         flags.push(self.runas_user.as_ref().unwrap());
+    //     }
+
+    //     if self.runas_group.is_some() {
+    //         flags.push("-g".into());
+    //         flags.push(self.runas_group.as_ref().unwrap());
+    //     }
+
+    //     flags
+    // }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
