@@ -1,0 +1,28 @@
+[package]
+name    = "sudo_pair"
+version = "0.1.0"
+license = "Apache-2.0"
+
+authors     = ["Stephen Touset <stephen@squareup.com>"]
+description = "sudo IO-plugin to require a live human pair"
+
+homepage      = "https://github.com/square/sudo_pair"
+repository    = "https://github.com/square/sudo_pair"
+documentation = "https://github.com/square/sudo_pair"
+readme        = "README.md"
+
+keywords = [ "sudo", "sudo plugin", "pairing", "pci" ]
+
+[lib]
+name       = "sudo_pair"
+crate-type = ["cdylib"]
+
+[dependencies]
+libc        = '~0'
+error-chain = '~0'
+unix_socket = '~0'
+sudo_plugin = { version = "0.1.0", path = "../sudo_plugin" }
+clippy      = { version = "*", optional = true }
+
+[features]
+default = []
