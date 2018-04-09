@@ -24,7 +24,7 @@ impl Version {
     }
 
     pub fn supported(&self) -> bool {
-        self >= &Self::minimum()
+        self >= Self::minimum()
     }
 
     pub fn check(self) -> Result<Self> {
@@ -37,6 +37,7 @@ impl Version {
 }
 
 impl From<c_uint> for Version {
+    #[cfg_attr(test, allow(cast_possible_truncation))]
     fn from(version: c_uint) -> Self {
         Self {
             major: (version >> 16)     as _,

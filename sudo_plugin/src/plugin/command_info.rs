@@ -46,7 +46,7 @@ pub struct CommandInfo {
 
 impl CommandInfo {
     pub fn new(raw: OptionMap) -> Result<Self> {
-        Ok(CommandInfo {
+        Ok(Self {
             command:       raw.get_parsed("command")?,
             runas_gid:     raw.get_parsed("runas_gid")?,
             runas_uid:     raw.get_parsed("runas_uid")?,
@@ -71,7 +71,7 @@ impl CommandInfo {
             login_class:       raw.get_parsed("login_class")       .ok(),
             nice:              raw.get_parsed("nice")              .ok(),
             noexec:            raw.get_parsed("noexec")            .unwrap_or(false),
-            preserve_fds:      raw.get_parsed("preserve_fds")      .unwrap_or(vec![]),
+            preserve_fds:      raw.get_parsed("preserve_fds")      .unwrap_or_else(|_| vec![]),
             preserve_groups:   raw.get_parsed("preserve_groups")   .unwrap_or(false),
             runas_groups:      raw.get_parsed("runas_groups")      .ok(),
             selinux_role:      raw.get_parsed("selinux_role")      .ok(),
@@ -84,7 +84,7 @@ impl CommandInfo {
             use_pty:           raw.get_parsed("use_pty")           .unwrap_or(false),
             utmp_user:         raw.get_parsed("utmp_user")         .ok(),
 
-            raw: raw,
+            raw,
         })
     }
 }

@@ -37,7 +37,7 @@ pub struct Settings {
 
 impl Settings {
     pub fn new(raw: OptionMap) -> Result<Self> {
-        Ok(Settings {
+        Ok(Self {
             plugin_dir:  raw.get_parsed("plugin_dir")?,
             plugin_path: raw.get_parsed("plugin_path")?,
             progname:    raw.get_parsed("progname")?,
@@ -51,7 +51,7 @@ impl Settings {
             login_class:          raw.get_parsed("login_class")         .ok(),
             login_shell:          raw.get_parsed("login_shell")         .unwrap_or(false),
             max_groups:           raw.get_parsed("max_groups")          .ok(),
-            network_addrs:        raw.get_parsed("network_addrs")       .unwrap_or(vec![]),
+            network_addrs:        raw.get_parsed("network_addrs")       .unwrap_or_else(|_| vec![]),
             noninteractive:       raw.get_parsed("noninteractive")      .unwrap_or(false),
             preserve_environment: raw.get_parsed("preserve_environment").unwrap_or(false),
             preserve_groups:      raw.get_parsed("preserve_groups")     .unwrap_or(false),
@@ -65,7 +65,7 @@ impl Settings {
             set_home:             raw.get_parsed("set_home")            .unwrap_or(false),
             sudoedit:             raw.get_parsed("sudoedit")            .unwrap_or(false),
 
-            raw: raw,
+            raw,
         })
     }
 
@@ -103,7 +103,7 @@ impl FromSudoOption for NetAddr {
         let bytes = s.as_bytes();
         let mid   = bytes.iter()
             .position(|b| *b == b'/' )
-            .unwrap_or(bytes.len());
+            .unwrap_or_else(|| bytes.len());
 
         let addr = s[        .. mid].parse()?;
         let mask = s[mid + 1 ..    ].parse()?;

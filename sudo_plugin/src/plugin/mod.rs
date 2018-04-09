@@ -69,7 +69,8 @@ impl Plugin {
     /// facilities.
     ///
     /// Returns an error if there was a problem initializing the plugin.
-    #[cfg_attr(feature = "clippy", allow(too_many_arguments))]
+    #[cfg_attr(test, allow(cast_sign_loss))]
+    #[cfg_attr(test, allow(too_many_arguments))]
     pub unsafe fn new(
         version:        c_uint,
         argc:           c_int,
@@ -148,6 +149,7 @@ impl Plugin {
         let cstring = CString::new(message.into())
             .chain_err(|| ErrorKind::IoError(IoFacility::PluginPrintf))?;
 
+        #[cfg_attr(test, allow(cast_possible_wrap))]
         let ret = (printf)(flags as c_int, cstring.as_ptr());
 
         if ret == -1 {
