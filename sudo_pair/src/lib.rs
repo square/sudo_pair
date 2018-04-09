@@ -19,6 +19,7 @@
 // TODO: remove all unwraps
 // TODO: remove all to_string_lossy
 // TODO: switch from error_chain to failure crate?
+// TODO: error message when /var/run/sudo_pair missing
 
 #![deny(warnings)]
 
@@ -36,13 +37,17 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
-#![cfg_attr(feature = "clippy", warn(clippy))]
-#![cfg_attr(feature = "clippy", warn(clippy_pedantic))]
-
 // this library is fundamentally built upon unsafe code
 #![allow(unsafe_code)]
+
+#![cfg_attr(test, allow(unstable_features))]
+#![cfg_attr(test, feature(plugin))]
+#![cfg_attr(test, plugin(clippy))]
+#![cfg_attr(test, warn(clippy))]
+#![cfg_attr(test, warn(clippy_pedantic))]
+
+// this produces too many false positives (uid/gid, argv/argc, etc.)
+#![cfg_attr(test, allow(similar_names))]
 
 extern crate libc;
 extern crate unix_socket;
@@ -67,8 +72,8 @@ use libc::{gid_t, mode_t, pid_t, uid_t};
 use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
 
-const DEFAULT_BINARY_PATH : &'static str = "/usr/bin/sudo_pair_approve";
-const DEFAULT_SOCKET_DIR  : &'static str = "/var/run/sudo_pair";
+const DEFAULT_BINARY_PATH : &str = "/usr/bin/sudo_pair_approve";
+const DEFAULT_SOCKET_DIR  : &str = "/var/run/sudo_pair";
 
 sudo_io_plugin! {
      sudo_pair: SudoPair {
@@ -90,7 +95,7 @@ impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
         // TODO: convert all outgoing errors to be unauthorized errors
         let settings    = PluginSettings::from(&plugin.plugin_options);
-        let environment = PluginEnvironment::new(&plugin)?;
+        let environment = PluginEnvironment::new(plugin)?;
 
         println!("{:#?}", plugin.user_info);
         println!("{:#?}", settings);
@@ -118,13 +123,13 @@ impl SudoPair {
 
     fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
-        self.socket.as_mut().map(|socket| {
+        self.socket.as_mut().map_or(Ok(()), |socket| {
             socket
                 .write_all(log)
                 .chain_err(|| ErrorKind::Unauthorized(
                     "pair abandoned session".into()
                 ))
-        }).unwrap_or(Ok(()))
+        })
     }
 
     fn log_disabled(&mut self, _: &[u8]) -> Result<()> {
@@ -172,7 +177,9 @@ impl SudoPair {
     }
 
     fn remote_pair_prompt(&mut self) -> Result<()> {
-        let socket = self.socket.as_mut().ok_or(ErrorKind::Uninitialized)?;
+        let socket = self.socket
+            .as_mut()
+            .ok_or(ErrorKind::Uninitialized)?;
 
         // TODO: flesh this message out
         let message = format!("\
@@ -271,9 +278,10 @@ impl SudoPair {
         // if we're doing `sudo -g`, so that the sudoing user can't
         // silently self-approve by manually connecting to the socket
         // without needing to invoke sudo
-        match self.is_sudoing_to_user() {
-            true  => self.environment.runas_uid,
-            false => unsafe { libc::getuid() } // just in case we're not uid 0
+        if self.is_sudoing_to_user() {
+            self.environment.runas_uid
+        } else {
+            unsafe { libc::getuid() } // just in case we're not uid 0
         }
     }
 
@@ -282,9 +290,10 @@ impl SudoPair {
         // sudoing to the same group, since the mode should be set
         // correctly either way, but I'm doing so anyway in the interest
         // of caution
-        match self.is_sudoing_to_group() {
-            true  => self.environment.runas_gid,
-            false => unsafe { libc::getgid() } // just in case we're not gid 0
+        if self.is_sudoing_to_group() {
+            self.environment.runas_gid
+        } else {
+            unsafe { libc::getgid() } // just in case we're not gid 0
         }
     }
 
@@ -406,21 +415,23 @@ impl<'a> PluginEnvironment {
         // effective groups are the user's original ones
         let runas_gids = plugin.command_info.runas_groups
             .as_ref()
-            .map(|gids| gids.iter().cloned().collect())
-            .unwrap_or(gids.clone());
+            .map_or_else(
+                || gids.clone(),
+                |gids| gids.iter().cloned().collect()
+            );
 
         Ok(Self {
             hostname:        plugin.user_info.host.clone(),
             uid:             plugin.user_info.uid,
             gid:             plugin.user_info.gid,
-            gids:            gids,
+            gids,
             username:        plugin.user_info.user.clone(),
             pid:             plugin.user_info.pid,
             command:         PathBuf::from(&plugin.command_info.command),
             cwd:             PathBuf::from(plugin.command_info.cwd.as_ref().unwrap_or(&plugin.user_info.cwd)),
             runas_uid:       plugin.command_info.runas_uid,
             runas_gid:       plugin.command_info.runas_gid,
-            runas_gids:      runas_gids,
+            runas_gids,
             runas_username:  uid_to_username(plugin.command_info.runas_uid)?,
             runas_groupname: gid_to_groupname(plugin.command_info.runas_gid)?,
         })
@@ -449,10 +460,17 @@ struct PluginSettings {
 impl<'a> From<&'a OptionMap> for PluginSettings {
     fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path:   map.get_parsed("BinaryPath")  .unwrap_or(DEFAULT_BINARY_PATH.into()),
-            socket_dir:    map.get_parsed("SocketDir")   .unwrap_or(DEFAULT_SOCKET_DIR.into()),
-            gids_enforced: map.get_parsed("GidsEnforced").unwrap_or(vec![]).into_iter().collect(),
-            gids_exempted: map.get_parsed("GidsExempted").unwrap_or(vec![]).into_iter().collect(),
+            binary_path: map.get_parsed("BinaryPath")
+                .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
+
+            socket_dir: map.get_parsed("SocketDir")
+                .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
+
+            gids_enforced: map.get_parsed("GidsEnforced")
+                .unwrap_or_else(|_| vec![]).into_iter().collect(),
+
+            gids_exempted: map.get_parsed("GidsExempted")
+                .unwrap_or_else(|_| vec![]).into_iter().collect(),
         }
     }
 }

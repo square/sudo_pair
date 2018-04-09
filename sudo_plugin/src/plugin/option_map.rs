@@ -170,7 +170,7 @@ where
 
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let      list = <T as FromSudoOptionList>::from_sudo_option_list(s);
-        let mut items = Vec::with_capacity(list.len());
+        let mut items = Self::with_capacity(list.len());
 
         for element in list {
             let item = FromSudoOption::from_sudo_option(element)

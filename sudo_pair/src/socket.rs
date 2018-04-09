@@ -135,10 +135,10 @@ impl Write for Socket {
 }
 
 /// Sets up a handler for Ctrl-C (SIGINT) that's a no-op, but with the
-/// SA_RESTART flag disabled, for the duration of the passed function
+/// `SA_RESTART` flag disabled, for the duration of the passed function
 /// call.
 ///
-/// Disabling SA_RESTART ensures that blocking calls like `accept(2)`
+/// Disabling `SA_RESTART` ensures that blocking calls like `accept(2)`
 /// will be terminated upon receipt on the signal instead of
 /// automatically resuming.
 unsafe fn ctrl_c_aborts_syscalls<F, T>(func: F) -> io::Result<T>

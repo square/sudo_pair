@@ -17,7 +17,6 @@ keywords = [ "sudo", "sudo plugin" ]
 libc            = '~0'
 error-chain     = '~0'
 sudo_plugin-sys = { version = "0.1.0", path = "../sudo_plugin-sys" }
-clippy          = { version = "*", optional = true }
 
-[features]
-default = []
+[dev-dependencies]
+clippy = { version = "*" }

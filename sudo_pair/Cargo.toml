@@ -22,7 +22,6 @@ libc        = '~0'
 error-chain = '~0'
 unix_socket = '~0'
 sudo_plugin = { version = "0.1.0", path = "../sudo_plugin" }
-clippy      = { version = "*", optional = true }
 
-[features]
-default = []
+[dev-dependencies]
+clippy = { version = "*" }

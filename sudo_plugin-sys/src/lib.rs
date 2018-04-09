@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-//! description = "FFI wrapper around authoring a sudo_plugin"
+//! description = "FFI wrapper around authoring sudo plugins"
 //!
 //! TODO: explain
 
@@ -38,10 +38,15 @@
 #![allow(trivial_casts)]
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
-#![cfg_attr(feature = "clippy", warn(clippy))]
-#![cfg_attr(feature = "clippy", warn(clippy_pedantic))]
+#![cfg_attr(test, allow(unstable_features))]
+#![cfg_attr(test, feature(plugin))]
+#![cfg_attr(test, plugin(clippy))]
+#![cfg_attr(test, warn(clippy))]
+#![cfg_attr(test, warn(clippy_pedantic))]
+
+// these are triggered by bindgen-generated code
+#![cfg_attr(test, allow(type_complexity))]
+#![cfg_attr(test, allow(unseparated_literal_suffix))]
 
 extern crate libc;
 

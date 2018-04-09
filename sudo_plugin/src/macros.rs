@@ -21,6 +21,9 @@
 ///
 /// ```rust
 /// # #[macro_use] extern crate sudo_plugin;
+/// extern crate libc;
+///
+/// use sudo_plugin::errors::*;
 ///
 /// sudo_io_plugin! {
 ///     example : Example {
@@ -40,11 +43,13 @@
 ///     }
 ///
 ///     fn close(&mut self, _: i32, _: i32) {
-///         plugin.print_info("example sudo plugin exited");
+///         println!("example sudo plugin exited");
 ///     }
 ///
 ///     fn log_stdout(&mut self, _: &[u8]) -> Result<()> {
-///         plugin.print_info("example sudo plugin received output on stdout");
+///         println!("example sudo plugin received output on stdout");
+///
+///         Ok(())
 ///     }
 /// }
 /// ```
@@ -54,7 +59,7 @@
 /// directory (on macOS, `/usr/local/libexec/sudo`) and add the following
 /// to `/etc/sudo.conf`:
 ///
-/// ```
+/// ```ignore
 /// Plugin example example.so
 /// ```
 #[macro_export]
