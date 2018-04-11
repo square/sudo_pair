@@ -21,14 +21,9 @@
 // this entire crate is practically unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(test, allow(unstable_features))]
-#![cfg_attr(test, feature(plugin))]
-#![cfg_attr(test, plugin(clippy))]
-#![cfg_attr(test, warn(clippy))]
-#![cfg_attr(test, warn(clippy_pedantic))]
-
-// this produces too many false positives (uid/gid, argv/argc, etc.)
-#![cfg_attr(test, allow(similar_names))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
+#![cfg_attr(feature="cargo-clippy", allow(similar_names))]
 
 pub extern crate sudo_plugin_sys;
 
