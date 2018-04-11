@@ -23,6 +23,8 @@
 /// # #[macro_use] extern crate sudo_plugin;
 /// extern crate libc;
 ///
+/// # fn main() { } // TODO: remove me for rust 1.27
+///
 /// use sudo_plugin::errors::*;
 ///
 /// sudo_io_plugin! {

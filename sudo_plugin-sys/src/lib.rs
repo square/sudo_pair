@@ -38,15 +38,11 @@
 #![allow(trivial_casts)]
 #![allow(unsafe_code)]
 
-#![cfg_attr(test, allow(unstable_features))]
-#![cfg_attr(test, feature(plugin))]
-#![cfg_attr(test, plugin(clippy))]
-#![cfg_attr(test, warn(clippy))]
-#![cfg_attr(test, warn(clippy_pedantic))]
-
-// these are triggered by bindgen-generated code
-#![cfg_attr(test, allow(type_complexity))]
-#![cfg_attr(test, allow(unseparated_literal_suffix))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
+#![cfg_attr(feature="cargo-clippy", allow(similar_names))]
+#![cfg_attr(feature="cargo-clippy", allow(type_complexity))]
+#![cfg_attr(feature="cargo-clippy", allow(unseparated_literal_suffix))]
 
 extern crate libc;
 
