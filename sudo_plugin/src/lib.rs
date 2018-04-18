@@ -16,6 +16,8 @@
 //!
 //! TODO: explain
 
+// TODO: provide the Plugin object to all callbacks?
+
 #![deny(warnings)]
 
 #![warn(anonymous_parameters)]
