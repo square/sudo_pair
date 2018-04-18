@@ -145,6 +145,7 @@ impl SudoPair {
             return Ok(());
         }
 
+        // TODO: clearly indicate when the socket path is missing
         let socket = Socket::open(
             self.socket_path(),
             self.socket_uid(),
