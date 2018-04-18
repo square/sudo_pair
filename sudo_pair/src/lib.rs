@@ -455,16 +455,16 @@ struct PluginSettings {
 impl<'a> From<&'a OptionMap> for PluginSettings {
     fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path: map.get_parsed("BinaryPath")
+            binary_path: map.get_parsed("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
 
-            socket_dir: map.get_parsed("SocketDir")
+            socket_dir: map.get_parsed("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
-            gids_enforced: map.get_parsed("GidsEnforced")
+            gids_enforced: map.get_parsed("gids_enforced")
                 .unwrap_or_else(|_| vec![]).into_iter().collect(),
 
-            gids_exempted: map.get_parsed("GidsExempted")
+            gids_exempted: map.get_parsed("gids_exempted")
                 .unwrap_or_else(|_| vec![]).into_iter().collect(),
         }
     }
