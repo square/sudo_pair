@@ -136,6 +136,7 @@ impl SudoPair {
         let mut template         = String::new();
         let mut prompt : Vec<u8> = vec![];
 
+        #[cfg_attr(feature="cargo-clippy", allow(result_map_unwrap_or_else))]
         File::open(&self.settings.prompt_path).map(|mut file| {
             let _ = file.read_to_string(&mut template);
         }).unwrap_or_else(|_| {
