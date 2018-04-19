@@ -269,7 +269,11 @@ impl SudoPair {
         if self.is_sudoing_to_user() {
             self.environment.runas_uid
         } else {
-            unsafe { libc::getuid() } // just in case we're not uid 0
+            // the *effective* uid is the one we want here since it's
+            // the uid of the elevated `sudo` process; `getuid` would
+            // return the invoking user's uid (ask me how I noticed
+            // this)
+            unsafe { libc::geteuid() }
         }
     }
 
