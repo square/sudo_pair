@@ -149,8 +149,11 @@ impl SudoPair {
             let fragment : Vec<u8> = iter.by_ref().take_while(|b| *b != b'%' ).collect();
             prompt.extend_from_slice(&fragment[..]);
 
+            // TODO: clean this up
             match iter.next() {
-                Some(b'b') => prompt.extend_from_slice(self.settings.binary_path.as_os_str().as_bytes()),
+                Some(b'b') => prompt.extend_from_slice(self.settings.binary_path.as_path().file_name()
+                    .unwrap_or_else(|| self.settings.binary_path.as_os_str()).as_bytes()),
+                Some(b'B') => prompt.extend_from_slice(self.settings.binary_path.as_os_str().as_bytes()),
                 Some(b'h') => prompt.extend_from_slice(self.environment.hostname.as_ref()),
                 Some(b'p') => prompt.extend_from_slice(self.environment.pid.to_string().as_ref()),
                 Some(b'u') => prompt.extend_from_slice(self.environment.uid.to_string().as_ref()),
