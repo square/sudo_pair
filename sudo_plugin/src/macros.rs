@@ -213,7 +213,7 @@ macro_rules! sudo_io_fn {
             // TODO: print nested errors
             let _ = result.as_ref().map_err(|err| {
                 $plugin.as_ref().map(|p| {
-                    p.print_error(&format!("{}: {}\n", stringify!($name), err))
+                    p.print_error(format!("{}: {}\n", stringify!($name), err))
                 })
             });
 

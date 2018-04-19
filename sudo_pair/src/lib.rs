@@ -46,7 +46,9 @@ use socket::Socket;
 
 use std::collections::HashSet;
 use std::ffi::CStr;
+use std::fs::File;
 use std::io::{Read, Write};
+use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 
 use libc::{gid_t, mode_t, pid_t, uid_t};
@@ -55,6 +57,7 @@ use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
 
 const DEFAULT_BINARY_PATH : &str = "/usr/bin/sudo_pair_approve";
+const DEFAULT_PROMPT_PATH : &str = "/etc/sudo_pair.prompt";
 const DEFAULT_SOCKET_DIR  : &str = "/var/run/sudo_pair";
 
 sudo_io_plugin! {
@@ -68,6 +71,7 @@ sudo_io_plugin! {
 }
 
 struct SudoPair {
+    plugin:      &'static sudo_plugin::Plugin,
     settings:    PluginSettings,
     environment: PluginEnvironment,
     socket:      Option<Socket>
@@ -84,6 +88,7 @@ impl SudoPair {
         println!("{:#?}", environment);
 
         let mut pair = Self {
+            plugin,
             settings,
             environment,
             socket: None,
@@ -126,17 +131,34 @@ impl SudoPair {
     }
 
     fn local_pair_prompt(&self) -> Result<()> {
-        // let message = format!("\
-        //     In order to run this command under sudo, you must get approval \
-        //     from another user and have them actively monitor this session. \
-        //     That user must also be authorized to run `{sudo_type}`\n\
-        //     \n\
-        //     Have that user run the following:\n\
-        //     \n\
-        //     \tssh {hostname} -- {binary_path} {socket_dir} {uid} {pid}\n\
-        // ");
+        // TODO: configurable file path
+        // TODO: error handling
+        let mut template         = String::new();
+        let mut prompt : Vec<u8> = vec![];
 
-        // plugin.print_info(message).map(Ok(()))
+        File::open(&self.settings.prompt_path).map(|mut file| {
+            let _ = file.read_to_string(&mut template);
+        }).unwrap_or_else(|_| {
+            template.push_str("%b %p %u");
+        });
+
+        let mut iter = template.bytes().into_iter().peekable();
+
+        while iter.peek().is_some() {
+            let fragment : Vec<u8> = iter.by_ref().take_while(|b| *b != b'%' ).collect();
+            prompt.extend_from_slice(&fragment[..]);
+
+            match iter.next() {
+                Some(b'b') => prompt.extend_from_slice(self.settings.binary_path.as_os_str().as_bytes()),
+                Some(b'h') => prompt.extend_from_slice(self.environment.hostname.as_ref()),
+                Some(b'p') => prompt.extend_from_slice(self.environment.pid.to_string().as_ref()),
+                Some(b'u') => prompt.extend_from_slice(self.environment.uid.to_string().as_ref()),
+                Some(x)    => prompt.push(x),
+                None       => (),
+            };
+        }
+
+        let _ = self.plugin.print_info(prompt)?;
 
         Ok(())
     }
@@ -418,13 +440,20 @@ impl<'a> PluginEnvironment {
 
 #[derive(Debug)]
 struct PluginSettings {
-    /// `BinaryPath` is the location of the approval binary, so that we
+    /// `binary_path` is the location of the approval binary, so that we
     /// can bypass the approval process for invoking it
     ///
     /// Default: `"/usr/bin/sudo_pair_approve"`
     binary_path: PathBuf,
 
-    /// `SocketDir` is the path where this plugin will store sockets for
+    /// `prompt_path` is the location of a prompt tempalate; if no
+    /// template is found at this location, an extremely minimal default
+    /// will be printed
+    ///
+    /// Default: `"/etc/sudo_pair.prompt"`
+    prompt_path: PathBuf,
+
+    /// `socket_dir` is the path where this plugin will store sockets for
     /// sessions that are pending approval
     ///
     /// Default: `"/var/run/sudo_pair"`
@@ -440,6 +469,9 @@ impl<'a> From<&'a OptionMap> for PluginSettings {
         Self {
             binary_path: map.get_parsed("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
+
+            prompt_path: map.get_parsed("prompt_path")
+                .unwrap_or_else(|_| DEFAULT_PROMPT_PATH.into()),
 
             socket_dir: map.get_parsed("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
