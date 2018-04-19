@@ -6,6 +6,7 @@
 // TODO: remove all to_string_lossy
 // TODO: switch from error_chain to failure crate?
 // TODO: error message when /var/run/sudo_pair missing
+// TODO: enable the ability to respond to `sudo --version`
 
 #![deny(warnings)]
 
@@ -108,7 +109,7 @@ impl SudoPair {
             socket
                 .write_all(log)
                 .chain_err(|| ErrorKind::Unauthorized(
-                    "pair abandoned session".into()
+                    "pair terminated the session".into()
                 ))
         })
     }
@@ -151,7 +152,7 @@ impl SudoPair {
             self.socket_uid(),
             self.socket_gid(),
             self.socket_mode(),
-        ).chain_err(|| ErrorKind::Uninitialized)?;
+        ).chain_err(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
 
         self.socket = Some(socket);
 
@@ -161,7 +162,7 @@ impl SudoPair {
     fn remote_pair_prompt(&mut self) -> Result<()> {
         let socket = self.socket
             .as_mut()
-            .ok_or(ErrorKind::Uninitialized)?;
+            .ok_or(ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
 
         let mut response : [u8; 1] = unsafe {
             ::std::mem::uninitialized()
