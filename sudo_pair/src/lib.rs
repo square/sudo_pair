@@ -177,28 +177,14 @@ impl SudoPair {
             .as_mut()
             .ok_or(ErrorKind::Uninitialized)?;
 
-        // TODO: flesh this message out
-        let message = format!("\
-            You have been asked by {} to approve their `sudo` invocation.\n\
-            \n\
-            Approve? y/n [n]: ",
-            self.environment.username
-        );
-
-        let mut response : [u8; 1] = [b'n'];
-
-        socket.write_all(message.as_bytes()).chain_err(|| ErrorKind::Unauthorized("TODO clean me up".into()))?;
-        socket.flush().chain_err(|| ErrorKind::Unauthorized("TODO clean me up".into()))?;
+        let mut response : [u8; 1] = unsafe {
+            ::std::mem::uninitialized()
+        };
 
         // read exactly one byte back from the socket for the
         // response
         socket.read_exact(&mut response)
             .chain_err(|| ErrorKind::Unauthorized("denied by pair".into()))?;
-
-        // echo back out the response, since it's noecho, raw on the
-        // client
-        let _ = socket.write_all(&response[..]);
-        let _ = socket.write_all(b"\n");
 
         match &response {
             b"y" | b"Y" => Ok(()),
