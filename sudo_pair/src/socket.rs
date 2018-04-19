@@ -22,11 +22,11 @@ use std::path::Path;
 
 use libc::{self, gid_t, mode_t, uid_t};
 
-use unix_socket::{SocketAddr, UnixListener, UnixStream};
+use unix_socket::{UnixListener, UnixStream};
 
+#[derive(Debug)]
 pub(crate) struct Socket {
     socket: UnixStream,
-    _peer:  SocketAddr,
 }
 
 impl Socket {
@@ -84,7 +84,6 @@ impl Socket {
 
         Ok(Self {
             socket: connection.0,
-            _peer:  connection.1,
         })
     }
 
