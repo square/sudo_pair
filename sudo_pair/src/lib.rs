@@ -172,6 +172,11 @@ impl SudoPair {
         let _ = socket.read(&mut response)
             .chain_err(|| ErrorKind::Unauthorized("denied by pair".into()))?;
 
+        // echo back out the response, since the client is anticipated
+        // to be noecho
+        let _ = socket.write_all(&response[..]);
+        let _ = socket.write_all(b"\n");
+
         match &response {
             b"y" | b"Y" => Ok(()),
             _           => Err(ErrorKind::Unauthorized("denied by pair".into()).into()),
