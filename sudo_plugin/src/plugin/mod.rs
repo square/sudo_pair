@@ -131,20 +131,20 @@ impl Plugin {
 
     /// Prints an informational message (which must not contain interior
     /// NUL bytes) to the plugin's `printf` facility.
-    pub fn print_info(&self, message: &str) -> Result<c_int> {
+    pub fn print_info<T: Into<Vec<u8>>>(&self, message: T) -> Result<c_int> {
         self.print(sudo_plugin_sys::SUDO_CONV_INFO_MSG, message)
     }
 
     /// Prints an error message (which must not contain interior NUL
     /// bytes) to the plugin's `printf` facility.
-    pub fn print_error(&self, message: &str) -> Result<c_int> {
+    pub fn print_error<T: Into<Vec<u8>>>(&self, message: T) -> Result<c_int> {
         self.print(sudo_plugin_sys::SUDO_CONV_ERROR_MSG, message)
     }
 
     /// Prints a message (which must not contain interior NUL bytes) to
     /// the plugin's `printf` facility using the requested severity
     /// level.
-    fn print(&self, level: c_uint, message: &str) -> Result<c_int> {
+    fn print<T: Into<Vec<u8>>>(&self, level: c_uint, message: T) -> Result<c_int> {
         unsafe { Self::printf(self.printf, level, message) }
     }
 
