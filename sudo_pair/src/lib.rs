@@ -162,7 +162,7 @@ impl SudoPair {
     fn remote_pair_prompt(&mut self) -> Result<()> {
         let socket = self.socket
             .as_mut()
-            .ok_or(ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
+            .ok_or_else(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
 
         let mut response : [u8; 1] = unsafe {
             ::std::mem::uninitialized()
