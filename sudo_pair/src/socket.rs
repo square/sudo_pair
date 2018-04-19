@@ -43,9 +43,9 @@ impl Socket {
                     return Err(io::Error::last_os_error());
                 }
 
-                // accept() onwill block until someone connects on the
+                // accept() will block until someone connects on the
                 // other side of the socket, so we ensure that the
-                // signal handler for Ctrl-C aborts syscalls instead of
+                // signal handler for Ctrl-C aborts the call instead of
                 // restarting them automatically
                 ctrl_c_aborts_syscalls(|| {
                     sock.accept()
@@ -106,7 +106,15 @@ impl Drop for Socket {
 
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.socket.read(buf)
+        unsafe {
+            // read() will block until someone writes on the other side
+            // of the socket, so we ensure that the signal handler for
+            // Ctrl-C aborts the read instead of restarting it
+            // automatically
+            ctrl_c_aborts_syscalls(|| {
+                self.socket.read(buf)
+            })?
+        }
     }
 }
 
