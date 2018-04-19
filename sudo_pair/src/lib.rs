@@ -183,7 +183,7 @@ impl SudoPair {
 
         // read exactly one byte back from the socket for the
         // response
-        socket.read_exact(&mut response)
+        let _ = socket.read(&mut response)
             .chain_err(|| ErrorKind::Unauthorized("denied by pair".into()))?;
 
         match &response {
