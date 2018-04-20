@@ -293,7 +293,11 @@ impl SudoPair {
         if self.is_sudoing_to_group() {
             self.environment.runas_gid
         } else {
-            unsafe { libc::getgid() } // just in case we're not gid 0
+            // the *effective* gid is the one we want here since it's
+            // the gid of the elevated `sudo` process; `getgid` would
+            // return the invoking user's gid (ask me how I noticed
+            // this)
+            unsafe { libc::getegid() }
         }
     }
 
