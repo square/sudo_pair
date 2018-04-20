@@ -63,7 +63,7 @@ use std::ffi::CStr;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use libc::{gid_t, mode_t, pid_t, uid_t};
 
@@ -73,6 +73,9 @@ use sudo_plugin::OptionMap;
 const DEFAULT_BINARY_PATH : &str = "/usr/bin/sudo_pair_approve";
 const DEFAULT_PROMPT_PATH : &str = "/etc/sudo_pair.prompt";
 const DEFAULT_SOCKET_DIR  : &str = "/var/run/sudo_pair";
+
+const TEMPLATE_ESCAPE         : u8    = b'%';
+const DEFAULT_PROMPT_TEMPLATE : &[u8] = b"%B '%p %u'\n";
 
 sudo_io_plugin! {
      sudo_pair: SudoPair {
@@ -141,38 +144,15 @@ impl SudoPair {
     }
 
     fn local_pair_prompt(&self) -> Result<()> {
-        // TODO: configurable file path
-        // TODO: error handling
-        let mut template         = String::new();
-        let mut prompt : Vec<u8> = vec![];
+        // read the template from the file; if there's an error, use the
+        // default template instead
+        let template = self.template_load(
+            &self.settings.prompt_path
+        ).unwrap_or(DEFAULT_PROMPT_TEMPLATE.to_owned());
 
-        #[cfg_attr(feature="cargo-clippy", allow(result_map_unwrap_or_else))]
-        File::open(&self.settings.prompt_path).map(|mut file| {
-            let _ = file.read_to_string(&mut template);
-        }).unwrap_or_else(|_| {
-            template.push_str("%B '%p %u'\n");
-        });
-
-        let mut iter = template.bytes().into_iter().peekable();
-
-        while iter.peek().is_some() {
-            let fragment : Vec<u8> = iter.by_ref().take_while(|b| *b != b'%' ).collect();
-            prompt.extend_from_slice(&fragment[..]);
-
-            // TODO: clean this up
-            match iter.next() {
-                Some(b'b') => prompt.extend_from_slice(self.settings.binary_path.as_path().file_name()
-                    .unwrap_or_else(|| self.settings.binary_path.as_os_str()).as_bytes()),
-                Some(b'B') => prompt.extend_from_slice(self.settings.binary_path.as_os_str().as_bytes()),
-                Some(b'h') => prompt.extend_from_slice(self.environment.hostname.as_ref()),
-                Some(b'p') => prompt.extend_from_slice(self.environment.pid.to_string().as_ref()),
-                Some(b'u') => prompt.extend_from_slice(self.environment.uid.to_string().as_ref()),
-                Some(x)    => prompt.push(x),
-                None       => (),
-            };
-        }
-
-        let _ = self.plugin.print_info(prompt)?;
+        let _ = self.plugin.print_info(
+            self.template_expand(&template[..])
+        )?;
 
         Ok(())
     }
@@ -334,7 +314,47 @@ impl SudoPair {
         // invocation that we don't know how to support; if you're
         // sudoing to yourself, as yourself... maybe the command should
         // be exempted, but for now I'm erring on the side of caution
+        //
+        // TODO: I actually hit this during testing (sudoing to myself),
+        // so I should consider what to actually do about this
         unreachable!()
+    }
+
+    fn template_load(&self, path: &Path) -> ::std::io::Result<Vec<u8>> {
+        let mut template = vec![];
+
+        File::open(path).and_then(|mut f|
+            f.read_to_end(&mut template)
+        ).map(|_| template)
+    }
+
+    fn template_expand(&self, template : &[u8]) -> Vec<u8> {
+        let mut result = vec![];
+        let mut iter   = template.iter().cloned();
+
+        while iter.len() != 0 {
+            // copy everything up to the next %-sign unchanged
+            result.extend(iter.by_ref().take_while(|b| *b != TEMPLATE_ESCAPE ));
+
+            // we expand each literal into an owned type so that we don't have
+            // to repeatd the `result.extend_from_slice` part each time in the
+            // match arms, but it does kind of suck that we have so much
+            // type-conversion noise
+            let expansion = match iter.next() {
+                Some(b'b') => self.settings.binary_name().into(),
+                Some(b'B') => self.settings.binary_path.as_os_str().as_bytes().into(),
+                Some(b'd') => self.environment.cwd.as_os_str().as_bytes().into(),
+                Some(b'h') => self.environment.hostname.as_bytes().into(),
+                Some(b'p') => self.environment.pid.to_string().into_bytes(),
+                Some(b'u') => self.environment.uid.to_string().into_bytes(),
+                Some(byte) => vec![TEMPLATE_ESCAPE, byte],
+                None       => vec![TEMPLATE_ESCAPE],
+            };
+
+            result.extend_from_slice(&expansion[..]);
+        }
+
+        result
     }
 }
 
@@ -480,6 +500,14 @@ struct PluginSettings {
     // TODO: doc
     gids_enforced: HashSet<gid_t>,
     gids_exempted: HashSet<gid_t>,
+}
+
+impl PluginSettings {
+    fn binary_name(&self) -> &[u8] {
+        self.binary_path.file_name().unwrap_or_else(||
+            self.binary_path.as_os_str()
+        ).as_bytes()
+    }
 }
 
 impl<'a> From<&'a OptionMap> for PluginSettings {
