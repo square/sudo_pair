@@ -136,7 +136,7 @@ impl SudoPair {
         File::open(&self.settings.prompt_path).map(|mut file| {
             let _ = file.read_to_string(&mut template);
         }).unwrap_or_else(|_| {
-            template.push_str("%b %p %u");
+            template.push_str("%B '%p %u'\n");
         });
 
         let mut iter = template.bytes().into_iter().peekable();
