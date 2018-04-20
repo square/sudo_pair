@@ -97,10 +97,6 @@ impl SudoPair {
         let settings    = PluginSettings::from(&plugin.plugin_options);
         let environment = PluginEnvironment::new(plugin)?;
 
-        println!("{:#?}", plugin.user_info);
-        println!("{:#?}", settings);
-        println!("{:#?}", environment);
-
         let mut pair = Self {
             plugin,
             settings,
