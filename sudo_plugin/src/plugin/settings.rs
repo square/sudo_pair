@@ -83,25 +83,29 @@ impl Settings {
         })
     }
 
-    // fn flags(&self) -> Vec<String> {
-    //     let mut flags = vec![];
+    pub fn flags(&self) -> Vec<Vec<u8>> {
+        let mut flags : Vec<Vec<u8>> = vec![];
 
-    //     if self.login_shell {
-    //         flags.push("-i".into());
-    //     }
+        if let Some(ref runas_user) = self.runas_user {
+            flags.push(b"-u".to_vec());
+            flags.push(runas_user.as_bytes().to_vec());
+        }
 
-    //     if self.runas_user.is_some() {
-    //         flags.push("-u".into());
-    //         flags.push(self.runas_user.as_ref().unwrap());
-    //     }
+        if let Some(ref runas_group) = self.runas_group {
+            flags.push(b"-g".to_vec());
+            flags.push(runas_group.as_bytes().to_vec());
+        }
 
-    //     if self.runas_group.is_some() {
-    //         flags.push("-g".into());
-    //         flags.push(self.runas_group.as_ref().unwrap());
-    //     }
+        if self.login_shell {
+            flags.push(b"-i".to_vec());
+        }
 
-    //     flags
-    // }
+        if self.run_shell {
+            flags.push(b"-s".to_vec());
+        }
+
+        flags
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

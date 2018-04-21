@@ -70,12 +70,14 @@ use libc::{gid_t, mode_t, pid_t, uid_t};
 use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
 
-const DEFAULT_BINARY_PATH : &str = "/usr/bin/sudo_pair_approve";
-const DEFAULT_PROMPT_PATH : &str = "/etc/sudo_pair.prompt";
-const DEFAULT_SOCKET_DIR  : &str = "/var/run/sudo_pair";
+const DEFAULT_BINARY_PATH      : &str = "/usr/bin/sudo_pair_approve";
+const DEFAULT_USER_PROMPT_PATH : &str = "/etc/sudo_pair.prompt.user";
+const DEFAULT_PAIR_PROMPT_PATH : &str = "/etc/sudo_pair.prompt.pair";
+const DEFAULT_SOCKET_DIR       : &str = "/var/run/sudo_pair";
 
-const TEMPLATE_ESCAPE         : u8    = b'%';
-const DEFAULT_PROMPT_TEMPLATE : &[u8] = b"%B '%p %u'\n";
+const TEMPLATE_ESCAPE     : u8    = b'%';
+const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p %u'\n";
+const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
 sudo_io_plugin! {
      sudo_pair: SudoPair {
@@ -147,8 +149,8 @@ impl SudoPair {
         // read the template from the file; if there's an error, use the
         // default template instead
         let template = self.template_load(
-            &self.settings.prompt_path
-        ).unwrap_or(DEFAULT_PROMPT_TEMPLATE.to_owned());
+            &self.settings.user_prompt_path
+        ).unwrap_or_else(|_| DEFAULT_USER_PROMPT.to_owned());
 
         let _ = self.plugin.print_info(
             self.template_expand(&template[..])
@@ -176,6 +178,10 @@ impl SudoPair {
     }
 
     fn remote_pair_prompt(&mut self) -> Result<()> {
+        let template = self.template_load(
+            &self.settings.pair_prompt_path
+        ).unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.to_owned());
+
         let socket = self.socket
             .as_mut()
             .ok_or_else(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
@@ -183,6 +189,9 @@ impl SudoPair {
         let mut response : [u8; 1] = unsafe {
             ::std::mem::uninitialized()
         };
+
+        let _ = socket.write(&template[..])
+            .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
 
         // read exactly one byte back from the socket for the
         // response
@@ -343,10 +352,15 @@ impl SudoPair {
             let expansion = match iter.next() {
                 Some(b'b') => self.settings.binary_name().into(),
                 Some(b'B') => self.settings.binary_path.as_os_str().as_bytes().into(),
+                Some(b'C') => self.plugin.invocation(),
                 Some(b'd') => self.environment.cwd.as_os_str().as_bytes().into(),
                 Some(b'h') => self.environment.hostname.as_bytes().into(),
+                Some(b'H') => self.plugin.user_info.lines.to_string().into_bytes(),
+                Some(b'g') => self.environment.gid.to_string().into_bytes(),
                 Some(b'p') => self.environment.pid.to_string().into_bytes(),
                 Some(b'u') => self.environment.uid.to_string().into_bytes(),
+                Some(b'U') => self.environment.username.as_bytes().into(),
+                Some(b'W') => self.plugin.user_info.cols.to_string().into_bytes(),
                 Some(byte) => vec![TEMPLATE_ESCAPE, byte],
                 None       => vec![TEMPLATE_ESCAPE],
             };
@@ -484,12 +498,20 @@ struct PluginSettings {
     /// Default: `"/usr/bin/sudo_pair_approve"`
     binary_path: PathBuf,
 
-    /// `prompt_path` is the location of a prompt tempalate; if no
-    /// template is found at this location, an extremely minimal default
-    /// will be printed
+    /// `user_prompt_path` is the location of the prompt template to display
+    /// to the user invoking sudo; if no template is found at this location,
+    /// an extremely minimal default will be printed
     ///
-    /// Default: `"/etc/sudo_pair.prompt"`
-    prompt_path: PathBuf,
+    /// Default: `"/etc/sudo_pair.prompt.user"`
+    user_prompt_path: PathBuf,
+
+    /// `pair_prompt_path` is the location of the prompt template to display
+    /// to the user being asked to approve the sudo session sudo; if no
+    /// template is found at this location, an extremely minimal default will
+    /// be printed
+    ///
+    /// Default: `"/etc/sudo_pair.prompt.pair"`
+    pair_prompt_path: PathBuf,
 
     /// `socket_dir` is the path where this plugin will store sockets for
     /// sessions that are pending approval
@@ -516,8 +538,11 @@ impl<'a> From<&'a OptionMap> for PluginSettings {
             binary_path: map.get_parsed("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
 
-            prompt_path: map.get_parsed("prompt_path")
-                .unwrap_or_else(|_| DEFAULT_PROMPT_PATH.into()),
+            user_prompt_path: map.get_parsed("user_prompt_path")
+                .unwrap_or_else(|_| DEFAULT_USER_PROMPT_PATH.into()),
+
+            pair_prompt_path: map.get_parsed("pair_prompt_path")
+                .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT_PATH.into()),
 
             socket_dir: map.get_parsed("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
