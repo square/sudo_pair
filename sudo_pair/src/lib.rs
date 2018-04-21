@@ -335,6 +335,10 @@ impl SudoPair {
             // copy everything up to the next %-sign unchanged
             result.extend(iter.by_ref().take_while(|b| *b != TEMPLATE_ESCAPE ));
 
+            if iter.len() == 0 {
+                break;
+            }
+
             // we expand each literal into an owned type so that we don't have
             // to repeatd the `result.extend_from_slice` part each time in the
             // match arms, but it does kind of suck that we have so much
