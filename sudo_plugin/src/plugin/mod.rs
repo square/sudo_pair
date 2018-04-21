@@ -115,6 +115,22 @@ impl Plugin {
         Ok(plugin)
     }
 
+    ///
+    /// As best as can be reconstructed, what was actually typed at the
+    /// shell in order to launch this invocation of sudo.
+    ///
+    /// TODO: add support for more flags
+    pub fn invocation(&self) -> Vec<u8> {
+        let mut command = self.settings.progname.as_bytes().to_vec();
+
+        command.push(b' ');
+        command.extend_from_slice(&self.settings.flags().join(&b' ')[..]);
+        command.push(b' ');
+        command.extend_from_slice(self.command_info.command.as_bytes());
+
+        command
+    }
+
     /// Prints an informational message (which must not contain interior
     /// NUL bytes) to the plugin's `printf` facility.
     pub fn print_info<T: Into<Vec<u8>>>(&self, message: T) -> Result<c_int> {
