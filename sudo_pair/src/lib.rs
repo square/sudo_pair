@@ -152,9 +152,11 @@ impl SudoPair {
             &self.settings.user_prompt_path
         ).unwrap_or_else(|_| DEFAULT_USER_PROMPT.to_owned());
 
+        // TODO: this is returning an error even though it printf, I'm not
+        // entirely sure why
         let _ = self.plugin.print_info(
             self.template_expand(&template[..])
-        )?;
+        );
 
         Ok(())
     }
@@ -182,6 +184,8 @@ impl SudoPair {
             &self.settings.pair_prompt_path
         ).unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.to_owned());
 
+        let prompt = self.template_expand(&template[..]);
+
         let socket = self.socket
             .as_mut()
             .ok_or_else(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
@@ -190,7 +194,7 @@ impl SudoPair {
             ::std::mem::uninitialized()
         };
 
-        let _ = socket.write(&template[..])
+        let _ = socket.write(&prompt[..])
             .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
 
         // read exactly one byte back from the socket for the
