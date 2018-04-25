@@ -83,25 +83,102 @@ impl Settings {
         })
     }
 
+    // TODO: surely this can be made more cleanly; also, it would be
+    // great if we could actually get the full original `sudo`
+    // invocation without having to reconstruct it by hand
     pub fn flags(&self) -> Vec<Vec<u8>> {
         let mut flags : Vec<Vec<u8>> = vec![];
 
+        // `sudoedit` is set if the flag was provided *or* if sudo
+        // was invoked as `sudoedit` directly; try our best to intrepret
+        // this case, although we'll technically get it wrong in the
+        // case of `sudoedit -e ...`
+        if self.sudoedit && self.progname != "sudoedit" {
+            flags.push(b"--edit".to_vec());
+        }
+
         if let Some(ref runas_user) = self.runas_user {
-            flags.push(b"-u".to_vec());
-            flags.push(runas_user.as_bytes().to_vec());
+            let mut flag = b"--user ".to_vec();
+            flag.extend_from_slice(runas_user.as_bytes());
+
+            flags.push(flag);
         }
 
         if let Some(ref runas_group) = self.runas_group {
-            flags.push(b"-g".to_vec());
-            flags.push(runas_group.as_bytes().to_vec());
+            let mut flag = b"--group ".to_vec();
+            flag.extend_from_slice(runas_group.as_bytes());
+
+            flags.push(flag);
+        }
+
+        if let Some(ref prompt) = self.prompt {
+            let mut flag = b"--prompt ".to_vec();
+            flag.extend_from_slice(prompt.as_bytes());
+
+            flags.push(flag);
         }
 
         if self.login_shell {
-            flags.push(b"-i".to_vec());
+            flags.push(b"--login".to_vec());
         }
 
         if self.run_shell {
-            flags.push(b"-s".to_vec());
+            flags.push(b"--shell".to_vec());
+        }
+
+        if self.set_home {
+            flags.push(b"--set-home".to_vec());
+        }
+
+        if self.preserve_environment {
+            flags.push(b"--preserve-env".to_vec());
+        }
+
+        if self.preserve_groups {
+            flags.push(b"--preserve-groups".to_vec());
+        }
+
+        if self.ignore_ticket {
+            flags.push(b"--reset-timestamp".to_vec());
+        }
+
+        if self.noninteractive {
+            flags.push(b"--non-interactive".to_vec());
+        }
+
+        if let Some(ref login_class) = self.login_class {
+            let mut flag = b"--login-class ".to_vec();
+            flag.extend_from_slice(login_class.as_bytes());
+
+            flags.push(flag);
+        }
+
+        if let Some(ref selinux_role) = self.selinux_role {
+            let mut flag = b"--role ".to_vec();
+            flag.extend_from_slice(selinux_role.as_bytes());
+
+            flags.push(flag);
+        }
+
+        if let Some(ref selinux_type) = self.selinux_type {
+            let mut flag = b"--type ".to_vec();
+            flag.extend_from_slice(selinux_type.as_bytes());
+
+            flags.push(flag);
+        }
+
+        if let Some(ref bsd_auth_type) = self.bsd_auth_type {
+            let mut flag = b"--auth-type ".to_vec();
+            flag.extend_from_slice(bsd_auth_type.as_bytes());
+
+            flags.push(flag);
+        }
+
+        if let Some(close_from) = self.close_from {
+            let mut flag = b"--close-from ".to_vec();
+            flag.extend_from_slice(close_from.to_string().as_bytes());
+
+            flags.push(flag);
         }
 
         flags
