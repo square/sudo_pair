@@ -40,27 +40,27 @@ pub struct UserInfo {
 }
 
 impl UserInfo {
-    pub fn new(raw: OptionMap) -> Result<Self> {
+    pub fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
-            cwd:    raw.get("cwd")?,
-            egid:   raw.get("egid")?,
-            euid:   raw.get("euid")?,
-            gid:    raw.get("gid")?,
-            groups: raw.get("groups")?,
-            host:   raw.get("host")?,
-            pgid:   raw.get("pgid")?,
-            pid:    raw.get("pid")?,
-            ppid:   raw.get("ppid")?,
-            uid:    raw.get("uid")?,
-            user:   raw.get("user")?,
+            cwd:    value.get("cwd")?,
+            egid:   value.get("egid")?,
+            euid:   value.get("euid")?,
+            gid:    value.get("gid")?,
+            groups: value.get("groups")?,
+            host:   value.get("host")?,
+            pgid:   value.get("pgid")?,
+            pid:    value.get("pid")?,
+            ppid:   value.get("ppid")?,
+            uid:    value.get("uid")?,
+            user:   value.get("user")?,
 
-            cols:   raw.get("cols")  .unwrap_or(80),
-            lines:  raw.get("lines") .unwrap_or(24),
-            sid:    raw.get("sid")   .unwrap_or(0),
-            tcpgid: raw.get("tcpgid").unwrap_or(-1),
-            tty:    raw.get("tty")   .ok(),
+            cols:   value.get("cols")  .unwrap_or(80),
+            lines:  value.get("lines") .unwrap_or(24),
+            sid:    value.get("sid")   .unwrap_or(0),
+            tcpgid: value.get("tcpgid").unwrap_or(-1),
+            tty:    value.get("tty")   .ok(),
 
-            raw,
+            raw: value,
         })
     }
 }

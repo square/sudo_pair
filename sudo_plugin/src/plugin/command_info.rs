@@ -59,46 +59,46 @@ pub struct CommandInfo {
 }
 
 impl CommandInfo {
-    pub fn new(raw: OptionMap) -> Result<Self> {
+    pub fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
-            command:       raw.get("command")?,
-            runas_gid:     raw.get("runas_gid")?,
-            runas_uid:     raw.get("runas_uid")?,
-            runas_egid:    raw.get("runas_egid")
-                .unwrap_or(raw.get("runas_gid")?),
-            runas_euid:    raw.get("runas_euid")
-                .unwrap_or(raw.get("runas_uid")?),
-            umask:         raw.get("umask")?,
+            command:       value.get("command")?,
+            runas_gid:     value.get("runas_gid")?,
+            runas_uid:     value.get("runas_uid")?,
+            runas_egid:    value.get("runas_egid")
+                .unwrap_or(value.get("runas_gid")?),
+            runas_euid:    value.get("runas_euid")
+                .unwrap_or(value.get("runas_uid")?),
+            umask:         value.get("umask")?,
 
-            chroot:            raw.get("chroot")            .ok(),
-            close_from:        raw.get("closefrom")         .ok(),
-            cwd:               raw.get("cwd")               .ok(),
-            exec_background:   raw.get("exec_background")   .unwrap_or(false),
-            exec_fd:           raw.get("execfd")            .ok(),
-            iolog_compress:    raw.get("iolog_compress")    .unwrap_or(false),
-            iolog_path:        raw.get("iolog_path")        .ok(),
-            iolog_stdin:       raw.get("iolog_stdin")       .unwrap_or(false),
-            iolog_stdout:      raw.get("iolog_stdout")      .unwrap_or(false),
-            iolog_stderr:      raw.get("iolog_stderr")      .unwrap_or(false),
-            iolog_ttyin:       raw.get("iolog_ttyin")       .unwrap_or(false),
-            iolog_ttyout:      raw.get("iolog_ttyout")      .unwrap_or(false),
-            login_class:       raw.get("login_class")       .ok(),
-            nice:              raw.get("nice")              .ok(),
-            noexec:            raw.get("noexec")            .unwrap_or(false),
-            preserve_fds:      raw.get("preserve_fds")      .unwrap_or_else(|_| vec![]),
-            preserve_groups:   raw.get("preserve_groups")   .unwrap_or(false),
-            runas_groups:      raw.get("runas_groups")      .ok(),
-            selinux_role:      raw.get("selinux_role")      .ok(),
-            selinux_type:      raw.get("selinux_type")      .ok(),
-            set_utmp:          raw.get("set_utmp")          .unwrap_or(false),
-            sudoedit:          raw.get("sudoedit")          .unwrap_or(false),
-            sudoedit_checkdir: raw.get("sudoedit_checkdir") .unwrap_or(true),
-            sudoedit_follow:   raw.get("sudoedit_follow")   .unwrap_or(false),
-            timeout:           raw.get("timeout")           .ok(),
-            use_pty:           raw.get("use_pty")           .unwrap_or(false),
-            utmp_user:         raw.get("utmp_user")         .ok(),
+            chroot:            value.get("chroot")            .ok(),
+            close_from:        value.get("closefrom")         .ok(),
+            cwd:               value.get("cwd")               .ok(),
+            exec_background:   value.get("exec_background")   .unwrap_or(false),
+            exec_fd:           value.get("execfd")            .ok(),
+            iolog_compress:    value.get("iolog_compress")    .unwrap_or(false),
+            iolog_path:        value.get("iolog_path")        .ok(),
+            iolog_stdin:       value.get("iolog_stdin")       .unwrap_or(false),
+            iolog_stdout:      value.get("iolog_stdout")      .unwrap_or(false),
+            iolog_stderr:      value.get("iolog_stderr")      .unwrap_or(false),
+            iolog_ttyin:       value.get("iolog_ttyin")       .unwrap_or(false),
+            iolog_ttyout:      value.get("iolog_ttyout")      .unwrap_or(false),
+            login_class:       value.get("login_class")       .ok(),
+            nice:              value.get("nice")              .ok(),
+            noexec:            value.get("noexec")            .unwrap_or(false),
+            preserve_fds:      value.get("preserve_fds")      .unwrap_or_else(|_| vec![]),
+            preserve_groups:   value.get("preserve_groups")   .unwrap_or(false),
+            runas_groups:      value.get("runas_groups")      .ok(),
+            selinux_role:      value.get("selinux_role")      .ok(),
+            selinux_type:      value.get("selinux_type")      .ok(),
+            set_utmp:          value.get("set_utmp")          .unwrap_or(false),
+            sudoedit:          value.get("sudoedit")          .unwrap_or(false),
+            sudoedit_checkdir: value.get("sudoedit_checkdir") .unwrap_or(true),
+            sudoedit_follow:   value.get("sudoedit_follow")   .unwrap_or(false),
+            timeout:           value.get("timeout")           .ok(),
+            use_pty:           value.get("use_pty")           .unwrap_or(false),
+            utmp_user:         value.get("utmp_user")         .ok(),
 
-            raw,
+            raw: value,
         })
     }
 }
