@@ -5,6 +5,7 @@ mod option_map;
 mod command_info;
 mod settings;
 mod user_info;
+mod traits;
 
 use super::errors::*;
 use super::version::Version;
@@ -102,11 +103,13 @@ impl Plugin {
             version,
             command,
 
-            settings:       OptionMap::new(settings)    .and_then(Settings::new)?,
-            user_info:      OptionMap::new(user_info)   .and_then(UserInfo::new)?,
-            command_info:   OptionMap::new(command_info).and_then(CommandInfo::new)?,
-            user_env:       OptionMap::new(user_env)?,
-            plugin_options: OptionMap::new(plugin_options)?,
+            // TODO: convert `try_from` calls to `into` when the TryFrom
+            // trait stabilizes around May 2018
+            settings:       Settings   ::try_from(OptionMap::from_raw(settings))?,
+            user_info:      UserInfo   ::try_from(OptionMap::from_raw(user_info))?,
+            command_info:   CommandInfo::try_from(OptionMap::from_raw(command_info))?,
+            user_env:       OptionMap  ::from_raw(user_env),
+            plugin_options: OptionMap  ::from_raw(plugin_options),
 
             _conversation: conversation,
             printf:        plugin_printf,
