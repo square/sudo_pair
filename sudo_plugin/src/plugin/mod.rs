@@ -102,11 +102,11 @@ impl Plugin {
             version,
             command,
 
-            settings:       OptionMap::new(settings)    .and_then(Settings::new)?,
-            user_info:      OptionMap::new(user_info)   .and_then(UserInfo::new)?,
-            command_info:   OptionMap::new(command_info).and_then(CommandInfo::new)?,
-            user_env:       OptionMap::new(user_env)?,
-            plugin_options: OptionMap::new(plugin_options)?,
+            settings:       Settings   ::new(OptionMap::new(settings))?,
+            user_info:      UserInfo   ::new(OptionMap::new(user_info))?,
+            command_info:   CommandInfo::new(OptionMap::new(command_info))?,
+            user_env:       OptionMap  ::new(user_env),
+            plugin_options: OptionMap  ::new(plugin_options),
 
             _conversation: conversation,
             printf:        plugin_printf,
