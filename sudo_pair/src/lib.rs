@@ -543,22 +543,22 @@ impl PluginSettings {
 impl<'a> From<&'a OptionMap> for PluginSettings {
     fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path: map.get_parsed("binary_path")
+            binary_path: map.get("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
 
-            user_prompt_path: map.get_parsed("user_prompt_path")
+            user_prompt_path: map.get("user_prompt_path")
                 .unwrap_or_else(|_| DEFAULT_USER_PROMPT_PATH.into()),
 
-            pair_prompt_path: map.get_parsed("pair_prompt_path")
+            pair_prompt_path: map.get("pair_prompt_path")
                 .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT_PATH.into()),
 
-            socket_dir: map.get_parsed("socket_dir")
+            socket_dir: map.get("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
-            gids_enforced: map.get_parsed("gids_enforced")
+            gids_enforced: map.get("gids_enforced")
                 .unwrap_or_else(|_| vec![]).into_iter().collect(),
 
-            gids_exempted: map.get_parsed("gids_exempted")
+            gids_exempted: map.get("gids_exempted")
                 .unwrap_or_else(|_| vec![]).into_iter().collect(),
         }
     }
