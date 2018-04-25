@@ -30,14 +30,14 @@ impl OptionMap {
     /// place a NULL byte as the final array entry. In the absence of
     /// such a NULL byte, there is no other way to detect the end of
     /// the options list.
-    pub unsafe fn new(mut ptr: *const *const c_char) -> Self {
+    pub unsafe fn from_raw(mut ptr: *const *const c_char) -> Self {
+        let mut map = HashMap::new();
+
         // if the pointer is null, we weren't given a list of settings,
         // so go ahead and return the empty map
         if ptr.is_null() {
-            return Self::default();
+            return OptionMap(map);
         }
-
-        let mut map = HashMap::new();
 
         // iterate through each pointer in the array until encountering
         // a NULL (which terminates the array)
@@ -98,12 +98,6 @@ impl OptionMap {
     }
 }
 
-impl Default for OptionMap {
-    fn default() -> OptionMap {
-        OptionMap(HashMap::new())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,7 +106,7 @@ mod tests {
 
     #[test]
     fn new_parses_string_keys() {
-        let map = unsafe { OptionMap::new([
+        let map = unsafe { OptionMap::from_raw([
             b"key1=value1\0".as_ptr() as _,
             b"key2=value2\0".as_ptr() as _,
             ptr::null(),
@@ -125,14 +119,14 @@ mod tests {
 
     #[test]
     fn new_parses_null_options() {
-        let map = unsafe { OptionMap::new(ptr::null()) };
+        let map = unsafe { OptionMap::from_raw(ptr::null()) };
 
         assert!(map.0.is_empty())
     }
 
     #[test]
     fn new_parses_non_utf8_keys() {
-        let map = unsafe { OptionMap::new([
+        let map = unsafe { OptionMap::from_raw([
             b"\x80=value\0".as_ptr() as _,
             ptr::null(),
         ].as_ptr()) };
@@ -142,7 +136,7 @@ mod tests {
 
     #[test]
     fn new_parses_non_utf8_values() {
-        let map = unsafe { OptionMap::new([
+        let map = unsafe { OptionMap::from_raw([
             b"key=\x80\0".as_ptr() as _,
             ptr::null(),
         ].as_ptr()) };
@@ -153,7 +147,7 @@ mod tests {
 
     #[test]
     fn new_parses_repeated_keys() {
-        let map = unsafe { OptionMap::new([
+        let map = unsafe { OptionMap::from_raw([
             b"key=value1\0".as_ptr() as _,
             b"key=value2\0".as_ptr() as _,
             b"key=value3\0".as_ptr() as _,
@@ -165,7 +159,7 @@ mod tests {
 
     #[test]
     fn new_parses_valueless_keys() {
-        let map = unsafe { OptionMap::new([
+        let map = unsafe { OptionMap::from_raw([
             b"key\0".as_ptr() as _,
             ptr::null(),
         ].as_ptr()) };
@@ -175,7 +169,7 @@ mod tests {
 
     #[test]
     fn get_parses_common_types() {
-        let map = unsafe { OptionMap::new([
+        let map = unsafe { OptionMap::from_raw([
             b"str=value\0"    .as_ptr() as _,
             b"true\0"         .as_ptr() as _,
             b"false\0"        .as_ptr() as _,
@@ -185,7 +179,7 @@ mod tests {
             ptr::null(),
         ].as_ptr()) };
 
-        assert_eq!(String::from("value"),      map.get::<String>("str").unwrap());
+        assert_eq!(String::from("value"),     map.get::<String>("str").unwrap());
         assert_eq!(PathBuf::from("/foo/bar"), map.get::<PathBuf>("path").unwrap());
 
         assert_eq!(true,  map.get::<bool>("true") .unwrap());
