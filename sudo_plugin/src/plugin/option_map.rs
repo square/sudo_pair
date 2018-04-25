@@ -70,20 +70,13 @@ impl OptionMap {
         OptionMap(map)
     }
 
-    /// Gets the value of a key as a string. Returns `None` if no such
-    /// key/value-pair was provided during initialization. Also returns
-    /// `None` if the value was not interpretable as a UTF-8 string.
-    pub fn get(&self, k: &str) -> Option<&str> {
-        self.get_raw(k.as_bytes()).and_then(|b| str::from_utf8(b).ok())
-    }
-
     /// Gets the value of a key as any arbitrary type that implements the
     /// `FromSudoOption` trait. Returns `Err(_)` if no such key/value-pair
-    /// was provided during initialization. Also returns `None` if the
+    /// was provided during initialization. Also returns `Err(_)` if the
     /// value was not interpretable as a UTF-8 string or if there was an
     /// error parsing the value to the requested type.
-    pub fn get_parsed<T: FromSudoOption>(&self, k: &str) -> Result<T> {
-        let v = self.get(k).chain_err(|| {
+    pub fn get<T: FromSudoOption>(&self, k: &str) -> Result<T> {
+        let v = self.get_str(k).chain_err(|| {
             format!("option {} wasn't provided to the plugin", k)
         })?;
 
@@ -92,10 +85,17 @@ impl OptionMap {
             .chain_err(|| format!("option {} couldn't be parsed", k))
     }
 
+    /// Gets the value of a key as a string. Returns `None` if no such
+    /// key/value-pair was provided during initialization. Also returns
+    /// `None` if the value was not interpretable as a UTF-8 string.
+    pub fn get_str(&self, k: &str) -> Option<&str> {
+        self.get_bytes(k.as_bytes()).and_then(|b| str::from_utf8(b).ok())
+    }
+
     /// Fetches a raw byte value using a bytes as the key. This is
     /// provided to allow plugins to retrieve values for keys when the
     /// value and/or key are not guaranteed to be UTF-8 strings.
-    pub fn get_raw(&self, k: &[u8]) -> Option<&[u8]> {
+    pub fn get_bytes(&self, k: &[u8]) -> Option<&[u8]> {
         self.0.get(k).map(Vec::as_slice)
     }
 }
@@ -199,3 +199,22 @@ pub trait FromSudoOptionList: Sized {
 
 impl FromSudoOptionList for i32 {}
 impl FromSudoOptionList for u32 {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ptr;
+
+    #[test]
+    fn new_parses_simple_keys() {
+        let map = unsafe { OptionMap::new([
+            b"key1=value1\0".as_ptr() as _,
+            b"key2=value2\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!(Some("value1"), map.get_str("key1"));
+        assert_eq!(Some("value2"), map.get_str("key2"));
+        assert_eq!(None,           map.get_str("key3"));
+    }
+}
