@@ -119,7 +119,6 @@ impl Plugin {
     /// As best as can be reconstructed, what was actually typed at the
     /// shell in order to launch this invocation of sudo.
     ///
-    /// TODO: add support for more flags
     pub fn invocation(&self) -> Vec<u8> {
         let mut command = self.settings.progname.as_bytes().to_vec();
 

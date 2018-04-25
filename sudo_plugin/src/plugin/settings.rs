@@ -69,8 +69,17 @@ impl Settings {
         })
     }
 
+    // TODO: surely this can be made more cleanly
     pub fn flags(&self) -> Vec<Vec<u8>> {
         let mut flags : Vec<Vec<u8>> = vec![];
+
+        // `sudoedit` is set if the flag was provided *or* if sudo
+        // was invoked as `sudoedit` directly; try our best to intrepret
+        // this case, although we'll technically get it wrong in the
+        // case of `sudoedit -e ...`
+        if self.sudoedit && self.progname != "sudoedit" {
+            flags.push(b"-e".to_vec());
+        }
 
         if let Some(ref runas_user) = self.runas_user {
             flags.push(b"-u".to_vec());
@@ -88,6 +97,51 @@ impl Settings {
 
         if self.run_shell {
             flags.push(b"-s".to_vec());
+        }
+
+        if self.set_home {
+            flags.push(b"-h".to_vec());
+        }
+
+        if self.preserve_environment {
+            flags.push(b"-E".to_vec());
+        }
+
+        if self.preserve_groups {
+            flags.push(b"-P".to_vec());
+        }
+
+        if self.ignore_ticket {
+            flags.push(b"-k".to_vec());
+        }
+
+        if self.noninteractive {
+            flags.push(b"-n".to_vec());
+        }
+
+        if let Some(ref login_class) = self.login_class {
+            flags.push(b"-c".to_vec());
+            flags.push(login_class.as_bytes().to_vec());
+        }
+
+        if let Some(ref selinux_role) = self.selinux_role {
+            flags.push(b"-r".to_vec());
+            flags.push(selinux_role.as_bytes().to_vec());
+        }
+
+        if let Some(ref selinux_type) = self.selinux_type {
+            flags.push(b"-t".to_vec());
+            flags.push(selinux_type.as_bytes().to_vec());
+        }
+
+        if let Some(ref bsd_auth_type) = self.bsd_auth_type {
+            flags.push(b"-a".to_vec());
+            flags.push(bsd_auth_type.as_bytes().to_vec());
+        }
+
+        if let Some(closefrom) = self.close_from {
+            flags.push(b"-C".to_vec());
+            flags.push(closefrom.to_string().as_bytes().to_vec());
         }
 
         flags
