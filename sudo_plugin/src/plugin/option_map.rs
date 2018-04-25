@@ -1,9 +1,10 @@
 use super::super::errors::*;
 
+use super::traits::*;
+
 use std::collections::HashMap;
 use std::ffi::CStr;
-use std::path::PathBuf;
-use std::str::{self, FromStr};
+use std::str;
 
 use libc::c_char;
 
@@ -17,9 +18,6 @@ const OPTIONS_SEPARATOR: u8 = b'=';
 /// which implements the `FromSudoOptionList` trait.
 #[derive(Clone, Debug)]
 pub struct OptionMap(HashMap<Vec<u8>, Vec<u8>>);
-
-#[derive(Clone, Copy, Debug)]
-pub struct ParseListError();
 
 impl OptionMap {
     /// Initializes the `OptionMap` from a pointer to the options
@@ -105,100 +103,6 @@ impl Default for OptionMap {
         OptionMap(HashMap::new())
     }
 }
-
-pub trait FromSudoOption: Sized {
-    type Err;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err>;
-}
-
-impl FromSudoOption for bool {
-    type Err = ::std::str::ParseBoolError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        FromStr::from_str(s)
-    }
-}
-
-impl FromSudoOption for u16 {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        FromStr::from_str(s)
-    }
-}
-
-impl FromSudoOption for i32 {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        FromStr::from_str(s)
-    }
-}
-
-impl FromSudoOption for u32 {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        FromStr::from_str(s)
-    }
-}
-
-impl FromSudoOption for u64 {
-    type Err = ::std::num::ParseIntError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        FromStr::from_str(s)
-    }
-}
-
-impl FromSudoOption for String {
-    type Err = ::std::string::ParseError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        FromStr::from_str(s)
-    }
-}
-
-impl FromSudoOption for PathBuf {
-    type Err = ::std::string::ParseError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        Ok(s.into())
-    }
-}
-
-impl<T> FromSudoOption for Vec<T>
-where
-    T: FromSudoOption + FromSudoOptionList,
-{
-    type Err = ParseListError;
-
-    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
-        let      list = <T as FromSudoOptionList>::from_sudo_option_list(s);
-        let mut items = Self::with_capacity(list.len());
-
-        for element in list {
-            let item = FromSudoOption::from_sudo_option(element)
-                .map_err(|_| ParseListError())?;
-
-            items.push(item);
-        }
-
-        Ok(items)
-    }
-}
-
-pub trait FromSudoOptionList: Sized {
-    const SEPARATOR: char = ',';
-
-    fn from_sudo_option_list(s: &str) -> Vec<&str> {
-        s.split(|b| b == Self::SEPARATOR).collect()
-    }
-}
-
-impl FromSudoOptionList for i32 {}
-impl FromSudoOptionList for u32 {}
 
 #[cfg(test)]
 mod tests {
