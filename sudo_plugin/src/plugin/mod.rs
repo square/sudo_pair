@@ -112,6 +112,18 @@ impl Plugin {
             printf:        plugin_printf,
         };
 
+        // TODO: protect uids directly, not just gids
+        //
+        // this is a hack around the fact that we only protect
+        // uids indirectly through restricting the gaining of gids; if
+        // a user specifies `-P` (`--preserve-groups`), they won't gain
+        // any gids and will completely bypass this plugins
+        if plugin.settings.preserve_groups {
+            bail!(ErrorKind::Unauthorized(
+                "the -P option may not be specified in sessions requiring a pair".into()
+            ));
+        }
+
         Ok(plugin)
     }
 
