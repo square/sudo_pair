@@ -161,6 +161,9 @@ impl Plugin {
         message: T,
     ) -> Result<c_int> {
         // TODO: level should be bitflags
+        // TODO: uninitialized errors end up allowing the plugin to be
+        //   bypassed during `open`, deal with this during the move to
+        //   the failure crate
         let printf  = printf.ok_or(ErrorKind::Uninitialized)?;
         let cstring = CString::new(message.into())
             .chain_err(|| ErrorKind::IoError(IoFacility::PluginPrintf))?;

@@ -25,6 +25,10 @@
 
 #![cfg_attr(feature="cargo-clippy", warn(clippy))]
 #![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
+
+// this alerts on a *ton* of names here, but all of them are trying
+// to map to the underlying option and argument names chosen by the
+// sudo_plugin facility
 #![cfg_attr(feature="cargo-clippy", allow(similar_names))]
 
 pub extern crate sudo_plugin_sys;
