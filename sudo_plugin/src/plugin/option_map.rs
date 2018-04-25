@@ -212,4 +212,22 @@ mod tests {
         assert_eq!(42,  map.get::<u64>("u64").unwrap());
         assert!(map.get::<u64>("i64").is_err());
     }
+
+    #[test]
+    fn get_parses_lists() {
+        impl FromSudoOptionList for String {
+            const SEPARATOR: char = '|';
+        }
+
+        let map = unsafe { OptionMap::from_raw([
+            b"ints=1,2,3\0".as_ptr() as _,
+            b"strs=a|b|c\0".as_ptr() as _,
+            b"str=a,b,c\0" .as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!(vec![1, 2, 3],       map.get::<Vec<u8>>("ints")    .unwrap());
+        assert_eq!(vec!["a", "b", "c"], map.get::<Vec<String>>("strs").unwrap());
+        assert_eq!(vec!["a,b,c"],       map.get::<Vec<String>>("str") .unwrap());
+    }
 }
