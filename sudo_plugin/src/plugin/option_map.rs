@@ -121,18 +121,101 @@ impl Default for OptionMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use std::ptr;
 
     #[test]
-    fn new_parses_simple_keys() {
+    fn new_parses_string_keys() {
         let map = unsafe { OptionMap::new([
             b"key1=value1\0".as_ptr() as _,
             b"key2=value2\0".as_ptr() as _,
             ptr::null(),
         ].as_ptr()) };
 
-        assert_eq!(Some("value1"), map.get_str("key1"));
-        assert_eq!(Some("value2"), map.get_str("key2"));
-        assert_eq!(None,           map.get_str("key3"));
+        assert_eq!("value1", map.get_str("key1").unwrap());
+        assert_eq!("value2", map.get_str("key2").unwrap());
+        assert!(map.get_str("key3").is_none());
+    }
+
+    #[test]
+    fn new_parses_null_options() {
+        let map = unsafe { OptionMap::new(ptr::null()) };
+
+        assert!(map.0.is_empty())
+    }
+
+    #[test]
+    fn new_parses_non_utf8_keys() {
+        let map = unsafe { OptionMap::new([
+            b"\x80=value\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!(&b"value"[..], map.get_bytes(b"\x80").unwrap());
+    }
+
+    #[test]
+    fn new_parses_non_utf8_values() {
+        let map = unsafe { OptionMap::new([
+            b"key=\x80\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!(None,         map.get_str("key"));
+        assert_eq!(&b"\x80"[..], map.get_bytes(b"key").unwrap());
+    }
+
+    #[test]
+    fn new_parses_repeated_keys() {
+        let map = unsafe { OptionMap::new([
+            b"key=value1\0".as_ptr() as _,
+            b"key=value2\0".as_ptr() as _,
+            b"key=value3\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!("value3", map.get_str("key").unwrap());
+    }
+
+    #[test]
+    fn new_parses_valueless_keys() {
+        let map = unsafe { OptionMap::new([
+            b"key\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!("key", map.get_str("key").unwrap());
+    }
+
+    #[test]
+    fn get_parses_common_types() {
+        let map = unsafe { OptionMap::new([
+            b"str=value\0"    .as_ptr() as _,
+            b"true\0"         .as_ptr() as _,
+            b"false\0"        .as_ptr() as _,
+            b"i64=-42\0"      .as_ptr() as _,
+            b"u64=42\0"       .as_ptr() as _,
+            b"path=/foo/bar\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!(String::from("value"),      map.get::<String>("str").unwrap());
+        assert_eq!(PathBuf::from("/foo/bar"), map.get::<PathBuf>("path").unwrap());
+
+        assert_eq!(true,  map.get::<bool>("true") .unwrap());
+        assert_eq!(false, map.get::<bool>("false").unwrap());
+        assert!(map.get::<bool>("str").is_err());
+
+        assert_eq!(-42, map.get::<i8>("i64") .unwrap());
+        assert_eq!(-42, map.get::<i16>("i64").unwrap());
+        assert_eq!(-42, map.get::<i32>("i64").unwrap());
+        assert_eq!(-42, map.get::<i64>("i64").unwrap());
+        assert!(map.get::<i64>("true").is_err());
+
+        assert_eq!(42,  map.get::<u8>("u64") .unwrap());
+        assert_eq!(42,  map.get::<u16>("u64").unwrap());
+        assert_eq!(42,  map.get::<u32>("u64").unwrap());
+        assert_eq!(42,  map.get::<u64>("u64").unwrap());
+        assert!(map.get::<u64>("i64").is_err());
     }
 }

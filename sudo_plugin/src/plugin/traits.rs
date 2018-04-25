@@ -32,6 +32,31 @@ impl FromSudoOption for bool {
     }
 }
 
+impl FromSudoOption for i8 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for u8 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for i16 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+
 impl FromSudoOption for u16 {
     type Err = ::std::num::ParseIntError;
 
@@ -49,6 +74,14 @@ impl FromSudoOption for i32 {
 }
 
 impl FromSudoOption for u32 {
+    type Err = ::std::num::ParseIntError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        FromStr::from_str(s)
+    }
+}
+
+impl FromSudoOption for i64 {
     type Err = ::std::num::ParseIntError;
 
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
