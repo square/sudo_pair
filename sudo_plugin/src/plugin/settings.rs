@@ -14,6 +14,7 @@
 
 use super::super::errors::*;
 use super::option_map::*;
+use super::traits::*;
 
 use std::net::{AddrParseError, IpAddr};
 use std::str;
@@ -50,36 +51,36 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn new(raw: OptionMap) -> Result<Self> {
+    pub fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
-            plugin_dir:  raw.get_parsed("plugin_dir")?,
-            plugin_path: raw.get_parsed("plugin_path")?,
-            progname:    raw.get_parsed("progname")?,
+            plugin_dir:  value.get("plugin_dir")?,
+            plugin_path: value.get("plugin_path")?,
+            progname:    value.get("progname")?,
 
-            bsd_auth_type:        raw.get_parsed("bsd_auth_type")       .ok(),
-            close_from:           raw.get_parsed("closefrom")           .ok(),
-            debug_flags:          raw.get_parsed("debug_flags")         .ok(),
-            debug_level:          raw.get_parsed("debug_level")         .ok(),
-            ignore_ticket:        raw.get_parsed("ignore_ticket")       .unwrap_or(false),
-            implied_shell:        raw.get_parsed("implied_shell")       .unwrap_or(false),
-            login_class:          raw.get_parsed("login_class")         .ok(),
-            login_shell:          raw.get_parsed("login_shell")         .unwrap_or(false),
-            max_groups:           raw.get_parsed("max_groups")          .ok(),
-            network_addrs:        raw.get_parsed("network_addrs")       .unwrap_or_else(|_| vec![]),
-            noninteractive:       raw.get_parsed("noninteractive")      .unwrap_or(false),
-            preserve_environment: raw.get_parsed("preserve_environment").unwrap_or(false),
-            preserve_groups:      raw.get_parsed("preserve_groups")     .unwrap_or(false),
-            prompt:               raw.get_parsed("prompt")              .ok(),
-            remote_host:          raw.get_parsed("remote_host")         .ok(),
-            run_shell:            raw.get_parsed("run_shell")           .unwrap_or(false),
-            runas_group:          raw.get_parsed("runas_group")         .ok(),
-            runas_user:           raw.get_parsed("runas_user")          .ok(),
-            selinux_role:         raw.get_parsed("selinux_role")        .ok(),
-            selinux_type:         raw.get_parsed("selinux_type")        .ok(),
-            set_home:             raw.get_parsed("set_home")            .unwrap_or(false),
-            sudoedit:             raw.get_parsed("sudoedit")            .unwrap_or(false),
+            bsd_auth_type:        value.get("bsd_auth_type")       .ok(),
+            close_from:           value.get("closefrom")           .ok(),
+            debug_flags:          value.get("debug_flags")         .ok(),
+            debug_level:          value.get("debug_level")         .ok(),
+            ignore_ticket:        value.get("ignore_ticket")       .unwrap_or(false),
+            implied_shell:        value.get("implied_shell")       .unwrap_or(false),
+            login_class:          value.get("login_class")         .ok(),
+            login_shell:          value.get("login_shell")         .unwrap_or(false),
+            max_groups:           value.get("max_groups")          .ok(),
+            network_addrs:        value.get("network_addrs")       .unwrap_or_else(|_| vec![]),
+            noninteractive:       value.get("noninteractive")      .unwrap_or(false),
+            preserve_environment: value.get("preserve_environment").unwrap_or(false),
+            preserve_groups:      value.get("preserve_groups")     .unwrap_or(false),
+            prompt:               value.get("prompt")              .ok(),
+            remote_host:          value.get("remote_host")         .ok(),
+            run_shell:            value.get("run_shell")           .unwrap_or(false),
+            runas_group:          value.get("runas_group")         .ok(),
+            runas_user:           value.get("runas_user")          .ok(),
+            selinux_role:         value.get("selinux_role")        .ok(),
+            selinux_type:         value.get("selinux_type")        .ok(),
+            set_home:             value.get("set_home")            .unwrap_or(false),
+            sudoedit:             value.get("sudoedit")            .unwrap_or(false),
 
-            raw,
+            raw: value,
         })
     }
 

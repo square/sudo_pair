@@ -40,27 +40,27 @@ pub struct UserInfo {
 }
 
 impl UserInfo {
-    pub fn new(raw: OptionMap) -> Result<Self> {
+    pub fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
-            cwd:    raw.get_parsed("cwd")?,
-            egid:   raw.get_parsed("egid")?,
-            euid:   raw.get_parsed("euid")?,
-            gid:    raw.get_parsed("gid")?,
-            groups: raw.get_parsed("groups")?,
-            host:   raw.get_parsed("host")?,
-            pgid:   raw.get_parsed("pgid")?,
-            pid:    raw.get_parsed("pid")?,
-            ppid:   raw.get_parsed("ppid")?,
-            uid:    raw.get_parsed("uid")?,
-            user:   raw.get_parsed("user")?,
+            cwd:    value.get("cwd")?,
+            egid:   value.get("egid")?,
+            euid:   value.get("euid")?,
+            gid:    value.get("gid")?,
+            groups: value.get("groups")?,
+            host:   value.get("host")?,
+            pgid:   value.get("pgid")?,
+            pid:    value.get("pid")?,
+            ppid:   value.get("ppid")?,
+            uid:    value.get("uid")?,
+            user:   value.get("user")?,
 
-            cols:   raw.get_parsed("cols")  .unwrap_or(80),
-            lines:  raw.get_parsed("lines") .unwrap_or(24),
-            sid:    raw.get_parsed("sid")   .unwrap_or(0),
-            tcpgid: raw.get_parsed("tcpgid").unwrap_or(-1),
-            tty:    raw.get_parsed("tty")   .ok(),
+            cols:   value.get("cols")  .unwrap_or(80),
+            lines:  value.get("lines") .unwrap_or(24),
+            sid:    value.get("sid")   .unwrap_or(0),
+            tcpgid: value.get("tcpgid").unwrap_or(-1),
+            tty:    value.get("tty")   .ok(),
 
-            raw,
+            raw: value,
         })
     }
 }
