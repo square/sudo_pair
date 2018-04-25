@@ -128,5 +128,11 @@ pub trait FromSudoOptionList: Sized {
     }
 }
 
+impl FromSudoOptionList for i8 {}
+impl FromSudoOptionList for u8 {}
+impl FromSudoOptionList for i16 {}
+impl FromSudoOptionList for u16 {}
 impl FromSudoOptionList for i32 {}
 impl FromSudoOptionList for u32 {}
+impl FromSudoOptionList for i64 {}
+impl FromSudoOptionList for u64 {}
