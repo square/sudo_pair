@@ -134,14 +134,21 @@ impl Plugin {
     /// shell in order to launch this invocation of sudo.
     ///
     pub fn invocation(&self) -> Vec<u8> {
-        let mut command = self.settings.progname.as_bytes().to_vec();
+        let mut sudo    = self.settings.progname.as_bytes().to_vec();
+        let     flags   = self.settings.flags();
+        let     command = self.command_info.command.as_bytes();
 
-        command.push(b' ');
-        command.extend_from_slice(&self.settings.flags().join(&b' ')[..]);
-        command.push(b' ');
-        command.extend_from_slice(self.command_info.command.as_bytes());
+        if !flags.is_empty() {
+            sudo.push(b' ');
+            sudo.extend_from_slice(&flags.join(&b' ')[..]);
+        }
 
-        command
+        if !command.is_empty() {
+            sudo.push(b' ');
+            sudo.extend_from_slice(&command);
+        }
+
+        sudo
     }
 
     /// Prints an informational message (which must not contain interior
