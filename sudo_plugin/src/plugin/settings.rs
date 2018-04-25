@@ -78,70 +78,84 @@ impl Settings {
         // this case, although we'll technically get it wrong in the
         // case of `sudoedit -e ...`
         if self.sudoedit && self.progname != "sudoedit" {
-            flags.push(b"-e".to_vec());
+            flags.push(b"--edit".to_vec());
         }
 
         if let Some(ref runas_user) = self.runas_user {
-            flags.push(b"-u".to_vec());
-            flags.push(runas_user.as_bytes().to_vec());
+            let mut flag = b"--user ".to_vec();
+            flag.extend_from_slice(runas_user.as_bytes());
+
+            flags.push(flag);
         }
 
         if let Some(ref runas_group) = self.runas_group {
-            flags.push(b"-g".to_vec());
-            flags.push(runas_group.as_bytes().to_vec());
+            let mut flag = b"--group ".to_vec();
+            flag.extend_from_slice(runas_group.as_bytes());
+
+            flags.push(flag);
         }
 
         if self.login_shell {
-            flags.push(b"-i".to_vec());
+            flags.push(b"--login".to_vec());
         }
 
         if self.run_shell {
-            flags.push(b"-s".to_vec());
+            flags.push(b"--shell".to_vec());
         }
 
         if self.set_home {
-            flags.push(b"-h".to_vec());
+            flags.push(b"--set-home".to_vec());
         }
 
         if self.preserve_environment {
-            flags.push(b"-E".to_vec());
+            flags.push(b"--preserve-env".to_vec());
         }
 
         if self.preserve_groups {
-            flags.push(b"-P".to_vec());
+            flags.push(b"--preserve-groups".to_vec());
         }
 
         if self.ignore_ticket {
-            flags.push(b"-k".to_vec());
+            flags.push(b"--reset-timestamp".to_vec());
         }
 
         if self.noninteractive {
-            flags.push(b"-n".to_vec());
+            flags.push(b"--non-interactive".to_vec());
         }
 
         if let Some(ref login_class) = self.login_class {
-            flags.push(b"-c".to_vec());
-            flags.push(login_class.as_bytes().to_vec());
+            let mut flag = b"--login-class ".to_vec();
+            flag.extend_from_slice(login_class.as_bytes());
+
+            flags.push(flag);
         }
 
         if let Some(ref selinux_role) = self.selinux_role {
-            flags.push(b"-r".to_vec());
-            flags.push(selinux_role.as_bytes().to_vec());
+            let mut flag = b"--role ".to_vec();
+            flag.extend_from_slice(selinux_role.as_bytes());
+
+            flags.push(flag);
         }
 
         if let Some(ref selinux_type) = self.selinux_type {
-            flags.push(b"-t".to_vec());
-            flags.push(selinux_type.as_bytes().to_vec());
+            let mut flag = b"--type ".to_vec();
+            flag.extend_from_slice(selinux_type.as_bytes());
+
+            flags.push(flag);
         }
 
         if let Some(ref bsd_auth_type) = self.bsd_auth_type {
-            flags.push(b"-a".to_vec());
-            flags.push(bsd_auth_type.as_bytes().to_vec());
+            let mut flag = b"--auth-type ".to_vec();
+            flag.extend_from_slice(bsd_auth_type.as_bytes());
+
+            flags.push(flag);
         }
 
-        if let Some(closefrom) = self.close_from {
-            flags.push(b"-C".to_vec());
-            flags.push(closefrom.to_string().as_bytes().to_vec());
+        if let Some(close_from) = self.close_from {
+            let mut flag = b"--close-from ".to_vec();
+            flag.extend_from_slice(close_from.to_string().as_bytes());
+
+            flags.push(flag);
         }
 
         flags
