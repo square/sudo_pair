@@ -83,7 +83,9 @@ impl Settings {
         })
     }
 
-    // TODO: surely this can be made more cleanly
+    // TODO: surely this can be made more cleanly; also, it would be
+    // great if we could actually get the full original `sudo`
+    // invocation without having to reconstruct it by hand
     pub fn flags(&self) -> Vec<Vec<u8>> {
         let mut flags : Vec<Vec<u8>> = vec![];
 
@@ -105,6 +107,13 @@ impl Settings {
         if let Some(ref runas_group) = self.runas_group {
             let mut flag = b"--group ".to_vec();
             flag.extend_from_slice(runas_group.as_bytes());
+
+            flags.push(flag);
+        }
+
+        if let Some(ref prompt) = self.prompt {
+            let mut flag = b"--prompt ".to_vec();
+            flag.extend_from_slice(prompt.as_bytes());
 
             flags.push(flag);
         }
