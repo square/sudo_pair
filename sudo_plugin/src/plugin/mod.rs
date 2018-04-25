@@ -103,9 +103,11 @@ impl Plugin {
             version,
             command,
 
-            settings:       Settings   ::new(OptionMap::from_raw(settings))?,
-            user_info:      UserInfo   ::new(OptionMap::from_raw(user_info))?,
-            command_info:   CommandInfo::new(OptionMap::from_raw(command_info))?,
+            // TODO: convert `try_from` calls to `into` when the TryFrom
+            // trait stabilizes around May 2018
+            settings:       Settings   ::try_from(OptionMap::from_raw(settings))?,
+            user_info:      UserInfo   ::try_from(OptionMap::from_raw(user_info))?,
+            command_info:   CommandInfo::try_from(OptionMap::from_raw(command_info))?,
             user_env:       OptionMap  ::from_raw(user_env),
             plugin_options: OptionMap  ::from_raw(plugin_options),
 
