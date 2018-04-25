@@ -14,6 +14,7 @@
 
 use super::super::errors::*;
 use super::option_map::*;
+use super::traits::*;
 
 use std::net::{AddrParseError, IpAddr};
 use std::str;

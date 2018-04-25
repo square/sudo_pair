@@ -19,6 +19,7 @@ mod option_map;
 mod command_info;
 mod settings;
 mod user_info;
+mod traits;
 
 use super::errors::*;
 use super::version::Version;
