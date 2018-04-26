@@ -59,13 +59,12 @@ mod socket;
 use socket::Socket;
 
 use std::collections::HashSet;
-use std::ffi::CStr;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{PathBuf, Path};
 
-use libc::{gid_t, mode_t, pid_t, uid_t};
+use libc::{gid_t, mode_t, uid_t};
 
 use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
@@ -92,7 +91,6 @@ sudo_io_plugin! {
 struct SudoPair {
     plugin:      &'static sudo_plugin::Plugin,
     settings:    PluginSettings,
-    environment: PluginEnvironment,
     socket:      Option<Socket>
 }
 
@@ -100,12 +98,10 @@ impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
         // TODO: convert all outgoing errors to be unauthorized errors
         let settings    = PluginSettings::from(&plugin.plugin_options);
-        let environment = PluginEnvironment::new(plugin)?;
 
         let mut pair = Self {
             plugin,
             settings,
-            environment,
             socket: None,
         };
 
@@ -240,31 +236,36 @@ impl SudoPair {
     }
 
     fn is_sudoing_from_root(&self) -> bool {
-        self.environment.uid == 0
+        // theoretically, root's `uid` should be 0, but it's probably
+        // safest to check whatever user `sudo` is running as since sudo
+        // is pretty much by definition going to be running setuid;
+        // hypothetically with selinux someone could have sudo owned by
+        // some non-root user that has the caps needed for sudoing around
+        self.plugin.user_info.uid == unsafe { libc::geteuid() }
     }
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
         !self.settings.gids_exempted.is_disjoint(
-            &self.environment.gids
+            &self.plugin.user_info.groups.iter().cloned().collect()
         )
     }
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
         !self.settings.gids_enforced.is_disjoint(
-            &self.environment.runas_gids
+            &self.plugin.runas_gids().iter().cloned().collect()
         )
     }
 
     fn is_sudoing_approval_command(&self) -> bool {
-        self.environment.command == self.settings.binary_path
+        self.plugin.command_info.command == self.settings.binary_path
     }
 
     fn is_sudoing_to_user(&self) -> bool {
-        self.environment.uid != self.environment.runas_uid
+        self.plugin.user_info.euid != self.plugin.command_info.runas_euid
     }
 
     fn is_sudoing_to_group(&self) -> bool {
-        self.environment.gid != self.environment.runas_gid
+        self.plugin.user_info.egid != self.plugin.command_info.runas_egid
     }
 
     fn socket_path(&self) -> PathBuf {
@@ -272,7 +273,11 @@ impl SudoPair {
         // there's no other (easy) way for the approval command to probe
         // for this information
         self.settings.socket_dir.join(
-            format!("{}.{}.sock", self.environment.uid, self.environment.pid)
+            format!(
+                "{}.{}.sock",
+                self.plugin.user_info.euid,
+                self.plugin.user_info.pid
+            )
         )
     }
 
@@ -282,7 +287,7 @@ impl SudoPair {
         // silently self-approve by manually connecting to the socket
         // without needing to invoke sudo
         if self.is_sudoing_to_user() {
-            self.environment.runas_uid
+            self.plugin.command_info.runas_euid
         } else {
             // the *effective* uid is the one we want here since it's
             // the uid of the elevated `sudo` process; `getuid` would
@@ -298,7 +303,7 @@ impl SudoPair {
         // correctly either way, but I'm doing so anyway in the interest
         // of caution
         if self.is_sudoing_to_group() {
-            self.environment.runas_gid
+            self.plugin.command_info.runas_egid
         } else {
             // the *effective* gid is the one we want here since it's
             // the gid of the elevated `sudo` process; `getgid` would
@@ -361,13 +366,13 @@ impl SudoPair {
                 Some(b'b') => self.settings.binary_name().into(),
                 Some(b'B') => self.settings.binary_path.as_os_str().as_bytes().into(),
                 Some(b'C') => self.plugin.invocation(),
-                Some(b'd') => self.environment.cwd.as_os_str().as_bytes().into(),
-                Some(b'h') => self.environment.hostname.as_bytes().into(),
+                Some(b'd') => self.plugin.cwd().as_os_str().as_bytes().into(),
+                Some(b'h') => self.plugin.user_info.host.as_bytes().into(),
                 Some(b'H') => self.plugin.user_info.lines.to_string().into_bytes(),
-                Some(b'g') => self.environment.gid.to_string().into_bytes(),
-                Some(b'p') => self.environment.pid.to_string().into_bytes(),
-                Some(b'u') => self.environment.uid.to_string().into_bytes(),
-                Some(b'U') => self.environment.username.as_bytes().into(),
+                Some(b'g') => self.plugin.user_info.egid.to_string().into_bytes(),
+                Some(b'p') => self.plugin.user_info.pid.to_string().into_bytes(),
+                Some(b'u') => self.plugin.user_info.euid.to_string().into_bytes(),
+                Some(b'U') => self.plugin.user_info.user.as_bytes().into(),
                 Some(b'W') => self.plugin.user_info.cols.to_string().into_bytes(),
                 Some(byte) => vec![TEMPLATE_ESCAPE, byte],
                 None       => vec![TEMPLATE_ESCAPE],
@@ -377,124 +382,6 @@ impl SudoPair {
         }
 
         result
-    }
-}
-
-#[derive(Debug)]
-struct PluginEnvironment {
-    /// The hostname of the machine the command is being invoked on.
-    hostname: String,
-
-    /// The uid of the user invoking the command.
-    uid: uid_t,
-
-    /// The primary gid of the user invoking the command.
-    gid: gid_t,
-
-    /// The gids of the user invoking the command.
-    gids: HashSet<gid_t>,
-
-    /// The username of the user invoking the command.
-    username: String,
-
-    /// The process ID of the `sudo` invocation.
-    pid: pid_t,
-
-    /// The fully qualified path to the command to be executed.
-    // TODO: use the full args too
-    command: PathBuf,
-
-    /// The current working directory to change to when executing the
-    /// command.
-    cwd: PathBuf,
-
-    /// The elevated user ID the command is being invoked under.
-    runas_uid: uid_t,
-
-    /// The elevated group ID the command is being invoked under.
-    runas_gid: gid_t,
-
-    /// The full set of group memberships the command will be run with.
-    runas_gids: HashSet<gid_t>,
-
-    /// The username of the elevated user ID the command is being invoked
-    /// under.
-    runas_username: String,
-
-    /// The groupname of the elevated group ID the command is being invoked
-    /// under.
-    runas_groupname: String,
-}
-
-fn uid_to_username(uid: uid_t) -> Result<String> {
-    let pwent = unsafe {
-        libc::getpwuid(uid)
-    };
-
-    if pwent.is_null() {
-        bail!(ErrorKind::Unauthorized("target user couldn't be found".into()))
-    }
-
-    unsafe {
-        Ok(
-            CStr::from_ptr((*pwent).pw_name)
-                .to_str()
-                .chain_err(|| "target user couldn't be found")?
-                .to_owned()
-        )
-    }
-}
-
-fn gid_to_groupname(gid: gid_t) -> Result<String> {
-    let pwent = unsafe {
-        libc::getgrgid(gid)
-    };
-
-    if pwent.is_null() {
-        bail!(ErrorKind::Unauthorized("target group couldn't be found".into()))
-    }
-
-    unsafe {
-        Ok(
-            CStr::from_ptr((*pwent).gr_name)
-                .to_str()
-                .chain_err(|| "target group couldn't be found")?
-                .to_owned()
-        )
-    }
-}
-
-impl<'a> PluginEnvironment {
-    fn new(plugin: &'a sudo_plugin::Plugin) -> Result<Self> {
-        let gids : HashSet<gid_t> = plugin.user_info.groups
-            .iter()
-            .cloned()
-            .collect();
-
-        // if -P is passed to `sudo`, `runas_groups` is empty, but the
-        // effective groups are the user's original ones
-        let runas_gids = plugin.command_info.runas_groups
-            .as_ref()
-            .map_or_else(
-                || gids.clone(),
-                |gids| gids.iter().cloned().collect()
-            );
-
-        Ok(Self {
-            hostname:        plugin.user_info.host.clone(),
-            uid:             plugin.user_info.uid,
-            gid:             plugin.user_info.gid,
-            gids,
-            username:        plugin.user_info.user.clone(),
-            pid:             plugin.user_info.pid,
-            command:         PathBuf::from(&plugin.command_info.command),
-            cwd:             PathBuf::from(plugin.command_info.cwd.as_ref().unwrap_or(&plugin.user_info.cwd)),
-            runas_uid:       plugin.command_info.runas_uid,
-            runas_gid:       plugin.command_info.runas_gid,
-            runas_gids,
-            runas_username:  uid_to_username(plugin.command_info.runas_uid)?,
-            runas_groupname: gid_to_groupname(plugin.command_info.runas_gid)?,
-        })
     }
 }
 
@@ -555,11 +442,11 @@ impl<'a> From<&'a OptionMap> for PluginSettings {
             socket_dir: map.get("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
-            gids_enforced: map.get("gids_enforced")
-                .unwrap_or_else(|_| vec![]).into_iter().collect(),
+            gids_enforced: map.get::<Vec<gid_t>>("gids_enforced")
+                .unwrap_or_default().iter().cloned().collect(),
 
-            gids_exempted: map.get("gids_exempted")
-                .unwrap_or_else(|_| vec![]).into_iter().collect(),
+            gids_exempted: map.get::<Vec<gid_t>>("gids_exempted")
+                .unwrap_or_default().iter().cloned().collect(),
         }
     }
 }

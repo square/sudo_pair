@@ -16,6 +16,7 @@ use super::super::errors::*;
 use super::option_map::*;
 
 use std::os::unix::io::RawFd;
+use std::path::PathBuf;
 
 use libc::{gid_t, mode_t, uid_t};
 
@@ -23,8 +24,8 @@ use libc::{gid_t, mode_t, uid_t};
 pub struct CommandInfo {
     pub chroot:            Option<String>,
     pub close_from:        Option<u64>,
-    pub command:           String,
-    pub cwd:               Option<String>,
+    pub command:           PathBuf,
+    pub cwd:               Option<PathBuf>,
     pub exec_background:   bool,
     pub exec_fd:           Option<u64>,
     pub iolog_compress:    bool,

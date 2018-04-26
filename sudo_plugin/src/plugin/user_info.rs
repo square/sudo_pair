@@ -15,12 +15,14 @@
 use super::super::errors::*;
 use super::option_map::*;
 
+use std::path::PathBuf;
+
 use libc::{gid_t, pid_t, uid_t};
 
 #[derive(Debug)]
 pub struct UserInfo {
     pub cols:   u64,
-    pub cwd:    String,
+    pub cwd:    PathBuf,
     pub egid:   gid_t,
     pub euid:   uid_t,
     pub gid:    gid_t,
