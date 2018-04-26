@@ -19,6 +19,12 @@ const OPTIONS_SEPARATOR: u8 = b'=';
 #[derive(Clone, Debug)]
 pub struct OptionMap(HashMap<Vec<u8>, Vec<u8>>);
 
+// TOOD: in policy plugins, some of these values can be written back to
+// by the plugin in order to change the execution of sudo itself (e.g.,
+// `command_info.chroot`, `command_info.cwd`, and others). We should
+// support that use-case, but I don't think the current design of the
+// API can be plausibly made to support it. This will probably require
+// a redesign of this entire thing, which I'm not really excited about.
 impl OptionMap {
     /// Initializes the `OptionMap` from a pointer to the options
     /// provided when `sudo` invokes the plugin's entry function. The
@@ -165,6 +171,17 @@ mod tests {
         ].as_ptr()) };
 
         assert_eq!("key", map.get_str("key").unwrap());
+    }
+
+    #[test]
+    fn new_parses_values_with_the_separator() {
+        let map = unsafe { OptionMap::from_raw([
+            b"key=value=value\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        assert_eq!("value=value", map.get_str("key").unwrap());
+        assert_eq!(None,          map.get_str("key=value"));
     }
 
     #[test]
