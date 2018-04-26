@@ -18,10 +18,12 @@ use self::user_info::UserInfo;
 
 use sudo_plugin_sys;
 
+use std::os::unix::ffi::OsStrExt;
+use std::path::PathBuf;
 use std::ffi::{CString, CStr};
 use std::slice;
 
-use libc::{c_char, c_int, c_uint};
+use libc::{c_char, c_int, c_uint, gid_t};
 
 /// An implementation of a sudo plugin, initialized and parsed from the
 /// values passed to the underlying `open` callback.
@@ -134,10 +136,11 @@ impl Plugin {
     /// As best as can be reconstructed, what was actually typed at the
     /// shell in order to launch this invocation of sudo.
     ///
+    // TODO: I don't really like this name
     pub fn invocation(&self) -> Vec<u8> {
         let mut sudo    = self.settings.progname.as_bytes().to_vec();
         let     flags   = self.settings.flags();
-        let     command = self.command_info.command.as_bytes();
+        let     command = self.command_info.command.as_os_str().as_bytes();
 
         if !flags.is_empty() {
             sudo.push(b' ');
@@ -150,6 +153,44 @@ impl Plugin {
         }
 
         sudo
+    }
+
+    ///
+    /// The `cwd` to be used for the command being run. This is
+    /// typically set on the `user_info` component, but may be
+    /// overridden by the policy plugin setting its value on
+    /// `command_info`.
+    ///
+    pub fn cwd(&self) -> &PathBuf {
+        self.command_info.cwd.as_ref().unwrap_or(
+            &self.user_info.cwd
+        )
+    }
+
+    ///
+    /// The complete set of groups the invoked command will have
+    /// privileges for. If the `-P` (`--preserve-groups`) flag was
+    /// passed to `sudo`, the underlying `command_info` will not have
+    /// this set and this method will return the list of original groups
+    /// from the running the command.
+    ///
+    pub fn runas_gids(&self) -> &Vec<gid_t> {
+        // sanity-check that if preserve_groups is unset we have
+        // `runas_groups`, and if it is set that we don't
+        if self.command_info.preserve_groups {
+            debug_assert!(self.command_info.runas_groups.is_some())
+        } else {
+            debug_assert!(self.command_info.runas_groups.is_none())
+        }
+
+        // even though the above sanity-check might go wrong, it still
+        // seems like a safe bet that if `runas_groups` isn't set that
+        // the command will be invoked with the original user's groups
+        // (it will probably require reading the `sudo` source code to
+        // verify this)
+        self.command_info.runas_groups.as_ref().unwrap_or(
+            &self.user_info.groups
+        )
     }
 
     /// Prints an informational message (which must not contain interior
