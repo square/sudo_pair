@@ -348,18 +348,46 @@ impl SudoPair {
             // to repeatd the `result.extend_from_slice` part each time in the
             // match arms, but it does kind of suck that we have so much
             // type-conversion noise
+            //
+            // TODO: document these somewhere useful for users of this plugin
+            // TODO: provide groupname of egid?
+            // TODO: provide username of runas_euid?
+            // TODO: provide groupname of runas_egid?
             let expansion = match iter.next() {
+                // the name of the appoval _b_inary
                 Some(b'b') => self.settings.binary_name().into(),
+
+                // the full path to the approval _B_inary
                 Some(b'B') => self.settings.binary_path.as_os_str().as_bytes().into(),
+
+                // the full _C_ommand `sudo` was invoked as (recreated as
+                // best-effort for now)
                 Some(b'C') => self.plugin.invocation(),
+
+                // the cw_d_ of the command being run under `sudo`
                 Some(b'd') => self.plugin.cwd().as_os_str().as_bytes().into(),
+
+                // the _h_ostname of the machine `sudo` is being executed on
                 Some(b'h') => self.plugin.user_info.host.as_bytes().into(),
+
+                // the _H_eight of the invoking user's terminal, in rows
                 Some(b'H') => self.plugin.user_info.lines.to_string().into_bytes(),
+
+                // the effective _g_id of the user invoking `sudo`
                 Some(b'g') => self.plugin.user_info.egid.to_string().into_bytes(),
+
+                // the _p_id of this `sudo` process
                 Some(b'p') => self.plugin.user_info.pid.to_string().into_bytes(),
+
+                // the effective _u_id of the user invoking `sudo`
                 Some(b'u') => self.plugin.user_info.euid.to_string().into_bytes(),
+
+                // the _U_sername of the user running `sudo`
                 Some(b'U') => self.plugin.user_info.user.as_bytes().into(),
+
+                // the _W_idth of the invoking user's terminal, in columns
                 Some(b'W') => self.plugin.user_info.cols.to_string().into_bytes(),
+
                 Some(byte) => vec![TEMPLATE_ESCAPE, byte],
                 None       => vec![TEMPLATE_ESCAPE],
             };
