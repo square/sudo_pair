@@ -97,7 +97,7 @@ struct SudoPair {
 impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
         // TODO: convert all outgoing errors to be unauthorized errors
-        let settings    = PluginSettings::from(&plugin.plugin_options);
+        let settings = PluginSettings::from(&plugin.plugin_options);
 
         let mut pair = Self {
             plugin,
@@ -282,7 +282,7 @@ impl SudoPair {
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
         !self.settings.gids_enforced.is_disjoint(
-            &self.plugin.runas_gids().iter().cloned().collect()
+            &self.plugin.runas_gids()
         )
     }
 
