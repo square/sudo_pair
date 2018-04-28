@@ -92,10 +92,25 @@ impl SudoPair {
         };
 
         if !pair.is_exempt() {
-            pair.local_pair_prompt()?;
+            pair.local_pair_prompt();
             pair.remote_pair_connect()?;
             pair.remote_pair_prompt()?;
         }
+
+        // TODO: provide a configurable option to deny or log if the
+        // remote euid is the same as the local euid. For some reason I
+        // convinced myself that this is necessary to implement in the
+        // client and not the pair plugin, but I can't remember what the
+        // reasoning was at the moment.
+        //
+        // Oh, now I remember. It *has* to be done on the client,
+        // because the approval script is run under `sudo` itself so
+        // that we can verify the pairer is also capable of doing the
+        // task the user invoking `sudo` is trying to do. Unfortunately,
+        // the OS APIs we have to determine the other side of the
+        // connection only tell us the *euid*, not the *uid*. So we end
+        // up with the euid of `root` which isn't helpful. So this kind
+        // of check *must* be done on the client.
 
         Ok(pair)
     }
@@ -127,20 +142,32 @@ impl SudoPair {
         ));
     }
 
-    fn local_pair_prompt(&self) -> Result<()> {
+    fn local_pair_prompt(&self) {
         // read the template from the file; if there's an error, use the
         // default template instead
         let template = self.template_load(
             &self.settings.user_prompt_path
         ).unwrap_or_else(|_| DEFAULT_USER_PROMPT.to_owned());
 
-        // TODO: this is returning an error even though it printf, I'm not
-        // entirely sure why
+        // TODO: this is returning an error (EINVAL) even though it prints
+        // successfully; I'm not entirely sure why. It started failing
+        // when I added some new operators for the templating code, but
+        // nothing in that commit seems like it should have obviously
+        // started causing writes to fail.
+        //
+        // EINVAL is raised by the underlying libc vfprintf call, which
+        // appears to only be problematic if the underlying write fails.
+        // As far as I can tell, this only happens if something isn't
+        // aligned correctly and the `fd` is opened with`O_DIRECT`. But
+        // it seems unlikely that STDIN is opened that way or that
+        // anything Rust allocates is misaligned. The other possibility
+        // is that STDIN is "unsuitable for writing" which also seems
+        // improbable. For now, I'm ignoring the situation but hopefully
+        // there's enough information here for someone (probably me) to
+        // pick up where I left off.
         let _ = self.plugin.print_info(
             self.template_expand(&template[..])
         );
-
-        Ok(())
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {
