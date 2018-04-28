@@ -18,6 +18,7 @@ use self::user_info::UserInfo;
 
 use sudo_plugin_sys;
 
+use std::collections::HashSet;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
@@ -117,18 +118,6 @@ impl Plugin {
             printf:        plugin_printf,
         };
 
-        // TODO: protect uids directly, not just gids
-        //
-        // this is a hack around the fact that we only protect
-        // uids indirectly through restricting the gaining of gids; if
-        // a user specifies `-P` (`--preserve-groups`), they won't gain
-        // any gids and will completely bypass this plugins
-        if plugin.settings.preserve_groups {
-            bail!(ErrorKind::Unauthorized(
-                "the -P option may not be specified in sessions requiring a pair".into()
-            ));
-        }
-
         Ok(plugin)
     }
 
@@ -174,13 +163,15 @@ impl Plugin {
     /// this set and this method will return the list of original groups
     /// from the running the command.
     ///
-    pub fn runas_gids(&self) -> &Vec<gid_t> {
+    /// This set will always contain `runas_egid`.
+    ///
+    pub fn runas_gids(&self) -> HashSet<gid_t> {
         // sanity-check that if preserve_groups is unset we have
         // `runas_groups`, and if it is set that we don't
         if self.command_info.preserve_groups {
-            debug_assert!(self.command_info.runas_groups.is_some())
-        } else {
             debug_assert!(self.command_info.runas_groups.is_none())
+        } else {
+            debug_assert!(self.command_info.runas_groups.is_some())
         }
 
         // even though the above sanity-check might go wrong, it still
@@ -188,9 +179,17 @@ impl Plugin {
         // the command will be invoked with the original user's groups
         // (it will probably require reading the `sudo` source code to
         // verify this)
-        self.command_info.runas_groups.as_ref().unwrap_or(
+        let mut set : HashSet<_> = self.command_info.runas_groups.as_ref().unwrap_or(
             &self.user_info.groups
-        )
+        ).iter().cloned().collect();
+
+        // `command_info.runas_egid` won't necessarily be in the list of
+        // `command_info.runas_groups` if `-P` was passed; however, the
+        // user will have this in the list of groups that they will gain
+        // permissions for so it seems sane to include it in this list
+        let _ = set.insert(self.command_info.runas_egid);
+
+        set
     }
 
     /// Prints an informational message (which must not contain interior
