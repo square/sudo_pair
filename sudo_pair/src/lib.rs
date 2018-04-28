@@ -315,6 +315,10 @@ impl SudoPair {
         }
     }
 
+    // TODO: on macOS, the `gid` of `nogroup` is -1, but rust libc
+    // considers `gid_t` unsigned (4294967295); something goes wrong
+    // here as a result, and when `chown` is called, the socket ends up
+    // owned by `gid == 1` instead of `gid == -1`
     fn socket_gid(&self) -> gid_t {
         // it's probably unnecessary to use our own gid in the event of
         // sudoing to the same group, since the mode should be set
