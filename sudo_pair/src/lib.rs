@@ -268,7 +268,10 @@ impl SudoPair {
         // is pretty much by definition going to be running setuid;
         // hypothetically with selinux someone could have sudo owned by
         // some non-root user that has the caps needed for sudoing around
-        self.plugin.user_info.uid == unsafe { libc::geteuid() }
+        //
+        // note that the `euid` will always be the owner of the `sudo`
+        // binary
+        self.plugin.user_info.uid == self.plugin.user_info.euid
     }
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
@@ -288,22 +291,26 @@ impl SudoPair {
     }
 
     fn is_sudoing_to_user(&self) -> bool {
-        self.plugin.user_info.euid != self.plugin.command_info.runas_euid
+        self.plugin.user_info.uid != self.plugin.command_info.runas_euid
     }
 
     fn is_sudoing_to_group(&self) -> bool {
-        self.plugin.user_info.egid != self.plugin.command_info.runas_egid
+        self.plugin.user_info.gid != self.plugin.command_info.runas_egid
     }
 
     fn socket_path(&self) -> PathBuf {
         // we encode the originating `uid` into the pathname since
         // there's no other (easy) way for the approval command to probe
         // for this information
+        //
+        // note that we want the *`uid`* and not the `euid` here since
+        // we want to know who the real user is and not the `uid` of the
+        // owner of `sudo`
         self.settings.socket_dir.join(
             format!(
                 "{}.{}.sock",
-                self.plugin.user_info.euid,
-                self.plugin.user_info.pid
+                self.plugin.user_info.uid,
+                self.plugin.user_info.pid,
             )
         )
     }
@@ -316,11 +323,9 @@ impl SudoPair {
         if self.is_sudoing_to_user() {
             self.plugin.command_info.runas_euid
         } else {
-            // the *effective* uid is the one we want here since it's
-            // the uid of the elevated `sudo` process; `getuid` would
-            // return the invoking user's uid (ask me how I noticed
-            // this)
-            unsafe { libc::geteuid() }
+            // `euid` is going to be the owner of the `sudo` binary
+            // since that's the effective user invoking this command
+            self.plugin.user_info.euid
         }
     }
 
@@ -332,11 +337,9 @@ impl SudoPair {
         if self.is_sudoing_to_group() {
             self.plugin.command_info.runas_egid
         } else {
-            // the *effective* gid is the one we want here since it's
-            // the gid of the elevated `sudo` process; `getgid` would
-            // return the invoking user's gid (ask me how I noticed
-            // this)
-            unsafe { libc::getegid() }
+            // `egid` is going to be the owner of the `sudo` binary
+            // since that's the effective user invoking this command
+            self.plugin.user_info.egid
         }
     }
 
@@ -391,7 +394,7 @@ impl SudoPair {
             // type-conversion noise
             //
             // TODO: document these somewhere useful for users of this plugin
-            // TODO: provide groupname of egid?
+            // TODO: provide groupname of gid?
             // TODO: provide username of runas_euid?
             // TODO: provide groupname of runas_egid?
             let expansion = match iter.next() {
@@ -414,14 +417,14 @@ impl SudoPair {
                 // the _H_eight of the invoking user's terminal, in rows
                 Some(b'H') => self.plugin.user_info.lines.to_string().into_bytes(),
 
-                // the effective _g_id of the user invoking `sudo`
-                Some(b'g') => self.plugin.user_info.egid.to_string().into_bytes(),
+                // the real _g_id of the user invoking `sudo`
+                Some(b'g') => self.plugin.user_info.gid.to_string().into_bytes(),
 
                 // the _p_id of this `sudo` process
                 Some(b'p') => self.plugin.user_info.pid.to_string().into_bytes(),
 
-                // the effective _u_id of the user invoking `sudo`
-                Some(b'u') => self.plugin.user_info.euid.to_string().into_bytes(),
+                // the real _u_id of the user invoking `sudo`
+                Some(b'u') => self.plugin.user_info.uid.to_string().into_bytes(),
 
                 // the _U_sername of the user running `sudo`
                 Some(b'U') => self.plugin.user_info.user.as_bytes().into(),
