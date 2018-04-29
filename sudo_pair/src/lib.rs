@@ -32,7 +32,6 @@
 #![cfg_attr(feature="cargo-clippy", allow(similar_names))]
 
 extern crate libc;
-extern crate unix_socket;
 
 #[macro_use]
 extern crate error_chain;
