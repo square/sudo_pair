@@ -151,7 +151,11 @@ impl Read for Socket {
 
 impl Write for Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.socket.write(buf)
+        unsafe {
+            ctrl_c_aborts_syscalls(|| {
+                self.socket.write(buf)
+            })?
+        }
     }
 
     fn flush(&mut self) -> io::Result<()> {
