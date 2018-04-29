@@ -16,13 +16,13 @@ use std::ffi::CString;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::net::Shutdown;
-use std::os::unix::ffi::OsStrExt;
-use std::os::unix::fs::FileTypeExt;
+use std::os::unix::prelude::*;
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::mem;
 use std::path::Path;
+use std::ptr;
 
 use libc::{self, gid_t, mode_t, uid_t};
-
-use unix_socket::{UnixListener, UnixStream};
 
 #[derive(Debug)]
 pub(crate) struct Socket {
@@ -47,7 +47,7 @@ impl Socket {
         // create a socket and wait for someone to connect; we *don't*
         // suffix this with an immediate `?` so that we have a chance
         // to clean up after ourselves first
-        let connection = UnixListener::bind(&path).and_then(|sock| {
+        let connection = UnixListener::bind(&path).and_then(|listener| {
             unsafe {
                 if libc::chown(cpath.as_ptr(), uid, gid) == -1 {
                     return Err(io::Error::last_os_error());
@@ -58,12 +58,44 @@ impl Socket {
                 }
 
                 // accept() will block until someone connects on the
-                // other side of the socket, so we ensure that the
-                // signal handler for Ctrl-C aborts the call instead of
-                // restarting them automatically
-                ctrl_c_aborts_syscalls(|| {
-                    sock.accept()
-                })?
+                // other side of the socket; we previously used `sigaction`
+                // to disable the `SA_RESTART` flag during `accept`, but
+                // this broke when switching from the `unix_socket`
+                // crate to Rust's builtin socket handling facilities,
+                // and I'm not entirely sure why
+                listener.set_nonblocking(true)?;
+
+                let mut fds : libc::fd_set = mem::uninitialized();
+                libc::FD_ZERO(&mut fds);
+                libc::FD_SET(listener.as_raw_fd(), &mut fds);
+
+                match libc::select(
+                    listener.as_raw_fd() + 1,
+                    &mut fds,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                ) {
+                    1  => (),
+                    -1 => return Err(io::Error::last_os_error()),
+                    0  => unreachable!("`select` returned 0 even though no timeout was set"),
+                    _  => unreachable!("`select` indicates that more than 1 fd is ready"),
+                };
+
+                // as a sanity check, confirm that the fd we're going to
+                // `accept` is the one that `select` says is ready
+                if !libc::FD_ISSET(listener.as_raw_fd(), &mut fds) {
+                    unreachable!("`select` returned an unexpected file descriptor");
+                }
+
+                // the listener has to go back into blocking mode,
+                // otherwise future `read` calls will block
+                //
+                // TODO: we might should use nonblocking I/O for the
+                // whole thing, since that will prevent us from needing
+                // to hijack SIGINT handling
+                listener.set_nonblocking(false)?;
+                listener.accept()
             }
         });
 
