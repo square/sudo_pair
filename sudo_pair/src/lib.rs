@@ -88,19 +88,19 @@ sudo_io_plugin! {
 }
 
 struct SudoPair {
-    plugin:      &'static sudo_plugin::Plugin,
-    settings:    PluginSettings,
-    socket:      Option<Socket>
+    plugin:  &'static sudo_plugin::Plugin,
+    options: PluginOptions,
+    socket:  Option<Socket>
 }
 
 impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
         // TODO: convert all outgoing errors to be unauthorized errors
-        let settings = PluginSettings::from(&plugin.plugin_options);
+        let options = PluginOptions::from(&plugin.plugin_options);
 
         let mut pair = Self {
             plugin,
-            settings,
+            options,
             socket: None,
         };
 
@@ -161,7 +161,7 @@ impl SudoPair {
         // read the template from the file; if there's an error, use the
         // default template instead
         let template = self.template_load(
-            &self.settings.user_prompt_path
+            &self.options.user_prompt_path
         ).unwrap_or_else(|_| DEFAULT_USER_PROMPT.to_owned());
 
         // TODO: this is returning an error (EINVAL) even though it prints
@@ -205,7 +205,7 @@ impl SudoPair {
 
     fn remote_pair_prompt(&mut self) -> Result<()> {
         let template = self.template_load(
-            &self.settings.pair_prompt_path
+            &self.options.pair_prompt_path
         ).unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.to_owned());
 
         let prompt = self.template_expand(&template[..]);
@@ -281,19 +281,19 @@ impl SudoPair {
     }
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
-        !self.settings.gids_exempted.is_disjoint(
+        !self.options.gids_exempted.is_disjoint(
             &self.plugin.user_info.groups.iter().cloned().collect()
         )
     }
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
-        !self.settings.gids_enforced.is_disjoint(
+        !self.options.gids_enforced.is_disjoint(
             &self.plugin.runas_gids()
         )
     }
 
     fn is_sudoing_approval_command(&self) -> bool {
-        self.plugin.command_info.command == self.settings.binary_path
+        self.plugin.command_info.command == self.options.binary_path
     }
 
     fn is_sudoing_to_user(&self) -> bool {
@@ -312,7 +312,7 @@ impl SudoPair {
         // note that we want the *`uid`* and not the `euid` here since
         // we want to know who the real user is and not the `uid` of the
         // owner of `sudo`
-        self.settings.socket_dir.join(
+        self.options.socket_dir.join(
             format!(
                 "{}.{}.sock",
                 self.plugin.user_info.uid,
@@ -405,10 +405,10 @@ impl SudoPair {
             // TODO: provide groupname of runas_egid?
             let expansion = match iter.next() {
                 // the name of the appoval _b_inary
-                Some(b'b') => self.settings.binary_name().into(),
+                Some(b'b') => self.options.binary_name().into(),
 
                 // the full path to the approval _B_inary
-                Some(b'B') => self.settings.binary_path.as_os_str().as_bytes().into(),
+                Some(b'B') => self.options.binary_path.as_os_str().as_bytes().into(),
 
                 // the full _C_ommand `sudo` was invoked as (recreated as
                 // best-effort for now)
@@ -450,7 +450,7 @@ impl SudoPair {
 }
 
 #[derive(Debug)]
-struct PluginSettings {
+struct PluginOptions {
     /// `binary_path` is the location of the approval binary, so that we
     /// can bypass the approval process for invoking it
     ///
@@ -483,7 +483,7 @@ struct PluginSettings {
     gids_exempted: HashSet<gid_t>,
 }
 
-impl PluginSettings {
+impl PluginOptions {
     fn binary_name(&self) -> &[u8] {
         self.binary_path.file_name().unwrap_or_else(||
             self.binary_path.as_os_str()
@@ -491,7 +491,7 @@ impl PluginSettings {
     }
 }
 
-impl<'a> From<&'a OptionMap> for PluginSettings {
+impl<'a> From<&'a OptionMap> for PluginOptions {
     fn from(map: &'a OptionMap) -> Self {
         Self {
             binary_path: map.get("binary_path")
