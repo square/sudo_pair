@@ -36,18 +36,26 @@ impl Socket {
         gid:    gid_t,
         mode:   mode_t,
     ) -> io::Result<Self> {
-        let cpath = CString::new(
-            path.as_ref().as_os_str().as_bytes()
-        )?;
-
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
         Self::unlink_socket(&path)?;
 
-        // create a socket and wait for someone to connect; we *don't*
-        // suffix this with an immediate `?` so that we have a chance
-        // to clean up after ourselves first
-        let connection = UnixListener::bind(&path).and_then(|listener| {
+        // by default, ensure no permissions on the created socket since
+        // we're going to customize them immediately afterward
+        let umask = unsafe {
+            libc::umask(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO)
+        };
+
+        // TODO: in theory the path these sockets are created in should
+        // be owned `root:root` and `chmod go-rw`, but we should
+        // confirm this before proceeding since `UnixListener::bind`
+        // calls `libc::listen` under the covers before we get a chance
+        // to change the file's ownership
+        let socket = UnixListener::bind(&path).and_then(|listener| {
+            let cpath = CString::new(
+                path.as_ref().as_os_str().as_bytes()
+            )?;
+
             unsafe {
                 if libc::chown(cpath.as_ptr(), uid, gid) == -1 {
                     return Err(io::Error::last_os_error());
@@ -57,21 +65,19 @@ impl Socket {
                     return Err(io::Error::last_os_error());
                 }
 
-                // accept() will block until someone connects on the
-                // other side of the socket; we previously used `sigaction`
-                // to disable the `SA_RESTART` flag during `accept`, but
-                // this broke when switching from the `unix_socket`
-                // crate to Rust's builtin socket handling facilities,
-                // and I'm not entirely sure why
-                listener.set_nonblocking(true)?;
+                let     fd       = listener.as_raw_fd();
+                let mut readfds  = mem::uninitialized();
 
-                let mut fds : libc::fd_set = mem::uninitialized();
-                libc::FD_ZERO(&mut fds);
-                libc::FD_SET(listener.as_raw_fd(), &mut fds);
+                libc::FD_ZERO(&mut readfds);
+                libc::FD_SET(fd, &mut readfds);
 
+                // rust automatically wraps the `accept()` function in a
+                // loop that retries on SIGINT, so we have to get
+                // creative here and `select(2)` ourselves if we want
+                // Ctrl-C to interrupt the process
                 match libc::select(
-                    listener.as_raw_fd() + 1,
-                    &mut fds,
+                    fd + 1, // this needs to be greater than the value of the FD
+                    &mut readfds,
                     ptr::null_mut(),
                     ptr::null_mut(),
                     ptr::null_mut(),
@@ -79,24 +85,19 @@ impl Socket {
                     1  => (),
                     -1 => return Err(io::Error::last_os_error()),
                     0  => unreachable!("`select` returned 0 even though no timeout was set"),
-                    _  => unreachable!("`select` indicates that more than 1 fd is ready"),
+                    _  => unreachable!("`select` indicated that more than 1 fd is ready"),
                 };
 
                 // as a sanity check, confirm that the fd we're going to
                 // `accept` is the one that `select` says is ready
-                if !libc::FD_ISSET(listener.as_raw_fd(), &mut fds) {
+                if !libc::FD_ISSET(fd, &mut readfds) {
                     unreachable!("`select` returned an unexpected file descriptor");
                 }
-
-                // the listener has to go back into blocking mode,
-                // otherwise future `read` calls will block
-                //
-                // TODO: we might should use nonblocking I/O for the
-                // whole thing, since that will prevent us from needing
-                // to hijack SIGINT handling
-                listener.set_nonblocking(false)?;
-                listener.accept()
             }
+
+            listener.accept().map(|connection| {
+                Self { socket: connection.0 }
+            })
         });
 
         // once the connection has been made (or aborted due to ctrl-c),
@@ -110,13 +111,10 @@ impl Socket {
         // about filesystem janitorial work
         let _ = Self::unlink_socket(&path);
 
-        // unwrap the connection and return any errors now that we've
-        // cleaned up after ourself
-        let connection = connection?;
+        // restore the process' original umask
+        let _ = unsafe { libc::umask(umask) };
 
-        Ok(Self {
-            socket: connection.0,
-        })
+        socket
     }
 
     pub(crate) fn close(&mut self) -> io::Result<()> {
@@ -151,25 +149,21 @@ impl Drop for Socket {
 
 impl Read for Socket {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        unsafe {
-            // read() will block until someone writes on the other side
-            // of the socket, so we ensure that the signal handler for
-            // Ctrl-C aborts the read instead of restarting it
-            // automatically
-            ctrl_c_aborts_syscalls(|| {
-                self.socket.read(buf)
-            })?
-        }
+        // read() will block until someone writes on the other side
+        // of the socket, so we ensure that the signal handler for
+        // Ctrl-C aborts the read instead of restarting it
+        // automatically
+        ctrl_c_aborts_syscalls(|| {
+            self.socket.read(buf)
+        })?
     }
 }
 
 impl Write for Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        unsafe {
-            ctrl_c_aborts_syscalls(|| {
-                self.socket.write(buf)
-            })?
-        }
+        ctrl_c_aborts_syscalls(|| {
+            self.socket.write(buf)
+        })?
     }
 
     fn flush(&mut self) -> io::Result<()> {
@@ -184,28 +178,30 @@ impl Write for Socket {
 /// Disabling `SA_RESTART` ensures that blocking calls like `accept(2)`
 /// will be terminated upon receipt on the signal instead of
 /// automatically resuming.
-unsafe fn ctrl_c_aborts_syscalls<F, T>(func: F) -> io::Result<T>
+fn ctrl_c_aborts_syscalls<F, T>(func: F) -> io::Result<T>
     where F: FnOnce() -> T
 {
-    let mut sigaction_old  = ::std::mem::uninitialized();
-    let     sigaction_null = ::std::ptr::null_mut();
+    unsafe {
+        let mut sigaction_old  = ::std::mem::uninitialized();
+        let     sigaction_null = ::std::ptr::null_mut();
 
-    // retrieve the existing handler
-    sigaction(libc::SIGINT, sigaction_null, &mut sigaction_old)?;
+        // retrieve the existing handler
+        sigaction(libc::SIGINT, sigaction_null, &mut sigaction_old)?;
 
-    // copy the old handler, but mask out SA_RESTART
-    let mut sigaction_new = sigaction_old;
-    sigaction_new.sa_flags &= !libc::SA_RESTART;
+        // copy the old handler, but mask out SA_RESTART
+        let mut sigaction_new = sigaction_old;
+        sigaction_new.sa_flags &= !libc::SA_RESTART;
 
-    // install the new handler
-    sigaction(libc::SIGINT, &sigaction_new, sigaction_null)?;
+        // install the new handler
+        sigaction(libc::SIGINT, &sigaction_new, sigaction_null)?;
 
-    let result = func();
+        let result = func();
 
-    // reinstall the old handler
-    sigaction(libc::SIGINT, &sigaction_old, sigaction_null)?;
+        // reinstall the old handler
+        sigaction(libc::SIGINT, &sigaction_old, sigaction_null)?;
 
-    Ok(result)
+        Ok(result)
+    }
 }
 
 /// Installs the new handler for the signal identified by `sig` if `new`
