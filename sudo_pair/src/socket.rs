@@ -65,8 +65,8 @@ impl Socket {
                     return Err(io::Error::last_os_error());
                 }
 
-                let     fd       = listener.as_raw_fd();
-                let mut readfds  = mem::uninitialized();
+                let     fd      = listener.as_raw_fd();
+                let mut readfds = mem::uninitialized();
 
                 libc::FD_ZERO(&mut readfds);
                 libc::FD_SET(fd, &mut readfds);
@@ -76,7 +76,7 @@ impl Socket {
                 // creative here and `select(2)` ourselves if we want
                 // Ctrl-C to interrupt the process
                 match libc::select(
-                    fd + 1, // this needs to be greater than the value of the FD
+                    fd + 1, // this must be greater than the fd's int value
                     &mut readfds,
                     ptr::null_mut(),
                     ptr::null_mut(),
