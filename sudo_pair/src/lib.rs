@@ -198,15 +198,20 @@ impl SudoPair {
             .as_mut()
             .ok_or_else(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
 
-        let mut response : [u8; 1] = unsafe {
-            ::std::mem::uninitialized()
-        };
-
-        let _ = socket.write(&prompt[..])
+        let _ = socket.write_all(&prompt[..])
             .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
 
+        // default `response` to something other than success, since
+        // `read` might return without actually having written anything;
+        // this prevents us from being required to check the number of
+        // bytes actually read from `read`
+        let mut response : [u8; 1] = [b'n'];
+
         // read exactly one byte back from the socket for the
-        // response
+        // response (`read_exact` isn't used because it will capture
+        // Ctrl-C and retry the read); we don't need to check the return
+        // value because if the read was successful, we're guaranteed to
+        // have read at least one byte
         let _ = socket.read(&mut response)
             .chain_err(|| ErrorKind::Unauthorized("denied by pair".into()))?;
 
@@ -314,10 +319,6 @@ impl SudoPair {
         }
     }
 
-    // TODO: on macOS, the `gid` of `nogroup` is -1, but rust libc
-    // considers `gid_t` unsigned (4294967295); something goes wrong
-    // here as a result, and when `chown` is called, the socket ends up
-    // owned by `gid == 1` instead of `gid == -1`
     fn socket_gid(&self) -> gid_t {
         // it's probably unnecessary to use our own gid in the event of
         // sudoing to the same group, since the mode should be set
