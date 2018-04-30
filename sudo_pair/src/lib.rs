@@ -112,11 +112,11 @@ impl SudoPair {
         pair.remote_pair_connect()?;
         pair.remote_pair_prompt()?;
 
-        // TODO: provide a configurable option to deny or log if the
-        // remote euid is the same as the local euid. For some reason I
-        // convinced myself that this is necessary to implement in the
-        // client and not the pair plugin, but I can't remember what the
-        // reasoning was at the moment.
+        // TODO(security): provide a configurable option to deny or log
+        // if the remote euid is the same as the local euid. For some
+        // reason I convinced myself that this is necessary to implement
+        // in the client and not the pair plugin, but I can't remember
+        // what the reasoning was at the moment.
         //
         // Oh, now I remember. It *has* to be done on the client,
         // because the approval script is run under `sudo` itself so
@@ -348,6 +348,11 @@ impl SudoPair {
     }
 
     fn socket_mode(&self) -> mode_t {
+        // TODO(security): if a user is doing `sudo -u ${u} -g ${g}`, the
+        // pair only needs to be able to act as the user, and doesn't
+        // require the ability to sudo to the group; we should probably
+        // limit usage to one or the other and not both
+
         // if the user is sudoing to a new `euid`, we require the
         // approver to also be able to act as the same `euid`; this is
         // the first check, because if euid changes egid is also likely
