@@ -90,11 +90,13 @@ impl SudoPair {
             socket: None,
         };
 
-        if !pair.is_exempt() {
-            pair.local_pair_prompt();
-            pair.remote_pair_connect()?;
-            pair.remote_pair_prompt()?;
+        if pair.is_exempt() {
+            return Ok(pair)
         }
+
+        pair.local_pair_prompt();
+        pair.remote_pair_connect()?;
+        pair.remote_pair_prompt()?;
 
         // TODO: provide a configurable option to deny or log if the
         // remote euid is the same as the local euid. For some reason I
