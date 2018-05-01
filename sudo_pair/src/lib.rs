@@ -95,6 +95,12 @@ impl SudoPair {
             socket: None,
         };
 
+        if pair.is_sudoing_to_user_and_group() {
+            bail!(ErrorKind::Unauthorized(
+                "sudo_pair doesn't support sudoing to both a user and a group".into()
+            ));
+        }
+
         if pair.is_exempt() {
             return Ok(pair)
         }
@@ -291,6 +297,19 @@ impl SudoPair {
         false
     }
 
+    fn is_sudoing_to_user_and_group(&self) -> bool {
+        // if a user is doing `sudo -u ${u} -g ${g}`, we don't have a
+        // way to ensure that the pair can act with permissions of both
+        // the new user and the new group; ignoring this would allow
+        // someone to gain a group privilege through a pair who doesn't
+        // also have that group privilege
+        if self.is_sudoing_to_user() && self.is_sudoing_to_group() {
+            return true
+        }
+
+        false
+    }
+
     fn is_sudoing_from_exempted_gid(&self) -> bool {
         !self.options.gids_exempted.is_disjoint(
             &self.plugin.user_info.groups.iter().cloned().collect()
@@ -361,11 +380,6 @@ impl SudoPair {
     }
 
     fn socket_mode(&self) -> mode_t {
-        // TODO(security): if a user is doing `sudo -u ${u} -g ${g}`, the
-        // pair only needs to be able to act as the user, and doesn't
-        // require the ability to sudo to the group; we should probably
-        // limit usage to one or the other and not both
-
         // if the user is sudoing to a new `euid`, we require the
         // approver to also be able to act as the same `euid`; this is
         // the first check, because if euid changes egid is also likely
