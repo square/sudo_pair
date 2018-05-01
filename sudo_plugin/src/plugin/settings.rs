@@ -87,6 +87,8 @@ impl Settings {
     // TODO: surely this can be made more cleanly; also, it would be
     // great if we could actually get the full original `sudo`
     // invocation without having to reconstruct it by hand
+    //
+    // TODO: maybe if /proc/$$/cmd exists I can prefer to use it
     pub fn flags(&self) -> Vec<Vec<u8>> {
         let mut flags : Vec<Vec<u8>> = vec![];
 

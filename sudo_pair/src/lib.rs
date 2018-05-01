@@ -22,6 +22,10 @@
 // TODO: error message when /var/run/sudo_pair missing
 // TODO: enable the ability to respond to `sudo --version`
 // TODO: iolog in `sudoreplay(8)` format
+// TODO: write a readme
+// TODO: rustfmt
+// TODO: allow redirect to stdout?
+// TODO: double-check all `as`-casts
 
 #![deny(warnings)]
 
