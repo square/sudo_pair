@@ -58,10 +58,20 @@ impl Prompt {
                 iter.by_ref().take_while(|b| *b != TEMPLATE_ESCAPE )
             );
 
-            // if there's nothing left, we're done
-            if iter.len() == 0 {
-                break;
-            }
+            // TODO: The above take_while consumes an extra byte in
+            // the event that it finds the escape character; this is
+            // *mostly* okay, but we can't distinguish between the case
+            // where a '%' was consumed and where one wasn't (for
+            // instance at EOF). This matters because of the following
+            // line which terminates if there's nothing left in the
+            // template to evaluate, because the template may have ended
+            // in a '%'! This isn't a huge deal, but it's at least worth
+            // documenting this limitation: if your template ends in a
+            // line '%' character, we will silently eat it.
+            let byte = match iter.next() {
+                Some(b) => b,
+                None    => break,
+            };
 
             // we expand each literal into an owned type so that we don't have
             // to repeatd the `result.extend_from_slice` part each time in the
@@ -72,43 +82,44 @@ impl Prompt {
             // TODO: provide groupname of gid?
             // TODO: provide username of runas_euid?
             // TODO: provide groupname of runas_egid?
-            let expansion = match iter.next() {
+            let expansion = match byte {
                 // the name of the appoval _b_inary
-                Some(b'b') => pair.options.binary_name().into(),
+                b'b' => pair.options.binary_name().into(),
 
                 // the full path to the approval _B_inary
-                Some(b'B') => pair.options.binary_path.as_os_str().as_bytes().into(),
+                b'B' => pair.options.binary_path.as_os_str().as_bytes().into(),
 
                 // the full _C_ommand `sudo` was invoked as (recreated as
                 // best-effort for now)
-                Some(b'C') => pair.plugin.invocation(),
+                b'C' => pair.plugin.invocation(),
 
                 // the cw_d_ of the command being run under `sudo`
-                Some(b'd') => pair.plugin.cwd().as_os_str().as_bytes().into(),
+                b'd' => pair.plugin.cwd().as_os_str().as_bytes().into(),
 
                 // the _h_ostname of the machine `sudo` is being executed on
-                Some(b'h') => pair.plugin.user_info.host.as_bytes().into(),
+                b'h' => pair.plugin.user_info.host.as_bytes().into(),
 
                 // the _H_eight of the invoking user's terminal, in rows
-                Some(b'H') => pair.plugin.user_info.lines.to_string().into_bytes(),
+                b'H' => pair.plugin.user_info.lines.to_string().into_bytes(),
 
                 // the real _g_id of the user invoking `sudo`
-                Some(b'g') => pair.plugin.user_info.gid.to_string().into_bytes(),
+                b'g' => pair.plugin.user_info.gid.to_string().into_bytes(),
 
                 // the _p_id of this `sudo` process
-                Some(b'p') => pair.plugin.user_info.pid.to_string().into_bytes(),
+                b'p' => pair.plugin.user_info.pid.to_string().into_bytes(),
 
                 // the real _u_id of the user invoking `sudo`
-                Some(b'u') => pair.plugin.user_info.uid.to_string().into_bytes(),
+                b'u' => pair.plugin.user_info.uid.to_string().into_bytes(),
 
                 // the _U_sername of the user running `sudo`
-                Some(b'U') => pair.plugin.user_info.user.as_bytes().into(),
+                b'U' => pair.plugin.user_info.user.as_bytes().into(),
 
                 // the _W_idth of the invoking user's terminal, in columns
-                Some(b'W') => pair.plugin.user_info.cols.to_string().into_bytes(),
+                b'W' => pair.plugin.user_info.cols.to_string().into_bytes(),
 
-                Some(byte) => vec![TEMPLATE_ESCAPE, byte],
-                None       => vec![TEMPLATE_ESCAPE],
+                // for any other byte, we should emit it by itself
+                // (e.g., '%%' emits '%', '%z' emits 'z', etc.)
+                byte => vec![byte],
             };
 
             result.extend_from_slice(&expansion[..]);
