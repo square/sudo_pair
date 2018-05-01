@@ -436,11 +436,11 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
             socket_dir: map.get("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
-            gids_enforced: map.get::<Vec<gid_t>>("gids_enforced")
-                .unwrap_or_default().iter().cloned().collect(),
+            gids_enforced: map.get("gids_enforced")
+                .unwrap_or_default(),
 
-            gids_exempted: map.get::<Vec<gid_t>>("gids_exempted")
-                .unwrap_or_default().iter().cloned().collect(),
+            gids_exempted: map.get("gids_exempted")
+                .unwrap_or_default(),
         }
     }
 }
