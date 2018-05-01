@@ -31,10 +31,10 @@ pub(crate) struct Socket {
 
 impl Socket {
     pub(crate) fn open<P: AsRef<Path>>(
-        path:   P,
-        uid:    uid_t,
-        gid:    gid_t,
-        mode:   mode_t,
+        path: P,
+        uid:  uid_t,
+        gid:  gid_t,
+        mode: mode_t,
     ) -> io::Result<Self> {
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
@@ -124,7 +124,7 @@ impl Socket {
     fn unlink_socket<P: AsRef<Path>>(path: P) -> io::Result<()> {
         match fs::metadata(&path).map(|md| md.file_type().is_socket()) {
             // file exists, is a socket; delete it
-            Ok(true) => fs::remove_file(&path),
+            Ok(true) => fs::remove_file(path),
 
             // file exists, is not a socket; abort
             Ok(false) => Err(io::Error::new(
@@ -153,21 +153,17 @@ impl Read for Socket {
         // of the socket, so we ensure that the signal handler for
         // Ctrl-C aborts the read instead of restarting it
         // automatically
-        ctrl_c_aborts_syscalls(|| {
-            self.socket.read(buf)
-        })?
+        ctrl_c_aborts_syscalls(|| self.socket.read(buf) )?
     }
 }
 
 impl Write for Socket {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        ctrl_c_aborts_syscalls(|| {
-            self.socket.write(buf)
-        })?
+        ctrl_c_aborts_syscalls(|| self.socket.write(buf) )?
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.socket.flush()
+        ctrl_c_aborts_syscalls(|| self.socket.flush() )?
     }
 }
 
