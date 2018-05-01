@@ -35,7 +35,11 @@ impl Prompt {
         let mut file = File::open(path)?;
         let     len  = file.metadata().map(|m| m.len() )?;
 
-        // TODO(rust 1.27): replace cast with TryFrom when it's stabilized
+        // TODO(rust 1.27): replace cast with TryFrom when it's
+        // stabilized; for now, this seems safe to ignore since wrapping
+        // would just cause us to preallocate an array smaller than
+        // anticipated (which would be +4.7GB anyway...)
+        #[cfg_attr(feature="cargo-clippy", allow(cast_possible_truncation))]
         let mut prompt = Self::with_capacity(len as usize);
 
         let _ = file.read_to_end(&mut prompt.template);
