@@ -12,6 +12,7 @@ pub(crate) struct Prompt {
     template: Vec<u8>,
 }
 
+// TODO: document the semantics of this in the README
 impl Prompt {
     pub(crate) fn with_capacity(capacity: usize) -> Self {
         Self { template: Vec::with_capacity(capacity) }
