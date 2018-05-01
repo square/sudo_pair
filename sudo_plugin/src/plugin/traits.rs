@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -117,6 +119,17 @@ where
         }
 
         Ok(items)
+    }
+}
+
+impl<T> FromSudoOption for HashSet<T>
+where
+    T: Eq + Hash + FromSudoOption + FromSudoOptionList,
+{
+    type Err = ParseListError;
+
+    fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
+        Vec::<T>::from_sudo_option(s).map(|vec| vec.into_iter().collect())
     }
 }
 

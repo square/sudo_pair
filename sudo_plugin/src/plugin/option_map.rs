@@ -107,8 +107,14 @@ impl OptionMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::collections::HashSet;
     use std::path::PathBuf;
     use std::ptr;
+
+    impl FromSudoOptionList for String {
+        const SEPARATOR: char = '|';
+    }
 
     #[test]
     fn new_parses_string_keys() {
@@ -218,10 +224,6 @@ mod tests {
 
     #[test]
     fn get_parses_lists() {
-        impl FromSudoOptionList for String {
-            const SEPARATOR: char = '|';
-        }
-
         let map = unsafe { OptionMap::from_raw([
             b"ints=1,2,3\0".as_ptr() as _,
             b"strs=a|b|c\0".as_ptr() as _,
@@ -232,5 +234,21 @@ mod tests {
         assert_eq!(vec![1, 2, 3],       map.get::<Vec<u8>>("ints")    .unwrap());
         assert_eq!(vec!["a", "b", "c"], map.get::<Vec<String>>("strs").unwrap());
         assert_eq!(vec!["a,b,c"],       map.get::<Vec<String>>("str") .unwrap());
+    }
+
+    #[test]
+    fn get_parses_hashsets() {
+
+        let map = unsafe { OptionMap::from_raw([
+            b"nums=1|2|3\0".as_ptr() as _,
+            ptr::null(),
+        ].as_ptr()) };
+
+        let set = map.get::<HashSet<String>>("nums").unwrap();
+
+        assert!(set.contains("1"));
+        assert!(set.contains("2"));
+        assert!(set.contains("3"));
+        assert!(!set.contains("4"));
     }
 }
