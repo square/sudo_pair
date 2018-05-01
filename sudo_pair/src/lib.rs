@@ -7,6 +7,7 @@
 // TODO: switch from error_chain to failure crate?
 // TODO: error message when /var/run/sudo_pair missing
 // TODO: enable the ability to respond to `sudo --version`
+// TODO: iolog in `sudoreplay(8)` format
 
 #![deny(warnings)]
 
@@ -198,7 +199,7 @@ impl SudoPair {
             .as_mut()
             .ok_or_else(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
 
-        let _ = socket.write_all(&prompt[..])
+        socket.write_all(&prompt[..])
             .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
 
         // default `response` to something other than success, since
