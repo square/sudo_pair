@@ -172,7 +172,7 @@ impl SudoPair {
         // improbable. For now, I'm ignoring the situation but hopefully
         // there's enough information here for someone (probably me) to
         // pick up where I left off.
-        let _ = self.plugin.print_info(prompt);
+        let _ = self.plugin.stdout().write(&prompt);
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {
