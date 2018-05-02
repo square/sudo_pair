@@ -220,6 +220,10 @@ impl SudoPair {
         socket.write_all(&prompt[..])
             .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
 
+        // ensure the entire prompt was written to the pair
+        socket.flush()
+            .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
+
         // default `response` to something other than success, since
         // `read` might return without actually having written anything;
         // this prevents us from being required to check the number of
