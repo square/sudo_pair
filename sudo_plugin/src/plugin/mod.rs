@@ -36,6 +36,7 @@ use std::collections::HashSet;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
+use std::io::{self, Write};
 use std::slice;
 
 use libc::{c_char, c_int, c_uint, gid_t};
@@ -75,8 +76,8 @@ pub struct Plugin {
     /// `plugin_options["disabled"] => "disabled"`).
     pub plugin_options: OptionMap,
 
+    printf:        sudo_plugin_sys::sudo_printf_non_null_t,
     _conversation: sudo_plugin_sys::sudo_conv_t,
-    printf:        sudo_plugin_sys::sudo_printf_t,
 }
 
 impl Plugin {
@@ -106,8 +107,8 @@ impl Plugin {
         // verify we've been given needed callbacks; we actually store the
         // Option-wrapped variants (instead of unwrapping them) because
         // those are the types the `sudo_plugin_sys` crate exports
-        let _ = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
-        let _ = conversation .ok_or(ErrorKind::Uninitialized)?;
+        let printf = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
+        let _      = conversation .ok_or(ErrorKind::Uninitialized)?;
 
         // parse the argv into the command being run
         let mut argv    = slice::from_raw_parts(argv, argc as usize).to_vec();
@@ -120,19 +121,41 @@ impl Plugin {
             version,
             command,
 
-            // TODO: convert `try_from` calls to `into` when the TryFrom
-            // trait stabilizes around May 2018
+            // TODO(rust 1.27): convert `try_from` calls to `into` when
+            // the TryFrom trait stabilizes
             settings:       Settings   ::try_from(OptionMap::from_raw(settings))?,
             user_info:      UserInfo   ::try_from(OptionMap::from_raw(user_info))?,
             command_info:   CommandInfo::try_from(OptionMap::from_raw(command_info))?,
             user_env:       OptionMap  ::from_raw(user_env),
             plugin_options: OptionMap  ::from_raw(plugin_options),
 
+            printf,
             _conversation: conversation,
-            printf:        plugin_printf,
         };
 
         Ok(plugin)
+    }
+
+    ///
+    /// Returns a facility implementing `std::io::Write` that emits to
+    /// the invoking user's STDOUT.
+    ///
+    pub fn stdout(&self) -> Printf {
+        Printf {
+            facility: self.printf,
+            level:    sudo_plugin_sys:: SUDO_CONV_INFO_MSG
+        }
+    }
+
+    ///
+    /// Returns a facility implementing `std::io::Write` that emits to
+    /// the invoking user's STDERR.
+    ///
+    pub fn stderr(&self) -> Printf {
+        Printf {
+            facility: self.printf,
+            level:    sudo_plugin_sys:: SUDO_CONV_ERROR_MSG
+        }
     }
 
     ///
@@ -205,51 +228,47 @@ impl Plugin {
 
         set
     }
+}
 
-    /// Prints an informational message (which must not contain interior
-    /// NUL bytes) to the plugin's `printf` facility.
-    pub fn print_info<T: Into<Vec<u8>>>(&self, message: T) -> Result<c_int> {
-        self.print(sudo_plugin_sys::SUDO_CONV_INFO_MSG, message)
-    }
+///
+/// A facility implementing `std::io::Write` that allows printing
+/// output to the user invoking `sudo`. Technically, the user may
+/// not be present on a local tty, but this will be wired up to a
+/// `printf`-like function that outputs to either STDOUT or STDERR.
+///
+#[derive(Copy, Clone, Debug)]
+pub struct Printf {
+    /// A *non-null* function pointer to a `sudo_printf_t` printf
+    /// facility
+    //
+    // TODO: non-nullness should be validated here
+    pub facility: sudo_plugin_sys::sudo_printf_non_null_t,
 
-    /// Prints an error message (which must not contain interior NUL
-    /// bytes) to the plugin's `printf` facility.
-    pub fn print_error<T: Into<Vec<u8>>>(&self, message: T) -> Result<c_int> {
-        self.print(sudo_plugin_sys::SUDO_CONV_ERROR_MSG, message)
-    }
+    /// A `sudo_conv_message` bitflag to indicate how and where the
+    /// message should be printed.
+    //
+    // TODO: level should be bitflags and validated
+    pub level: u32,
+}
 
-    /// Prints a message (which must not contain interior NUL bytes) to
-    /// the plugin's `printf` facility using the requested severity
-    /// level.
-    fn print<T: Into<Vec<u8>>>(&self, level: c_uint, message: T) -> Result<c_int> {
-        unsafe { Self::printf(self.printf, level, message) }
-    }
+impl Write for Printf {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let message = CString::new(buf).map_err(|err|
+            io::Error::new(io::ErrorKind::InvalidData, err)
+        )?;
 
-    /// Prints a message (which must not contain interior NUL bytes) to
-    /// the plugin's `printf` facility using the requested flags. This
-    /// is provided as a static function in order to facilitate printing
-    /// error messages before the plugin is fully initialized (for
-    /// example, in the event of an initialization failure).
-    pub unsafe fn printf<T: Into<Vec<u8>>>(
-        printf:  sudo_plugin_sys::sudo_printf_t,
-        flags:   c_uint,
-        message: T,
-    ) -> Result<c_int> {
-        // TODO: level should be bitflags
-        // TODO: uninitialized errors end up allowing the plugin to be
-        //   bypassed during `open`, deal with this during the move to
-        //   the failure crate
-        let printf  = printf.ok_or(ErrorKind::Uninitialized)?;
-        let cstring = CString::new(message.into())
-            .chain_err(|| ErrorKind::IoError(IoFacility::PluginPrintf))?;
-
-        #[cfg_attr(feature="cargo-clippy", allow(cast_possible_wrap))]
-        let ret = (printf)(flags as c_int, cstring.as_ptr());
+        let ret = unsafe {
+            (self.facility)(self.level as i32, message.as_ptr())
+        };
 
         if ret == -1 {
-            bail!(ErrorKind::IoError(IoFacility::PluginPrintf))
+            Err(io::Error::last_os_error())?;
         }
 
-        Ok(ret)
+        Ok(ret as _)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
     }
 }
