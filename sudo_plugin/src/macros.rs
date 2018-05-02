@@ -26,6 +26,7 @@
 /// # fn main() { } // TODO(rust 1.27): remove this line
 ///
 /// use sudo_plugin::errors::*;
+/// use std::io::Write;
 ///
 /// sudo_io_plugin! {
 ///     example : Example {
@@ -39,7 +40,7 @@
 ///
 /// impl Example {
 ///     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
-///         plugin.print_info("example sudo plugin initialized");
+///         plugin.stdout().write(b"example sudo plugin initialized");
 ///
 ///         Ok(Example {})
 ///     }
@@ -150,12 +151,17 @@ macro_rules! sudo_io_static_fn {
                     $instance = Some(i);
                 },
 
+                // we still have to print errors here even if `Plugin::new`
+                // failed, so we have to create a Printf facility ourselves
+                //
                 // TODO: print nested errors
+                // TODO: remove unwrap
                 Err(e) => {
-                    let _ = sudo_plugin::Plugin::printf(
-                        plugin_printf,
-                        3, // TODO: replace hardcoded value
-                        format!("{}: {}\n", stringify!($name), e),
+                    let _ = sudo_plugin::Printf {
+                        facility: plugin_printf.unwrap(),
+                        level:    sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
+                    }.write(
+                        format!("{}: {}\n", stringify!($name), e).as_bytes(),
                     );
                 }
             }
@@ -226,8 +232,8 @@ macro_rules! sudo_io_fn {
 
             // TODO: print nested errors
             let _ = result.as_ref().map_err(|err| {
-                $plugin.as_ref().map(|p| {
-                    p.print_error(format!("\n{}: {}\n", stringify!($name), err))
+                $plugin.as_mut().map(|p| {
+                    p.stderr().write(format!("\n{}: {}\n", stringify!($name), err).as_bytes())
                 })
             });
 
