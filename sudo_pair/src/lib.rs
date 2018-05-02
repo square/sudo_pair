@@ -62,10 +62,11 @@ extern crate sudo_plugin;
 mod template;
 mod socket;
 
-use template::Template;
+use template::Spec;
 use socket::Socket;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
@@ -165,13 +166,14 @@ impl SudoPair {
         ));
     }
 
-    fn local_pair_prompt(&self, template_spec: &HashMap<u8, Vec<u8>>) {
+    fn local_pair_prompt(&self, template_spec: &Spec) {
         // read the template from the file; if there's an error, use the
         // default template instead
-        let template = Template::load(&self.options.user_prompt_path)
-            .unwrap_or_else(|_| DEFAULT_USER_PROMPT.into());
+        let template : Vec<u8> = File::open(&self.options.user_prompt_path)
+            .and_then(|file| file.bytes().collect() )
+            .unwrap_or_else(|_| DEFAULT_USER_PROMPT.into() );
 
-        let prompt = template.expand(&template_spec);
+        let prompt = template_spec.expand(&template[..]);
 
         // TODO: this is returning an error (EINVAL) even though it prints
         // successfully; I'm not entirely sure why. It started failing
@@ -210,11 +212,14 @@ impl SudoPair {
         Ok(())
     }
 
-    fn remote_pair_prompt(&mut self, template_spec: &HashMap<u8, Vec<u8>>) -> Result<()> {
-        let template = Template::load(&self.options.pair_prompt_path)
-            .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.into());
+    fn remote_pair_prompt(&mut self, template_spec: &Spec) -> Result<()> {
+        // read the template from the file; if there's an error, use the
+        // default template instead
+        let template : Vec<u8> = File::open(&self.options.pair_prompt_path)
+            .and_then(|file| file.bytes().collect() )
+            .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.into() );
 
-        let prompt = template.expand(&template_spec);
+        let prompt = template_spec.expand(&template[..]);
 
         let socket = self.socket
             .as_mut()
@@ -385,51 +390,46 @@ impl SudoPair {
         unreachable!()
     }
 
-    fn template_spec(&self) -> HashMap<u8, Vec<u8>> {
-        // we expand each literal into an owned type so that we don't have
-        // to repeatd the `result.extend_from_slice` part each time in the
-        // match arms, but it does kind of suck that we have so much
-        // type-conversion noise
-        //
+    fn template_spec(&self) -> Spec {
         // TODO: document these somewhere useful for users of this plugin
         // TODO: provide groupname of gid?
         // TODO: provide username of runas_euid?
         // TODO: provide groupname of runas_egid?
-        let mut spec = HashMap::new();
+        let mut spec = Spec::with_escape(b'%');
 
         // the name of the appoval _b_inary
-        let _ = spec.insert(b'b', self.options.binary_name().into());
+        spec.replace(b'b', self.options.binary_name());
 
         // the full path to the approval _B_inary
-        let _ = spec.insert(b'B', self.options.binary_path.as_os_str().as_bytes().into());
+        spec.replace(b'B', self.options.binary_path.as_os_str().as_bytes());
 
         // the full _C_ommand `sudo` was invoked as (recreated as
         // best-effort for now)
-        let _ = spec.insert(b'C', self.plugin.invocation());
+        spec.replace(b'C', self.plugin.invocation());
 
         // the cw_d_ of the command being run under `sudo`
-        let _ = spec.insert(b'd', self.plugin.cwd().as_os_str().as_bytes().into());
+        spec.replace(b'd', self.plugin.cwd().as_os_str().as_bytes());
 
         // the _h_ostname of the machine `sudo` is being executed on
-        let _ = spec.insert(b'h', self.plugin.user_info.host.as_bytes().into());
+        spec.replace(b'h', self.plugin.user_info.host.as_bytes());
 
         // the _H_eight of the invoking user's terminal, in rows
-        let _ = spec.insert(b'H', self.plugin.user_info.lines.to_string().into_bytes());
+        spec.replace(b'H', self.plugin.user_info.lines.to_string());
 
         // the real _g_id of the user invoking `sudo`
-        let _ = spec.insert(b'g', self.plugin.user_info.gid.to_string().into_bytes());
+        spec.replace(b'g', self.plugin.user_info.gid.to_string());
 
         // the _p_id of this `sudo` process
-        let _ = spec.insert(b'p', self.plugin.user_info.pid.to_string().into_bytes());
+        spec.replace(b'p', self.plugin.user_info.pid.to_string());
 
         // the real _u_id of the user invoking `sudo`
-        let _ = spec.insert(b'u', self.plugin.user_info.uid.to_string().into_bytes());
+        spec.replace(b'u', self.plugin.user_info.uid.to_string());
 
         // the _U_sername of the user running `sudo`
-        let _ = spec.insert(b'U', self.plugin.user_info.user.as_bytes().into());
+        spec.replace(b'U', self.plugin.user_info.user.as_bytes());
 
         // the _W_idth of the invoking user's terminal, in columns
-        let _ = spec.insert(b'W', self.plugin.user_info.cols.to_string().into_bytes());
+        spec.replace(b'W', self.plugin.user_info.cols.to_string());
 
         spec
     }
