@@ -95,6 +95,12 @@ impl SudoPair {
             socket: None,
         };
 
+        if pair.is_sudoing_to_user_and_group() {
+            bail!(ErrorKind::Unauthorized(
+                "sudo_pair doesn't support sudoing to both a user and a group".into()
+            ));
+        }
+
         if pair.is_exempt() {
             return Ok(pair)
         }
@@ -237,6 +243,13 @@ impl SudoPair {
             return true;
         }
 
+        // a user sudoing entirely to themselves is weird, but I can't
+        // see any reason not to let them do it without approval since
+        // they can already do everything as themselves anyway
+        if self.is_sudoing_to_themselves() {
+            return true;
+        }
+
         // exempt if the user who's sudoing is in a group that's exempt
         // from having to pair
         if self.is_sudoing_from_exempted_gid() {
@@ -267,6 +280,34 @@ impl SudoPair {
         // note that the `euid` will always be the owner of the `sudo`
         // binary
         self.plugin.user_info.uid == self.plugin.user_info.euid
+    }
+
+    fn is_sudoing_to_themselves(&self) -> bool {
+        // if they're not sudoing to a new uid or to a new gid, they're
+        // just becoming themselves... right?
+        if !self.is_sudoing_to_user() && !self.is_sudoing_to_group() {
+            debug_assert_eq!(
+                self.plugin.runas_gids(),
+                self.plugin.user_info.groups.iter().cloned().collect()
+            );
+
+            return true;
+        }
+
+        false
+    }
+
+    fn is_sudoing_to_user_and_group(&self) -> bool {
+        // if a user is doing `sudo -u ${u} -g ${g}`, we don't have a
+        // way to ensure that the pair can act with permissions of both
+        // the new user and the new group; ignoring this would allow
+        // someone to gain a group privilege through a pair who doesn't
+        // also have that group privilege
+        if self.is_sudoing_to_user() && self.is_sudoing_to_group() {
+            return true
+        }
+
+        false
     }
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
@@ -339,11 +380,6 @@ impl SudoPair {
     }
 
     fn socket_mode(&self) -> mode_t {
-        // TODO(security): if a user is doing `sudo -u ${u} -g ${g}`, the
-        // pair only needs to be able to act as the user, and doesn't
-        // require the ability to sudo to the group; we should probably
-        // limit usage to one or the other and not both
-
         // if the user is sudoing to a new `euid`, we require the
         // approver to also be able to act as the same `euid`; this is
         // the first check, because if euid changes egid is also likely
@@ -358,14 +394,10 @@ impl SudoPair {
             return libc::S_IWGRP; // from <sys/stat.h>, writable by the group
         }
 
-        // this is here as a fallback in case of an unexpected sudo
-        // invocation that we don't know how to support; if you're
-        // sudoing to yourself, as yourself... maybe the command should
-        // be exempted, but for now I'm erring on the side of caution
-        //
-        // TODO: I actually hit this during testing (sudoing to myself),
-        // so I should consider what to actually do about this
-        unreachable!()
+        // elsewhere, we exempt sessions for users who are sudoing to
+        // themselves, so this line should never be reached; if it is,
+        // it's a bug
+        unreachable!("cannot determine if we're sudoing to a user or group")
     }
 }
 
