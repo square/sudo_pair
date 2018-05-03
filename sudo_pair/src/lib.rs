@@ -394,9 +394,10 @@ impl SudoPair {
         if self.is_sudoing_to_user() {
             self.plugin.command_info.runas_euid
         } else {
-            // `euid` is going to be the owner of the `sudo` binary
-            // since that's the effective user invoking this command
-            self.plugin.user_info.euid
+            // don't change the owner; chown accepts a uid of -1
+            // (unsigned) to indicate that the owner should not be
+            // changed
+            uid_t::max_value()
         }
     }
 
@@ -408,9 +409,10 @@ impl SudoPair {
         if self.is_sudoing_to_group() {
             self.plugin.command_info.runas_egid
         } else {
-            // `egid` is going to be the owner of the `sudo` binary
-            // since that's the effective user invoking this command
-            self.plugin.user_info.egid
+            // don't change the owner; chown accepts a uid of -1
+            // (unsigned) to indicate that the owner should not be
+            // changed
+            gid_t::max_value()
         }
     }
 
