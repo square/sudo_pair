@@ -46,7 +46,7 @@
 
 extern crate libc;
 
-use libc::c_uint;
+use libc::{c_int, c_uint};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -58,3 +58,8 @@ pub type sudo_printf_non_null_t = unsafe extern "C" fn(
 
 pub const SUDO_API_VERSION: c_uint =
     SUDO_API_VERSION_MAJOR << 16 | SUDO_API_VERSION_MINOR;
+
+pub const SUDO_PLUGIN_OPEN_SUCCESS       : c_int =  1;
+pub const SUDO_PLUGIN_OPEN_FAILURE       : c_int =  0;
+pub const SUDO_PLUGIN_OPEN_GENERAL_ERROR : c_int = -1;
+pub const SUDO_PLUGIN_OPEN_USAGE_ERROR   : c_int = -2;
