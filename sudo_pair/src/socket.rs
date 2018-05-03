@@ -1,6 +1,6 @@
 use std::ffi::CString;
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{Read, Write, Result, Error, ErrorKind};
 use std::net::Shutdown;
 use std::os::unix::prelude::*;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -21,10 +21,12 @@ impl Socket {
         uid:  uid_t,
         gid:  gid_t,
         mode: mode_t,
-    ) -> io::Result<Self> {
+    ) -> Result<Self> {
+        let path = path.as_ref();
+
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
-        Self::unlink_socket(&path)?;
+        Self::unlink(&path)?;
 
         // by default, ensure no permissions on the created socket since
         // we're going to customize them immediately afterward
@@ -39,16 +41,16 @@ impl Socket {
         // to change the file's ownership
         let socket = UnixListener::bind(&path).and_then(|listener| {
             let cpath = CString::new(
-                path.as_ref().as_os_str().as_bytes()
+                path.as_os_str().as_bytes()
             )?;
 
             unsafe {
                 if libc::chown(cpath.as_ptr(), uid, gid) == -1 {
-                    return Err(io::Error::last_os_error());
+                    return Err(Error::last_os_error());
                 };
 
                 if libc::chmod(cpath.as_ptr(), mode) == -1 {
-                    return Err(io::Error::last_os_error());
+                    return Err(Error::last_os_error());
                 }
 
                 let     fd      = listener.as_raw_fd();
@@ -69,7 +71,7 @@ impl Socket {
                     ptr::null_mut(),
                 ) {
                     1  => (),
-                    -1 => return Err(io::Error::last_os_error()),
+                    -1 => return Err(Error::last_os_error()),
                     0  => unreachable!("`select` returned 0 even though no timeout was set"),
                     _  => unreachable!("`select` indicated that more than 1 fd is ready"),
                 };
@@ -95,7 +97,7 @@ impl Socket {
         // because we want to unlink the socket regardless) and b) it's
         // more important to continue the sudo session than to worry
         // about filesystem janitorial work
-        let _ = Self::unlink_socket(&path);
+        let _ = Self::unlink(&path);
 
         // restore the process' original umask
         let _ = unsafe { libc::umask(umask) };
@@ -103,21 +105,21 @@ impl Socket {
         socket
     }
 
-    pub(crate) fn close(&mut self) -> io::Result<()> {
+    pub(crate) fn close(&mut self) -> Result<()> {
         self.socket.shutdown(Shutdown::Both)
     }
 
-    fn unlink_socket<P: AsRef<Path>>(path: P) -> io::Result<()> {
+    fn unlink(path: &Path) -> Result<()> {
         match fs::metadata(&path).map(|md| md.file_type().is_socket()) {
             // file exists, is a socket; delete it
             Ok(true) => fs::remove_file(path),
 
             // file exists, is not a socket; abort
-            Ok(false) => Err(io::Error::new(
-                io::ErrorKind::AlreadyExists,
+            Ok(false) => Err(Error::new(
+                ErrorKind::AlreadyExists,
                 format!(
                     "{} exists and is not a socket",
-                    path.as_ref().to_string_lossy()
+                    path.to_string_lossy()
                 ),
             )),
 
@@ -134,7 +136,7 @@ impl Drop for Socket {
 }
 
 impl Read for Socket {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         // read() will block until someone writes on the other side
         // of the socket, so we ensure that the signal handler for
         // Ctrl-C aborts the read instead of restarting it
@@ -144,11 +146,11 @@ impl Read for Socket {
 }
 
 impl Write for Socket {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
         ctrl_c_aborts_syscalls(|| self.socket.write(buf) )?
     }
 
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> Result<()> {
         ctrl_c_aborts_syscalls(|| self.socket.flush() )?
     }
 }
@@ -160,7 +162,7 @@ impl Write for Socket {
 /// Disabling `SA_RESTART` ensures that blocking calls like `accept(2)`
 /// will be terminated upon receipt on the signal instead of
 /// automatically resuming.
-fn ctrl_c_aborts_syscalls<F, T>(func: F) -> io::Result<T>
+fn ctrl_c_aborts_syscalls<F, T>(func: F) -> Result<T>
     where F: FnOnce() -> T
 {
     unsafe {
@@ -193,9 +195,9 @@ unsafe fn sigaction(
     sig: libc::c_int,
     new: *const libc::sigaction,
     old: *mut   libc::sigaction,
-) -> io::Result<()> {
+) -> Result<()> {
     if libc::sigaction(sig, new, old) == -1 {
-        return Err(io::Error::last_os_error())
+        return Err(Error::last_os_error())
     }
 
     Ok(())
