@@ -38,6 +38,7 @@ use std::path::PathBuf;
 use std::ffi::{CString, CStr};
 use std::io::{self, Write};
 use std::slice;
+use std::sync::{Arc, Mutex};
 
 use libc::{c_char, c_int, c_uint, gid_t};
 
@@ -76,7 +77,7 @@ pub struct Plugin {
     /// `plugin_options["disabled"] => "disabled"`).
     pub plugin_options: OptionMap,
 
-    printf:        sudo_plugin_sys::sudo_printf_non_null_t,
+    printf:        Arc<Mutex<sudo_plugin_sys::sudo_printf_non_null_t>>,
     _conversation: sudo_plugin_sys::sudo_conv_t,
 }
 
@@ -129,7 +130,7 @@ impl Plugin {
             user_env:       OptionMap  ::from_raw(user_env),
             plugin_options: OptionMap  ::from_raw(plugin_options),
 
-            printf,
+            printf: Arc::new(Mutex::new(printf)),
             _conversation: conversation,
         };
 
@@ -142,7 +143,7 @@ impl Plugin {
     ///
     pub fn stdout(&self) -> Printf {
         Printf {
-            facility: self.printf,
+            facility: self.printf.clone(),
             level:    sudo_plugin_sys::SUDO_CONV_INFO_MSG
         }
     }
@@ -153,7 +154,7 @@ impl Plugin {
     ///
     pub fn stderr(&self) -> Printf {
         Printf {
-            facility: self.printf,
+            facility: self.printf.clone(),
             level:    sudo_plugin_sys::SUDO_CONV_ERROR_MSG
         }
     }
@@ -236,17 +237,13 @@ impl Plugin {
 /// not be present on a local tty, but this will be wired up to a
 /// `printf`-like function that outputs to either STDOUT or STDERR.
 ///
-/// TODO: this might be violating safety, since each `Printf` can point
-/// to the same facility, and technically we're having two pointers to
-/// the same printf function, that `write` thinks it's borrowing mutably
-/// and exclusively... well, crap.
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct Printf {
     /// A *non-null* function pointer to a `sudo_printf_t` printf
     /// facility
     //
     // TODO: non-nullness should be validated here
-    pub facility: sudo_plugin_sys::sudo_printf_non_null_t,
+    pub facility: Arc<Mutex<sudo_plugin_sys::sudo_printf_non_null_t>>,
 
     /// A `sudo_conv_message` bitflag to indicate how and where the
     /// message should be printed.
@@ -290,7 +287,7 @@ impl Write for Printf {
         )?;
 
         let ret = unsafe {
-            (self.facility)(self.level as i32, message.as_ptr())
+            (self.facility.lock().unwrap())(self.level as i32, message.as_ptr())
         };
 
         if ret == -1 {
