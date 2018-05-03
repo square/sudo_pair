@@ -117,6 +117,10 @@ macro_rules! sudo_io_static_fn {
                 // call fails, we don't really have anything productive
                 // to do
                 if let Some(printf) = printf {
+                    let printf = ::std::sync::Arc::new(
+                        ::std::sync::Mutex::new(printf)
+                    );
+
                     let _ = sudo_plugin::Printf {
                         facility: printf,
                         level:    sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
