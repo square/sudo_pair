@@ -111,21 +111,16 @@ macro_rules! sudo_io_static_fn {
         ) -> ::libc::c_int {
             unsafe fn stderr(
                 printf: sudo_plugin::sys::sudo_printf_t,
-                error:  Error,
+                error:  &Error,
             ) -> ::libc::c_int {
-                // if printf is a NULL pointer, we don't really have
-                // anything productive to do
+                // if printf is a NULL pointer or if the `write_error`
+                // call fails, we don't really have anything productive
+                // to do
                 if let Some(printf) = printf {
-                    let message = format!(
-                        "{}: {}\n", stringify!($name), error
-                    );
-
-                    // if this errors, there's not much we can do about
-                    // it, so we discard the result
                     let _ = sudo_plugin::Printf {
                         facility: printf,
                         level:    sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
-                    }.write(message.as_bytes());
+                    }.write_error(stringify!($name).as_bytes(), error);
                 }
 
                 return error.as_sudo_io_plugin_open_retval();
@@ -145,7 +140,7 @@ macro_rules! sudo_io_static_fn {
 
             match plugin {
                 Ok(p)  => $plugin = Some(p),
-                Err(e) => return stderr(plugin_printf, e),
+                Err(e) => return stderr(plugin_printf, &e),
             }
 
             // unwrap should be panic-safe here, since we just assigned
@@ -154,7 +149,7 @@ macro_rules! sudo_io_static_fn {
 
             match instance {
                 Ok(i)  => $instance = Some(i),
-                Err(e) => return stderr(plugin_printf, e),
+                Err(e) => return stderr(plugin_printf, &e),
             }
 
             sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
@@ -171,7 +166,7 @@ macro_rules! sudo_io_fn {
             exit_status: ::libc::c_int,
             error:       ::libc::c_int
         ) {
-            if let Some(ref mut i) = $instance {
+            if let Some(i) = $instance.as_mut() {
                 i.$fn(exit_status as _, error as _)
             }
         }
@@ -221,12 +216,14 @@ macro_rules! sudo_io_fn {
                 .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
                 .and_then(|i| i.$fn(slice) );
 
-            // TODO: print nested errors
-            let _ = result.as_ref().map_err(|err| {
-                $plugin.as_mut().map(|p| {
-                    p.stderr().write(format!("\n{}: {}\n", stringify!($name), err).as_bytes())
-                })
-            });
+            // if there was an error (and we can unwrap the plugin),
+            // write it out
+            if let (Some(p), Err(e)) = ($plugin.as_ref(), result.as_ref()) {
+                let _ = p.stderr().write_error(
+                    stringify!($name).as_bytes(),
+                    e,
+                );
+            }
 
             result.as_sudo_io_plugin_log_retval()
         }

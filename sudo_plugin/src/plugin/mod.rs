@@ -222,6 +222,10 @@ impl Plugin {
 /// not be present on a local tty, but this will be wired up to a
 /// `printf`-like function that outputs to either STDOUT or STDERR.
 ///
+/// TODO: this might be violating safety, since each `Printf` can point
+/// to the same facility, and technically we're having two pointers to
+/// the same printf function, that `write` thinks it's borrowing mutably
+/// and exclusively... well, crap.
 #[derive(Copy, Clone, Debug)]
 pub struct Printf {
     /// A *non-null* function pointer to a `sudo_printf_t` printf
@@ -235,6 +239,34 @@ pub struct Printf {
     //
     // TODO: level should be bitflags and validated
     pub level: u32,
+}
+
+impl Printf {
+    ///
+    /// Writes a formatted error to the user via the configured
+    /// facility.
+    ///
+    pub fn write_error(&mut self, tag: &[u8], error: &Error) -> io::Result<()> {
+        // errors are prefixed with a newline for clarity, since they
+        // might be emitted while an existing line has output on it
+        let mut message = vec![b'\n'];
+        let mut stack   = vec![];
+
+        // this is necessary since error_chain::Iter doesn't implement
+        // `DoubleEndedIterator`, so we can't reverse it without pushing
+        // everything onto a vec first
+        for e in error.iter() {
+            stack.push(e);
+        }
+
+        for e in stack.iter().rev() {
+            message.extend_from_slice(tag);
+            message.extend_from_slice(format!(": {}", e).as_bytes());
+            message.push(b'\n');
+        }
+
+        self.write(&message[..]).and_then(|_| self.flush() )
+    }
 }
 
 impl Write for Printf {
@@ -254,6 +286,7 @@ impl Write for Printf {
         Ok(ret as _)
     }
 
+    // TODO: is there any meaningful implementation of this method?
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
