@@ -329,7 +329,12 @@ impl SudoPair {
         // the new user and the new group; ignoring this would allow
         // someone to gain a group privilege through a pair who doesn't
         // also have that group privilege
-        if self.is_sudoing_to_user() && self.is_sudoing_to_group() {
+        //
+        // note that we don't use `is_sudoing_to_group` because sudoing
+        // to a new user typically implicitly comes along with sudoing
+        // to a new group which is fine, what we want to avoid is the
+        // user explicitly providing a *different* group
+        if self.is_sudoing_to_user() && self.is_sudoing_to_explicit_group() {
             return true
         }
 
@@ -358,6 +363,11 @@ impl SudoPair {
 
     fn is_sudoing_to_group(&self) -> bool {
         self.plugin.user_info.gid != self.plugin.command_info.runas_egid
+    }
+
+    // returns true if `-g` was specified
+    fn is_sudoing_to_explicit_group(&self) -> bool {
+        self.plugin.settings.runas_group.is_some()
     }
 
     fn socket_path(&self) -> PathBuf {
