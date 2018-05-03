@@ -24,6 +24,8 @@ impl Socket {
     ) -> Result<Self> {
         let path = path.as_ref();
 
+        Self::enforce_ownership(&path)?;
+
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
         Self::unlink(&path)?;
@@ -126,6 +128,86 @@ impl Socket {
             // file doesn't exist; nothing to do
             _ => Ok(()),
         }
+    }
+
+    fn enforce_ownership(path: &Path) -> Result<()> {
+        let parent = path.parent().ok_or_else(|| {
+            Error::new(ErrorKind::AlreadyExists, format!(
+                "couldn't determine permissions of the parent directory for {}",
+                path.to_string_lossy()
+            ))
+        })?;
+
+        let parent = CString::new(
+            parent.as_os_str().as_bytes()
+        )?;
+
+        unsafe {
+            let mut stat : libc::stat = mem::uninitialized();
+
+            if libc::stat(
+                parent.as_ptr(),
+                &mut stat
+            ) == -1 {
+                return Err(Error::last_os_error());
+            }
+
+            if stat.st_mode & libc::S_IFDIR == 0 {
+                return Err(Error::new(ErrorKind::Other, format!(
+                    "the socket path {} is not a directory",
+                    parent.to_string_lossy(),
+                )));
+            }
+
+            if stat.st_uid != libc::geteuid() {
+                return Err(Error::new(ErrorKind::Other, format!(
+                    "the socket directory {} is not owned by root",
+                    parent.to_string_lossy(),
+                )));
+            }
+
+            // TODO: temporarily disabled while I relearn everything I
+            // know about POSIX filesystem ownership.
+            //
+            // All of this is to the best of my (current) understanding.
+            // On Linux, new files are created with their uid and gid
+            // set to the euid and egid of the process creating them. On
+            // Darwin (and probably other BSDs), they are created with
+            // the euid of the process creating them, but their egid is
+            // that of the directory they're being created in (which is
+            // typically behavior on Linux only if the setgid is enabled
+            // on the directory).
+            //
+            // So I'd like to ensure the file is owned by root's primary
+            // group, so that the created sockets don't inherit a group
+            // that unprivileged users are in. But I'd first have to
+            // actually figure out the primary group for my `euid`
+            // (sudo is run *setuid*, which doesn't change the `egid`),
+            // and then I'd have to... I don't know, check that nobody
+            // else is in it? That doesn't seem like a lot of ROI on my
+            // effort. So for now I'll just check that the group doesn't
+            // have any permissions to this directory.
+            //
+            // if stat.st_gid != libc::getegid() {
+            //     return Err(Error::new(ErrorKind::Other, format!(
+            //         "the socket directory {} is not owned by root's group",
+            //         parent.to_string_lossy(),
+            //     )));
+            // }
+
+            if
+                stat.st_mode & libc::S_IWGRP           != 0 ||
+                stat.st_mode & libc::S_IWOTH           != 0 ||
+                stat.st_mode & libc::S_ISGID as mode_t != 0
+            {
+                return Err(Error::new(ErrorKind::Other, format!(
+                    "the socket directory {} has insecure permissions",
+                    parent.to_string_lossy(),
+                )));
+            }
+        }
+
+        Ok(())
     }
 }
 
