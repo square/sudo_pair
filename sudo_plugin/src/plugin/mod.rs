@@ -129,7 +129,7 @@ impl Plugin {
     pub fn stdout(&self) -> Printf {
         Printf {
             facility: self.printf,
-            level:    sudo_plugin_sys:: SUDO_CONV_INFO_MSG
+            level:    sudo_plugin_sys::SUDO_CONV_INFO_MSG
         }
     }
 
@@ -140,7 +140,7 @@ impl Plugin {
     pub fn stderr(&self) -> Printf {
         Printf {
             facility: self.printf,
-            level:    sudo_plugin_sys:: SUDO_CONV_ERROR_MSG
+            level:    sudo_plugin_sys::SUDO_CONV_ERROR_MSG
         }
     }
 

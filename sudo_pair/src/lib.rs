@@ -2,7 +2,6 @@
 //!
 //! TODO: explain
 
-// TODO: remove all unwraps
 // TODO: remove all to_string_lossy
 // TODO: switch from error_chain to failure crate?
 // TODO: error message when /var/run/sudo_pair missing

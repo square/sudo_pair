@@ -6,6 +6,7 @@ use super::version::Version;
 
 use std::fmt;
 
+use sudo_plugin_sys as sys;
 use libc::c_int;
 
 /// The list of supported facilities to communicate with the end-user.
@@ -94,14 +95,14 @@ impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval
     for ::std::result::Result<T, E> {
     fn as_sudo_io_plugin_open_retval(&self) -> c_int {
         match *self {
-            Ok(_)      => 1,
+            Ok(_)      => sys::SUDO_PLUGIN_OPEN_SUCCESS,
             Err(ref e) => e.as_sudo_io_plugin_open_retval(),
         }
     }
 
     fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
-            Ok(_)      => 1,
+            Ok(_)      => sys::SUDO_PLUGIN_OPEN_SUCCESS,
             Err(ref e) => e.as_sudo_io_plugin_log_retval(),
         }
     }
@@ -110,15 +111,15 @@ impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval
 impl AsSudoPluginRetval for Error {
     fn as_sudo_io_plugin_open_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized(_), _) => -1,
-            Error(_, _)                          =>  0,
+            Error(ErrorKind::Unauthorized(_), _) => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
+            Error(_, _)                          => sys::SUDO_PLUGIN_OPEN_FAILURE,
         }
     }
 
     fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized(_), _) =>  0,
-            Error(_, _)                          => -1,
+            Error(ErrorKind::Unauthorized(_), _) => sys::SUDO_PLUGIN_OPEN_FAILURE,
+            Error(_, _)                          => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
         }
     }
 }

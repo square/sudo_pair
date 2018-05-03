@@ -109,6 +109,28 @@ macro_rules! sudo_io_static_fn {
             user_env_ptr:       *const *const ::libc::c_char,
             plugin_options_ptr: *const *const ::libc::c_char,
         ) -> ::libc::c_int {
+            unsafe fn stderr(
+                printf: sudo_plugin::sys::sudo_printf_t,
+                error:  Error,
+            ) -> ::libc::c_int {
+                // if printf is a NULL pointer, we don't really have
+                // anything productive to do
+                if let Some(printf) = printf {
+                    let message = format!(
+                        "{}: {}\n", stringify!($name), error
+                    );
+
+                    // if this errors, there's not much we can do about
+                    // it, so we discard the result
+                    let _ = sudo_plugin::Printf {
+                        facility: printf,
+                        level:    sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
+                    }.write(message.as_bytes());
+                }
+
+                return error.as_sudo_io_plugin_open_retval();
+            }
+
             let plugin = sudo_plugin::Plugin::new(
                 version,
                 argc, argv,
@@ -121,38 +143,21 @@ macro_rules! sudo_io_static_fn {
                 plugin_options_ptr,
             );
 
-            let instance = match plugin {
-                Ok(p)  => {
-                    $plugin = Some(p);
-                    <$ty>::$fn($plugin.as_ref().unwrap())
-                }
-
-                Err(e) => Err(e),
-            };
-
-            let ret = instance.as_sudo_io_plugin_open_retval();
-
-            match instance {
-                Ok(i) => {
-                    $instance = Some(i);
-                },
-
-                // we still have to print errors here even if `Plugin::new`
-                // failed, so we have to create a Printf facility ourselves
-                //
-                // TODO: print nested errors
-                // TODO: remove unwrap
-                Err(e) => {
-                    let _ = sudo_plugin::Printf {
-                        facility: plugin_printf.unwrap(),
-                        level:    sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
-                    }.write(
-                        format!("{}: {}\n", stringify!($name), e).as_bytes(),
-                    );
-                }
+            match plugin {
+                Ok(p)  => $plugin = Some(p),
+                Err(e) => return stderr(plugin_printf, e),
             }
 
-            ret
+            // unwrap should be panic-safe here, since we just assigned
+            // a value to $plugin
+            let instance = <$ty>::$fn($plugin.as_ref().unwrap());
+
+            match instance {
+                Ok(i)  => $instance = Some(i),
+                Err(e) => return stderr(plugin_printf, e),
+            }
+
+            sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
         }
 
         Some(open)
