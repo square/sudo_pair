@@ -6,12 +6,12 @@ license = "Apache-2.0"
 authors     = ["Stephen Touset <stephen@squareup.com>"]
 description = "sudo IO-plugin to require a live human pair"
 
-homepage      = "https://github.com/square/sudo_pair"
-repository    = "https://github.com/square/sudo_pair"
-documentation = "https://github.com/square/sudo_pair"
-readme        = "README.md"
+homepage   = "https://github.com/square/sudo_pair"
+repository = "https://github.com/square/sudo_pair.git"
+readme     = "../README.md"
 
-keywords = [ "sudo", "sudo plugin", "pairing", "pci" ]
+categories = [ "command-line-utilities" ]
+keywords   = [ "sudo", "sudo plugin", "pairing", "pci" ]
 
 [lib]
 name       = "sudo_pair"
