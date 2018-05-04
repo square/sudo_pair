@@ -209,11 +209,7 @@ impl Socket {
             //     )));
             // }
 
-            if
-                stat.st_mode & libc::S_IWGRP           != 0 ||
-                stat.st_mode & libc::S_IWOTH           != 0 ||
-                stat.st_mode & libc::S_ISGID as mode_t != 0
-            {
+            if stat.st_mode & (libc::S_IWGRP | libc::S_IWOTH) != 0 {
                 return Err(Error::new(ErrorKind::Other, format!(
                     "the socket directory {} has insecure permissions",
                     parent.to_string_lossy(),

@@ -1,17 +1,17 @@
 [package]
 name    = "sudo_plugin-sys"
-version = "0.1.0"
+version = "1.0.0"
 license = "Apache-2.0"
 
 authors     = ["Stephen Touset <stephen@squareup.com>"]
 description = "Bindings to the sudo plugin API"
 
-homepage      = "https://github.com/square/sudo_pair"
-repository    = "https://github.com/square/sudo_pair"
-documentation = "https://github.com/square/sudo_pair"
-readme        = "README.md"
+homepage   = "https://github.com/square/sudo_pair"
+repository = "https://github.com/square/sudo_pair.git"
+readme     = "README.md"
 
-keywords = [ "sudo", "sudo plugin", "api-bindings" ]
+categories = [ "external-ffi-bindings" ]
+keywords   = [ "sudo", "sudo-plugin", "api-bindings" ]
 
 build = "build.rs"
 
@@ -20,3 +20,6 @@ libc = '~0'
 
 [build-dependencies]
 bindgen = '~0'
+
+[badges]
+travis-ci = { repository = "square/sudo_pair" }

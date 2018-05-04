@@ -1,0 +1,9 @@
+]0;squdo: <%U@%h:%d $ > %C[8;%H;%WtYou have been asked to approve and monitor the following squdo session:
+
+    <[1m[34m%U[0m@[1m[31m%h[0m:[1m[34m%d[0m [31m$[0m > %C
+
+Once approved, this terminal will mirror all output from the active squdo session until its completion.
+
+[1mClosing this terminal, losing your network connection to this host, or explicitly ending the session by typing <Ctrl-D> will cause the command being run under elevated privileges to terminate immediately.[0m
+
+Approve? y/n [n]: 

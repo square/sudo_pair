@@ -12,9 +12,12 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-//! description = "FFI wrapper around authoring sudo plugins"
+//! This crate is a (lighly enhanced) set of bindgen-generated Rust FFI
+//! bindings for the [`sudo_plugin(8)`] facility. In general, it is
+//! expected that end-users will prefer to use the handcrafted Rust
+//! wrappers from the `sudo_plugin` crate which accompanies this project.
 //!
-//! TODO: explain
+//! [sudo_plugin]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 
 #![deny(warnings)]
 
