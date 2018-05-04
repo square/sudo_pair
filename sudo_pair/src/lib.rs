@@ -14,18 +14,20 @@
 
 //! sudo IO-plugin to require a live human pair.
 //!
-//! TODO: explain
+//! This plugin implements dual control for `sudo`, requiring that
+//! another engineer approve and monitor any privileged sessions.
 
 // TODO: remove all to_string_lossy
 // TODO: switch from error_chain to failure crate?
 // TODO: error message when /var/run/sudo_pair missing
 // TODO: enable the ability to respond to `sudo --version`
 // TODO: iolog in `sudoreplay(8)` format
-// TODO: write a readme
 // TODO: rustfmt
 // TODO: allow redirect to stdout?
 // TODO: double-check all `as`-casts
-// TODO: document templating in the README
+// TODO: docs on docs.rs
+// TODO: various badges
+// TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
 
 #![deny(warnings)]
 
@@ -75,10 +77,11 @@ use libc::{gid_t, mode_t, uid_t};
 use sudo_plugin::errors::*;
 use sudo_plugin::OptionMap;
 
-const DEFAULT_BINARY_PATH      : &str = "/usr/bin/sudo_pair_approve";
-const DEFAULT_USER_PROMPT_PATH : &str = "/etc/sudo_pair.prompt.user";
-const DEFAULT_PAIR_PROMPT_PATH : &str = "/etc/sudo_pair.prompt.pair";
-const DEFAULT_SOCKET_DIR       : &str = "/var/run/sudo_pair";
+const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
+const DEFAULT_USER_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.user";
+const DEFAULT_PAIR_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.pair";
+const DEFAULT_SOCKET_DIR       : &str       = "/var/run/sudo_pair";
+const DEFAULT_GIDS_ENFORCED    : [gid_t; 1] = [0];
 
 const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p %u'\n";
 const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
@@ -140,6 +143,16 @@ impl SudoPair {
         // connection only tell us the *euid*, not the *uid*. So we end
         // up with the euid of `root` which isn't helpful. So this kind
         // of check *must* be done on the client.
+        //
+        // Except I have an idea for how to solve this plugin-side. Open
+        // a socket writable by all. When someone connects, get the
+        // credentials of the peer and send them a cryptographically-
+        // random token. Close the socket and reopen a new one as we
+        // currently do. Instead of expecting a `y`, expect the token.
+        // This binds their ability to approve the session (able to
+        // write to the socket) with their original identity (proven
+        // through providing the token from their original user). This
+        // shouldn't be too hard, but I haven't gotten around to it yet.
 
         Ok(pair)
     }
@@ -485,34 +498,49 @@ impl SudoPair {
 #[derive(Debug)]
 struct PluginOptions {
     /// `binary_path` is the location of the approval binary, so that we
-    /// can bypass the approval process for invoking it
+    /// can bypass the approval process for invoking it.
     ///
-    /// Default: `"/usr/bin/sudo_pair_approve"`
+    /// Default: `"/usr/bin/sudo_approve"`
     binary_path: PathBuf,
 
-    /// `user_prompt_path` is the location of the prompt template to display
-    /// to the user invoking sudo; if no template is found at this location,
-    /// an extremely minimal default will be printed
+    /// `user_prompt_path` is the location of the prompt template to
+    /// display to the user invoking sudo; if no template is found at
+    /// this location, an extremely minimal default will be printed.
     ///
     /// Default: `"/etc/sudo_pair.prompt.user"`
     user_prompt_path: PathBuf,
 
-    /// `pair_prompt_path` is the location of the prompt template to display
-    /// to the user being asked to approve the sudo session sudo; if no
-    /// template is found at this location, an extremely minimal default will
-    /// be printed
+    /// `pair_prompt_path` is the location of the prompt template to
+    /// display to the user being asked to approve the sudo session; if
+    /// no template is found at this location, an extremely minimal
+    /// default will be printed.
     ///
     /// Default: `"/etc/sudo_pair.prompt.pair"`
     pair_prompt_path: PathBuf,
 
     /// `socket_dir` is the path where this plugin will store sockets for
-    /// sessions that are pending approval
+    /// sessions that are pending approval.
     ///
     /// Default: `"/var/run/sudo_pair"`
     socket_dir: PathBuf,
 
-    // TODO: doc
+    /// `gids_enforced` is a comma-separated list of gids that sudo_pair
+    /// will gate access to. If a user is `sudo`ing to a user that is a
+    /// member of one of these groups, they will be required to have a
+    /// pair approve their session.
+    ///
+    /// Default: `[0]` (e.g., root)
     gids_enforced: HashSet<gid_t>,
+
+    /// `gids_exempted` is a comma-separated list of gids whose users
+    /// will be exempted from the requirements of sudo_pair. Note that
+    /// this is not the opposite of the `gids_enforced` flag. Whereas
+    /// `gids_enforced` gates access *to* groups, `gids_exempted`
+    /// exempts users sudoing *from* groups. For instance, this setting
+    /// can be used to ensure that oncall sysadmins can respond to
+    /// outages without needing to find a pair.
+    ///
+    /// Default: `[]` (however, root is *always* exempt)
     gids_exempted: HashSet<gid_t>,
 }
 
@@ -540,7 +568,7 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
             gids_enforced: map.get("gids_enforced")
-                .unwrap_or_default(),
+                .unwrap_or_else(|_| DEFAULT_GIDS_ENFORCED.iter().cloned().collect()),
 
             gids_exempted: map.get("gids_exempted")
                 .unwrap_or_default(),

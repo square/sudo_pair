@@ -1,0 +1,19 @@
+language: rust
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+script:
+  - cargo build
+  - cargo test
+  - 'if [[ "${TRAVIS_RUST_VERSION}" = "nightly" ]]; then cargo install --force clippy; fi'
+  - 'if [[ "${TRAVIS_RUST_VERSION}" = "nightly" ]]; then cargo clippy; fi'
+
+cache: cargo
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true

@@ -287,6 +287,11 @@ impl Write for Printf {
         )?;
 
         let ret = unsafe {
+            // TODO: this should be bitflags at some point, but the
+            // cast is only necessary because Rust interprets the
+            // `#define`'d constants as `u32` when they're treated by
+            // sudo as `i32`.
+            #[cfg_attr(feature="cargo-clippy", allow(cast_possible_wrap))]
             (self.facility.lock().unwrap())(self.level as i32, message.as_ptr())
         };
 
@@ -294,6 +299,9 @@ impl Write for Printf {
             Err(io::Error::last_os_error())?;
         }
 
+        // TODO: replace the cast, but for now we've checked for it
+        // being negative so there's no possibility of wraparound
+        #[cfg_attr(feature="cargo-clippy", allow(cast_sign_loss))]
         Ok(ret as _)
     }
 

@@ -1,0 +1,7 @@
+Due to security and compliance requirements, this `squdo` session will require approval and monitoring from another engineer. When finished, this session will be archived permanently for later retrieval and analysis.
+
+To continue, another engineer must run:
+
+    ssh -t '[1m[31m%h[0m' 'sh -l -c "%b %u %p"'
+
+If a suitable engineer is not available and you have an immediate and urgent need to run this command (e.g., a payments outage or other serious system issue), you may run the above command to approve your own session. [1mNote that doing so will immediately page an oncall security engineer, so this capability should only be used in the event of an emergency.[0m
