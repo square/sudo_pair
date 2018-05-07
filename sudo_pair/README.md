@@ -229,12 +229,17 @@ difficulty.
 
 Pick a [TODO](sudo_pair/src/lib.rs) and get started!
 
+## Bugs
+
+Please report non-security issues on the GitHub tracker. Security issues
+are covered by Square's [bug bounty program](BUG-BOUNTY.md).
+
 ## License
 
 `sudo_pair` is  distributed under the terms of both the Apache License
 (Version 2.0).
 
-See [LICENSE-APACHE](../LICENSE-APACHE) for details.
+See [LICENSE-APACHE](LICENSE-APACHE) for details.
 
 [sudo_plugin_man]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 [libc]: https://github.com/rust-lang/libc
