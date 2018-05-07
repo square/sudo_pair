@@ -25,7 +25,7 @@ fn main() {
         .header("include/bindings.h")
         // we provide a default sudo_plugin.h in case it's not available
         // on the system
-        .clang_arg("--include-directory-after=include")
+        .clang_arg("-I include")
         .generate()
         .expect("Unable to generate bindings")
         .write_to_file(out_path.join("bindings.rs"))
