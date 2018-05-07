@@ -14,9 +14,9 @@ categories = [ "external-ffi-bindings" ]
 keywords   = [ "sudo", "sudo-plugin" ]
 
 [dependencies]
-libc            = '~0'
-error-chain     = '~0'
-sudo_plugin-sys = { version = "~1", path = "../sudo_plugin-sys" }
+libc            = '0'
+error-chain     = '0'
+sudo_plugin-sys = { version = "1", path = "../sudo_plugin-sys" }
 
 [badges]
 travis-ci = { repository = "square/sudo_pair" }

@@ -16,10 +16,10 @@ keywords   = [ "sudo", "sudo-plugin", "api-bindings" ]
 build = "build.rs"
 
 [dependencies]
-libc = '~0'
+libc = '0'
 
 [build-dependencies]
-bindgen = '~0'
+bindgen = '0'
 
 [badges]
 travis-ci = { repository = "square/sudo_pair" }
