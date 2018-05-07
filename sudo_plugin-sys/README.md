@@ -23,8 +23,8 @@ Contributions are welcome!
 
 ## License
 
-`sudo_pair` is  distributed under the terms of both the Apache License
-(Version 2.0).
+`sudo_pair` is  distributed under the terms of the Apache License
+Version 2.0).
 
 See [LICENSE-APACHE](LICENSE-APACHE) for details.
 
