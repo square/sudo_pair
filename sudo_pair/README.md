@@ -189,7 +189,7 @@ sudo to a new user (and gain its groups) or sudo to a new group
 
 This project is composed of three Rust crates:
 
-* [`sudo_plugin-sys`](sudo_plugin-sys): raw Rust FFI bindings to the [`sudo_plugin(8)`](sudo_plugin_man) interface
+* [`sudo_plugin-sys`](sudo_plugin-sys): raw Rust FFI bindings to the [`sudo_plugin(8)`][sudo_plugin_man] interface
 * [`sudo_plugin`](sudo_plugin): a set of Rust structs and macros to simplify writing plugins
 * [`sudo_pair`](sudo_pair): the implementation of this plugin
 
