@@ -13,9 +13,10 @@
 // permissions and limitations under the License.
 
 //! This crate is a (lighly enhanced) set of bindgen-generated Rust FFI
-//! bindings for the [`sudo_plugin(8)`] facility. In general, it is
-//! expected that end-users will prefer to use the handcrafted Rust
-//! wrappers from the `sudo_plugin` crate which accompanies this project.
+//! bindings for the [`sudo_plugin(8)`][sudo_plugin] facility. In
+//! general, it is expected that end-users will prefer to use the
+//! handcrafted Rust wrappers from the `sudo_plugin` crate which
+//! accompanies this project.
 //!
 //! [sudo_plugin]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 

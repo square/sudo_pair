@@ -198,9 +198,9 @@ This project is composed of three Rust crates:
 Given the security-sensitive nature of this project, it is an explicit
 goal to have a minimal set of dependencies. Currently, those are:
 
-* [rust-lang/libc](libc)
-* [rust-lang-nursery/rust-bindgen](bindgen)
-* [rust-lang-nursery/error-chain](error-chain)
+* [rust-lang/libc][libc]
+* [rust-lang-nursery/rust-bindgen][bindgen]
+* [rust-lang-nursery/error-chain][error-chain]
 
 ## Contributions
 
@@ -216,10 +216,9 @@ Pick a [TODO](sudo_pair/src/lib.rs) and get started!
 `sudo_pair` is  distributed under the terms of both the Apache License
 (Version 2.0).
 
-See [LICENSE-APACHE](LICENSE-APACHE) for details.
+See [LICENSE-APACHE](../LICENSE-APACHE) for details.
 
 [sudo_plugin_man]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 [libc]: https://github.com/rust-lang/libc
 [bindgen]: https://github.com/rust-lang-nursery/rust-bindgen
 [error-chain]: https://github.com/rust-lang-nursery/error-chain
-[cla]: https://docs.google.com/forms/d/e/1FAIpQLSeRVQ35-gq2vdSxD1kdh7CJwRdjmUA0EZ9gRXaWYoUeKPZEQQ/viewform?formkey=dDViT2xzUHAwRkI3X3k5Z0lQM091OGc6MQ&ndplr=1
