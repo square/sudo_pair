@@ -36,6 +36,7 @@ pub struct UserInfo {
     pub tcpgid: pid_t,
     pub tty:    Option<String>,
     pub uid:    uid_t,
+    pub umask:  Option<String>,
     pub user:   String,
 
     pub raw: OptionMap,
@@ -56,6 +57,7 @@ impl UserInfo {
             uid:    value.get("uid")?,
             user:   value.get("user")?,
 
+            umask:  value.get("umask") .ok(),
             cols:   value.get("cols")  .unwrap_or(80),
             lines:  value.get("lines") .unwrap_or(24),
             sid:    value.get("sid")   .unwrap_or(0),
