@@ -46,6 +46,7 @@ pub struct Settings {
     pub selinux_type:         Option<String>,
     pub set_home:             bool,
     pub sudoedit:             bool,
+    pub timeout:              Option<String>,
 
     pub raw: OptionMap,
 }
@@ -79,6 +80,7 @@ impl Settings {
             selinux_type:         value.get("selinux_type")        .ok(),
             set_home:             value.get("set_home")            .unwrap_or(false),
             sudoedit:             value.get("sudoedit")            .unwrap_or(false),
+            timeout:              value.get("timeout")             .ok(),
 
             raw: value,
         })

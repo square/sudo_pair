@@ -28,6 +28,7 @@
 // TODO: docs on docs.rs
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
+// TODO: implement change_winsize
 
 #![deny(warnings)]
 

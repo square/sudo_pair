@@ -95,6 +95,7 @@ macro_rules! sudo_io_plugin {
                     log_stderr:       None,
                     register_hooks:   None,
                     deregister_hooks: None,
+                    change_winsize:   None,
                 }
             }
         };
@@ -247,5 +248,30 @@ macro_rules! sudo_io_fn {
         }
 
         Some($log_fn)
+    }};
+
+    ( change_winsize , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
+        unsafe extern "C" fn change_winsize(
+            lines: ::libc::c_uint,
+            cols:  ::libc::c_uint,
+        ) {
+            let result = $instance
+                .as_mut()
+                .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
+                .and_then(|i| i.$fn(lines as _, cols as _) );
+
+            // if there was an error (and we can unwrap the plugin),
+            // write it out
+            if let (Some(p), Err(e)) = ($plugin.as_ref(), result.as_ref()) {
+                let _ = p.stderr().write_error(
+                    stringify!($name).as_bytes(),
+                    e,
+                );
+            }
+
+            result.as_sudo_io_plugin_log_retval()
+        }
+
+        Some(change_winsize)
     }};
 }
