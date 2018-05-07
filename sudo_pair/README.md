@@ -166,6 +166,24 @@ but not much more. Ctrl-C was disabled so a user who's forgotten that
 this is terminal is being used to monitor another user's session doesn't
 instinctively kill it with Ctrl-C.
 
+## Limitations
+
+Sessions under `sudo_pair` can't be used in the middle of a pipe. I'll
+consider lifting these restrictions, but doing so is inherently
+problematic.
+
+Allowing piped data to standard input, as far as I can tell, likel
+results in a complete bypass of the security model here. Commands can
+often accept input on `stdin`, and there's no reasonable way to show
+this information to the pair.
+
+On the other hand, if `sudo` output is piped to `stdout`, we could
+simply log it like we log TTY output. This works, except we print the
+prompt itself on `stdout`. We could print the prompt to `stderr`
+instead. In retrospect, maybe we should do this. Redirecting to `stderr`
+would still be problematic, but at least we get some ability to insert
+`sudo` commands at the front of pipes. I'll consider this.
+
 ## Security Model
 
 This plugin allows users to `sudo -u ${user}` to become a user or
