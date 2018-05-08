@@ -19,7 +19,7 @@ use std::fmt;
 use libc::c_uint;
 
 const MINIMUM_MAJOR: u16 = 1;
-const MINIMUM_MINOR: u16 = 12;
+const MINIMUM_MINOR: u16 = 9;
 
 const MINIMUM: Version = Version {
     major: MINIMUM_MAJOR,
