@@ -274,7 +274,7 @@ impl Printf {
             message.push(b'\n');
         }
 
-        self.write(&message[..]).and_then(|_| self.flush() )
+        self.write_all(&message[..]).and_then(|_| self.flush() )
     }
 }
 
