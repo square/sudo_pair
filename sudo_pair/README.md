@@ -64,6 +64,11 @@ install -o root -g root -m 0755 ./sample/bin/sudo_approve /usr/bin/sudo_approve
 # function correctly; if this is the case, the two files will need to be
 # merged
 install -o root -g root -m 0644 ./sample/etc/sudo.conf /etc/sudo.conf
+
+# if these prompts don't work for you, they're configurable via a simple
+# templating language explained later in the README
+install -o root -g root -m 0644 ./sample/etc/sudo.prompt.user /etc/sudo.prompt.user
+install -o root -g root -m 0644 ./sample/etc/sudo.prompt.pair /etc/sudo.prompt.pair
 ```
 
 ## Configuration
