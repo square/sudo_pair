@@ -416,11 +416,9 @@ impl SudoPair {
     }
 
     fn socket_gid(&self) -> gid_t {
-        // it's probably unnecessary to use our own gid in the event of
-        // sudoing to the same group, since the mode should be set
-        // correctly either way, but I'm doing so anyway in the interest
-        // of caution
-        if self.is_sudoing_to_group() {
+        // this should only be changed if the user is sudoing to a group
+        // explicitly, not only if they're gaining a new primary `gid`
+        if self.is_sudoing_to_explicit_group() {
             self.plugin.command_info.runas_egid
         } else {
             // don't change the owner; chown accepts a uid of -1
@@ -439,9 +437,14 @@ impl SudoPair {
             return libc::S_IWUSR; // from <sys/stat.h>, writable by the user
         }
 
-        // if the user is sudoing to a new `egid`, we require the
-        // approver to also be able to act as the same `egid`
-        if self.is_sudoing_to_group() {
+        // if the user is sudoing to a new `egid` (and not implicitly
+        // by getting a new `euid`) we require the approver to also be
+        // able to act as the same `egid`
+        //
+        // I *think* since the above statement returns only, this is
+        // true if and only if `is_sudoing_to_group()` is true, but I'm
+        // using the explicit version here for safety
+        if self.is_sudoing_to_explicit_group() {
             return libc::S_IWGRP; // from <sys/stat.h>, writable by the group
         }
 
