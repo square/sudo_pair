@@ -206,9 +206,9 @@ sockets are created (in order):
 
 ```
 drwxr-xr-x   3 root    wheel     96 May  8 09:17 .
-s-w-------   1 root    wheel      0 May  8 09:16 1882.29664.sock
-s-w-------   1 nobody  wheel      0 May  8 09:17 1882.29921.sock
-s----w----   1 root    sys        0 May  8 09:18 1882.29994.sock
+s-w-------   1 root    wheel      0 May  8 09:16 1882.29664.sock # sudo -u root
+s-w-------   1 nobody  wheel      0 May  8 09:17 1882.29921.sock # sudo -u nobody
+s----w----   1 root    sys        0 May  8 09:18 1882.29994.sock # sudo -g sys
 ```
 
 As a result, the only people who can approve a `sudo` session to a user
