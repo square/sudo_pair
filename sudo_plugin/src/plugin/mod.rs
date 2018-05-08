@@ -172,7 +172,7 @@ impl Plugin {
             sudo.extend_from_slice(&flags.join(&b' ')[..]);
         }
 
-        for entry in self.command.iter() {
+        for entry in &self.command {
             sudo.push(b' ');
             sudo.extend_from_slice(entry.as_bytes());
         }
