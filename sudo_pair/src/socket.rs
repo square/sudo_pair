@@ -50,11 +50,6 @@ impl Socket {
             libc::umask(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO)
         };
 
-        // TODO: in theory the path these sockets are created in should
-        // be owned `root:root` and `chmod go-rw`, but we should
-        // confirm this before proceeding since `UnixListener::bind`
-        // calls `libc::listen` under the covers before we get a chance
-        // to change the file's ownership
         let socket = UnixListener::bind(&path).and_then(|listener| {
             let cpath = CString::new(
                 path.as_os_str().as_bytes()
