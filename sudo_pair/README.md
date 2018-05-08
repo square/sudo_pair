@@ -86,11 +86,11 @@ The full list of options are as follows:
 
 * `user_prompt_path` (default: `/etc/sudo_pair.prompt.user`)
 
-  This is the location of the prompt template to display to the user invoking sudo; if no template is found at this location, an extremely minimal default will be printed. See the [Prompts][#prompts] section for more details.
+  This is the location of the prompt template to display to the user invoking sudo; if no template is found at this location, an extremely minimal default will be printed. See the [Prompts](#prompts) section for more details.
 
 * `pair_prompt_path` (default: `/etc/sudo_pair.prompt.pair`)
 
-  This is the location of the prompt template to display to the user being asked to approve the sudo session; if no template is found at this location, an extremely minimal default will be printed. See the [Prompts][#prompts] section for more details.
+  This is the location of the prompt template to display to the user being asked to approve the sudo session; if no template is found at this location, an extremely minimal default will be printed. See the [Prompts](#prompts) section for more details.
 
 * `socket_dir` (default: `/var/run/sudo_pair`)
 
