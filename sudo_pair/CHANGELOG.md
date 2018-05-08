@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
-### Fixed
+### Security
+- Ensure approval sockets aren't created with the primary group of the new user
 
+### Fixed
 - Rolled back the minimum plugin API version to 1.9; it was mistakenly bumped to 1.12 when support for 1.12 was added
 
 ## [0.9.0] - 2018-05-07
