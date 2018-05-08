@@ -257,7 +257,7 @@ are covered by Square's [bug bounty program](BUG-BOUNTY.md).
 
 ## License
 
-`sudo_pair` is  distributed under the terms of both the Apache License
+`sudo_pair` is  distributed under the terms of the Apache License
 (Version 2.0).
 
 See [LICENSE-APACHE](LICENSE-APACHE) for details.
