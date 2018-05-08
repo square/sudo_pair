@@ -195,20 +195,25 @@ This plugin allows users to `sudo -u ${user}` to become a user or
 `sudo -g ${group}` to gain an additional group.
 
 When a user does this, a socket is created that is owned and only
-writable by `${user}` (or `${group}`). To approve, that `${user}` (or
-someone in the `${group}`) must connect to this socket. The provided
-approval script checks if the invoking user has write access to the
-socket. If not, it also does a `sudo -u ${user}` (or `sudo -g ${group}`)
-and reruns itself (this is exempt from any pairing requirements).
+writable by `${user}` (or `${group}`). In order to connect to that
+socket, the approver must be able to write to files as that `${user}`
+(or `${group}`). In other words, they need to be [on the other side of
+the airtight hatchway][airtight-hatchway]. In practical terms, this
+means the approver needs to also be able to `sudo` to that user or
+group.
 
-For `sudo -u root`, `sudo -u nobody`, and `sudo -g sys`, the following
-sockets are created (in order):
+To facilitate this, the plugin exempts the approval script. And the
+sample approval script automatically detects the user or group you need
+to become and runs `sudo -u ${user}` (or `sudo -g ${group}`) implicitly.
+
+As a concrete example, these are the sockets opened for `sudo -u root`,
+`sudo -u nobody`, and `sudo -g sys`:
 
 ```
 drwxr-xr-x   3 root    wheel     96 May  8 09:17 .
-s-w-------   1 root    wheel      0 May  8 09:16 1882.29664.sock # sudo -u root
-s-w-------   1 nobody  wheel      0 May  8 09:17 1882.29921.sock # sudo -u nobody
-s----w----   1 root    sys        0 May  8 09:18 1882.29994.sock # sudo -g sys
+s-w-------   1 root    wheel      0 May  8 09:16 1882.29664.sock    # sudo -u root
+s-w-------   1 nobody  wheel      0 May  8 09:17 1882.29921.sock    # sudo -u nobody
+s----w----   1 root    sys        0 May  8 09:18 1882.29994.sock    # sudo -g sys
 ```
 
 As a result, the only people who can approve a `sudo` session to a user
