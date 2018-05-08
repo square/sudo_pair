@@ -202,9 +202,10 @@ the airtight hatchway][airtight-hatchway]. In practical terms, this
 means the approver needs to also be able to `sudo` to that user or
 group.
 
-To facilitate this, the plugin exempts the approval script. And the
-sample approval script automatically detects the user or group you need
-to become and runs `sudo -u ${user}` (or `sudo -g ${group}`) implicitly.
+To facilitate this, the plugin exempts the approval script from the
+requirement to have a pair. And the sample approval script automatically
+detects the user or group you need to become and runs `sudo -u ${user}`
+(or `sudo -g ${group}`) implicitly.
 
 As a concrete example, these are the sockets opened for `sudo -u root`,
 `sudo -u nobody`, and `sudo -g sys`:
@@ -216,8 +217,8 @@ s-w-------   1 nobody  wheel      0 May  8 09:17 1882.29921.sock    # sudo -u no
 s----w----   1 root    sys        0 May  8 09:18 1882.29994.sock    # sudo -g sys
 ```
 
-As a result, the only people who can approve a `sudo` session to a user
-or group must *also* be able to `sudo` as that user or group.
+The only people who can approve a `sudo` session to a user or group must
+*also* be able to `sudo` as that user or group.
 
 Due to limitations of the POSIX filesystem permission model, a user may
 sudo to a new user (and gain its groups) or sudo to a new group
