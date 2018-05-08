@@ -265,3 +265,4 @@ See [LICENSE-APACHE](LICENSE-APACHE) for details.
 [libc]: https://github.com/rust-lang/libc
 [bindgen]: https://github.com/rust-lang-nursery/rust-bindgen
 [error-chain]: https://github.com/rust-lang-nursery/error-chain
+[airtight-hatchway]: https://blogs.msdn.microsoft.com/oldnewthing/20060508-22/
