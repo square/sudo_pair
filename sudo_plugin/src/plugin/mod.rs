@@ -33,7 +33,6 @@ use self::user_info::UserInfo;
 use sudo_plugin_sys;
 
 use std::collections::HashSet;
-use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
 use std::io::{self, Write};
@@ -167,16 +166,15 @@ impl Plugin {
     pub fn invocation(&self) -> Vec<u8> {
         let mut sudo    = self.settings.progname.as_bytes().to_vec();
         let     flags   = self.settings.flags();
-        let     command = self.command_info.command.as_os_str().as_bytes();
 
         if !flags.is_empty() {
             sudo.push(b' ');
             sudo.extend_from_slice(&flags.join(&b' ')[..]);
         }
 
-        if !command.is_empty() {
+        for entry in self.command.iter() {
             sudo.push(b' ');
-            sudo.extend_from_slice(&command);
+            sudo.extend_from_slice(entry.as_bytes());
         }
 
         sudo
