@@ -196,6 +196,16 @@ approval script checks if the invoking user has write access to the
 socket. If not, it also does a `sudo -u ${user}` (or `sudo -g ${group}`)
 and reruns itself (this is exempt from any pairing requirements).
 
+For `sudo -u root`, `sudo -u nobody`, and `sudo -g sys`, the following
+sockets are created (in order):
+
+```
+drwxr-xr-x   3 root    wheel     96 May  8 09:17 .
+s-w-------   1 root    wheel      0 May  8 09:16 1882.29664.sock
+s-w-------   1 nobody  wheel      0 May  8 09:17 1882.29921.sock
+s----w----   1 root    sys        0 May  8 09:18 1882.29994.sock
+```
+
 As a result, the only people who can approve a `sudo` session to a user
 or group must *also* be able to `sudo` as that user or group.
 
