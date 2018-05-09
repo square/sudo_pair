@@ -67,7 +67,7 @@ use template::Spec;
 use socket::Socket;
 
 use std::collections::HashSet;
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
@@ -202,30 +202,28 @@ impl SudoPair {
         // we ignore any errors about printing the prompt locally,
         // because we can't really do anything productive other than
         // die, and that could render `sudo` inoperable given an
-        // unanticipated bug
-        let _ = self.plugin.user_info.tty
-            .as_ref()
-            .and_then(|tty| OpenOptions::new().write(true).open(tty).ok() )
-            .and_then(|mut file| file.write_all(&prompt).ok() )
-            .ok_or_else(|| {
-            // TODO: this is returning an error (EINVAL) even though it prints
-            // successfully; I'm not entirely sure why. It started failing
-            // when I added some new operators for the templating code, but
-            // nothing in that commit seems like it should have obviously
-            // started causing writes to fail.
-            //
-            // EINVAL is raised by the underlying libc vfprintf call, which
-            // appears to only be problematic if the underlying write fails.
-            // As far as I can tell, this only happens if something isn't
-            // aligned correctly and the `fd` is opened with`O_DIRECT`. But
-            // it seems unlikely that STDIN is opened that way or that
-            // anything Rust allocates is misaligned. The other possibility
-            // is that STDIN is "unsuitable for writing" which also seems
-            // improbable. For now, I'm ignoring the situation but hopefully
-            // there's enough information here for someone (probably me) to
-            // pick up where I left off.
-            self.plugin.stderr().write_all(&prompt)
-        });
+        // unanticipated bug (however, if we fail to print to the TTY)
+        // we do try to print directly to stderr
+        //
+        // TODO: the stderr write is returning an error (EINVAL) even
+        // though it prints successfully; I'm not entirely sure why. It
+        // started failing when I added some new operators for the
+        // templating code, but nothing in that commit seems like it
+        // should have obviously started causing writes to fail.
+        //
+        // EINVAL is raised by the underlying libc vfprintf call, which
+        // appears to only be problematic if the underlying write fails.
+        // As far as I can tell, this only happens if something isn't
+        // aligned correctly and the `fd` is opened with`O_DIRECT`. But
+        // it seems unlikely that STDIN is opened that way or that
+        // anything Rust allocates is misaligned. The other possibility
+        // is that STDIN is "unsuitable for writing" which also seems
+        // improbable. For now, I'm ignoring the situation but hopefully
+        // there's enough information here for someone (probably me) to
+        // pick up where I left off.
+        let _ = self.plugin.tty().as_mut()
+            .and_then(|tty| tty.write_all(&prompt).ok() )
+            .ok_or_else(||self.plugin.stderr().write_all(&prompt));
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {

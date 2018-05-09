@@ -35,7 +35,9 @@ use sudo_plugin_sys;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
+use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
+use std::path::Path;
 use std::slice;
 use std::sync::{Arc, Mutex};
 
@@ -159,6 +161,16 @@ impl Plugin {
     }
 
     ///
+    /// Returns a facility implementing `std::io::Write` that emits to
+    /// the user's TTY, if sudo detected one.
+    ///
+    pub fn tty(&self) -> Option<Tty> {
+        self.user_info.tty.as_ref().and_then(|path|
+            Tty::try_from(path).ok()
+        )
+    }
+
+    ///
     /// As best as can be reconstructed, what was actually typed at the
     /// shell in order to launch this invocation of sudo.
     ///
@@ -226,6 +238,29 @@ impl Plugin {
         let _ = set.insert(self.command_info.runas_egid);
 
         set
+    }
+}
+
+///
+/// A facility implementing `std::io::Write` that allows printing
+/// output to directly to the terminal of the user invoking `sudo`.
+///
+#[derive(Debug)]
+pub struct Tty(File);
+
+impl Tty {
+    fn try_from(path: &Path) -> io::Result<Tty> {
+        OpenOptions::new().write(true).open(path).map(Tty)
+    }
+}
+
+impl Write for Tty {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
     }
 }
 
