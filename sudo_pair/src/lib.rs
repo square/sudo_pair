@@ -28,7 +28,6 @@
 // TODO: docs on docs.rs
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
-// TODO: implement change_winsize
 
 #![deny(warnings)]
 
@@ -89,11 +88,12 @@ const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
 sudo_io_plugin! {
      sudo_pair: SudoPair {
-        close:      close,
-        log_ttyout: log_ttyout,
-        log_stdin:  log_disabled,
-        log_stdout: log_disabled,
-        log_stderr: log_disabled,
+        close:          close,
+        log_ttyout:     log_ttyout,
+        log_stdin:      log_disabled,
+        log_stdout:     log_disabled,
+        log_stderr:     log_disabled,
+        change_winsize: change_winsize,
      }
 }
 
@@ -183,6 +183,17 @@ impl SudoPair {
         bail!(ErrorKind::Unauthorized(
             "redirection of stdin, stout, and stderr prohibited".into()
         ));
+    }
+
+    fn change_winsize(&mut self, lines: u64, cols: u64) -> Result<()> {
+        let mut escape_sequence = Vec::with_capacity(12);
+        escape_sequence.extend(b"\x1b[8;");
+        escape_sequence.extend_from_slice(lines.to_string().as_bytes());
+        escape_sequence.push(b';');
+        escape_sequence.extend_from_slice(cols.to_string().as_bytes());
+        escape_sequence.push(b't');
+
+        self.log_ttyout(&escape_sequence[..])
     }
 
     fn local_pair_prompt(&self, template_spec: &Spec) {

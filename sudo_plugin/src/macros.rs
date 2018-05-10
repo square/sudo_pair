@@ -254,7 +254,7 @@ macro_rules! sudo_io_fn {
         unsafe extern "C" fn change_winsize(
             lines: ::libc::c_uint,
             cols:  ::libc::c_uint,
-        ) {
+        ) -> ::libc::c_int {
             let result = $instance
                 .as_mut()
                 .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
