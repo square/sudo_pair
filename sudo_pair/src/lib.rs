@@ -23,7 +23,6 @@
 // TODO: enable the ability to respond to `sudo --version`
 // TODO: iolog in `sudoreplay(8)` format
 // TODO: rustfmt
-// TODO: allow redirect to stdout?
 // TODO: double-check all `as`-casts
 // TODO: docs on docs.rs
 // TODO: various badges
@@ -92,8 +91,8 @@ sudo_io_plugin! {
         close:      close,
         log_ttyout: log_ttyout,
         log_stdin:  log_disabled,
-        log_stdout: log_disabled,
-        log_stderr: log_disabled,
+        log_stdout: log_ttyout,
+        log_stderr: log_ttyout,
      }
 }
 
@@ -181,7 +180,7 @@ impl SudoPair {
         }
 
         bail!(ErrorKind::Unauthorized(
-            "redirection of stdin, stout, and stderr prohibited".into()
+            "redirection of stdin to paired sessions is prohibited".into()
         ));
     }
 
@@ -194,11 +193,23 @@ impl SudoPair {
 
         let prompt = template_spec.expand(&template[..]);
 
-        // TODO: this is returning an error (EINVAL) even though it prints
-        // successfully; I'm not entirely sure why. It started failing
-        // when I added some new operators for the templating code, but
-        // nothing in that commit seems like it should have obviously
-        // started causing writes to fail.
+        // If sudo has detected the user's TTY, we try to print to it
+        // directly. If we don't have a TTY or fail to open/write to
+        // it, we fall back to writing with the plugin's printf
+        // function. This allows `sudo_pair` to be used in situations
+        // where stdout/stderr are redirected to pipes.
+        //
+        // we ignore any errors about printing the prompt locally,
+        // because we can't really do anything productive other than
+        // die, and that could render `sudo` inoperable given an
+        // unanticipated bug (however, if we fail to print to the TTY)
+        // we do try to print directly to stderr
+        //
+        // TODO: the stderr write is returning an error (EINVAL) even
+        // though it prints successfully; I'm not entirely sure why. It
+        // started failing when I added some new operators for the
+        // templating code, but nothing in that commit seems like it
+        // should have obviously started causing writes to fail.
         //
         // EINVAL is raised by the underlying libc vfprintf call, which
         // appears to only be problematic if the underlying write fails.
@@ -210,7 +221,9 @@ impl SudoPair {
         // improbable. For now, I'm ignoring the situation but hopefully
         // there's enough information here for someone (probably me) to
         // pick up where I left off.
-        let _ = self.plugin.stdout().write(&prompt);
+        let _ = self.plugin.tty().as_mut()
+            .and_then(|tty| tty.write_all(&prompt).ok() )
+            .ok_or_else(||self.plugin.stderr().write_all(&prompt));
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {

@@ -34,7 +34,7 @@ pub struct UserInfo {
     pub ppid:   pid_t,
     pub sid:    pid_t,
     pub tcpgid: pid_t,
-    pub tty:    Option<String>,
+    pub tty:    Option<PathBuf>,
     pub uid:    uid_t,
     pub umask:  Option<String>,
     pub user:   String,
