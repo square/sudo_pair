@@ -95,14 +95,14 @@ impl Plugin {
     pub unsafe fn new(
         version:        c_uint,
         argc:           c_int,
-        argv:           *const *const c_char,
+        argv:           *const *mut c_char,
         conversation:   sudo_plugin_sys::sudo_conv_t,
         plugin_printf:  sudo_plugin_sys::sudo_printf_t,
-        settings:       *const *const c_char,
-        user_info:      *const *const c_char,
-        command_info:   *const *const c_char,
-        user_env:       *const *const c_char,
-        plugin_options: *const *const c_char,
+        settings:       *const *mut c_char,
+        user_info:      *const *mut c_char,
+        command_info:   *const *mut c_char,
+        user_env:       *const *mut c_char,
+        plugin_options: *const *mut c_char,
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
 
@@ -125,11 +125,11 @@ impl Plugin {
 
             // TODO(rust 1.27): convert `try_from` calls to `into` when
             // the TryFrom trait stabilizes
-            settings:       Settings   ::try_from(OptionMap::from_raw(settings))?,
-            user_info:      UserInfo   ::try_from(OptionMap::from_raw(user_info))?,
-            command_info:   CommandInfo::try_from(OptionMap::from_raw(command_info))?,
-            user_env:       OptionMap  ::from_raw(user_env),
-            plugin_options: OptionMap  ::from_raw(plugin_options),
+            settings:       Settings   ::try_from(OptionMap::from_raw(settings as _))?,
+            user_info:      UserInfo   ::try_from(OptionMap::from_raw(user_info as _))?,
+            command_info:   CommandInfo::try_from(OptionMap::from_raw(command_info as _))?,
+            user_env:       OptionMap  ::from_raw(user_env as _),
+            plugin_options: OptionMap  ::from_raw(plugin_options as _),
 
             printf: Arc::new(Mutex::new(printf)),
             _conversation: conversation,
