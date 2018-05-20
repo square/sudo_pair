@@ -29,8 +29,6 @@
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
 // TODO: implement change_winsize
 
-#![deny(warnings)]
-
 #![warn(anonymous_parameters)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]

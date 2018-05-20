@@ -20,8 +20,6 @@
 //!
 //! [sudo_plugin]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 
-#![deny(warnings)]
-
 #![warn(anonymous_parameters)]
 #![warn(box_pointers)]
 #![warn(missing_copy_implementations)]
