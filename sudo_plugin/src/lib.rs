@@ -18,8 +18,6 @@
 
 // TODO: provide the Plugin object to all callbacks?
 
-#![deny(warnings)]
-
 #![warn(anonymous_parameters)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]

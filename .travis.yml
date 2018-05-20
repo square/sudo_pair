@@ -5,6 +5,9 @@ rust:
   - beta
   - nightly
 
+env:
+  - RUSTFLAGS="-D warnings"
+
 script:
   - cargo build
   - cargo test
