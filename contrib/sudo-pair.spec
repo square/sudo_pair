@@ -31,7 +31,6 @@ mkdir -p %{buildroot}/usr/libexec/sudo
 rm -rf %{buildroot}
 
 %files
-%defattr(-,root,root-)
 /usr/libexec/sudo/libsudo_pair.so
 
 %changelog
