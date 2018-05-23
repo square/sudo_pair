@@ -23,7 +23,7 @@ Plugin for sudo that requires another human to approve and monitor privileged su
 cargo build --release
 
 %install
-%{__cp} %{_sourcedir}/release/target/libsudo_pair.so %{buildroot}/usr/libexec/sudo/
+%{__cp} %{_sourcedir}/target/release/libsudo_pair.so %{buildroot}/usr/libexec/sudo/
 
 %clean
 rm -rf %{buildroot}
@@ -31,6 +31,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root-)
 /usr/libexec/sudo/libsudo_pair.so
+
 %changelog
 * Wed May 23 2018 - robert (at) meinit.nl
 - Initial release.
