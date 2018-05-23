@@ -9,6 +9,8 @@ Source: https://github.com/square/sudo_pair/archive/sudo_pair-%{version}.tar.gz
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-build
 BuildRequires: cargo
+BuildRequires: clang-devel
+BuildRequires: git
 
 %description
 Plugin for sudo that requires another human to approve and monitor privileged sudo sessions
