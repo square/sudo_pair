@@ -17,7 +17,7 @@ Plugin for sudo that requires another human to approve and monitor privileged su
 
 %prep
 
-%setup
+%setup -n sudo_pair-sudo_pair-%{version}
 
 %build
 cargo build --release
