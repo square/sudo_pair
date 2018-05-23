@@ -11,6 +11,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-build
 BuildRequires: cargo
 BuildRequires: clang-devel
 BuildRequires: git
+Requires: sudo
 
 %description
 Plugin for sudo that requires another human to approve and monitor privileged sudo sessions
@@ -23,7 +24,8 @@ Plugin for sudo that requires another human to approve and monitor privileged su
 cargo build --release
 
 %install
-%{__cp} %{_sourcedir}/target/release/libsudo_pair.so %{buildroot}/usr/libexec/sudo/
+mkdir -p %{buildroot}/usr/libexec/sudo
+%{__cp} target/release/libsudo_pair.so %{buildroot}/usr/libexec/sudo/
 
 %clean
 rm -rf %{buildroot}
