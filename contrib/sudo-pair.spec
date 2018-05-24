@@ -2,7 +2,7 @@ Name: sudo-pair
 Version: v0.9.2
 Release: 1
 Summary: Plugin for sudo that requires another human to approve and monitor privileged sudo sessions.
-Group: tem Environment/Libraries
+Group: System Environment/Libraries
 License: Apache Software License 2.0
 Url: https://github.com/square/sudo_pair
 Source: https://github.com/square/sudo_pair/archive/sudo_pair-%{version}.tar.gz
@@ -34,6 +34,11 @@ rm -rf %{buildroot}
 
 %files
 /usr/libexec/sudo/libsudo_pair.so
+%doc README.md
+%doc sample/etc/sudo.conf
+%doc sample/etc/sudo.prompt.pair
+%doc sample/etc/sudo.prompt.user
+%doc sample/bin/sudo_approve
 
 %changelog
 * Wed May 23 2018 - robert (at) meinit.nl
