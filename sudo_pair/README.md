@@ -164,11 +164,11 @@ As it turns out, you can pretty much just do this with `socat`:
 socat STDIO /path/to/socket
 ```
 
-The script incldued with this project isn't much more than this. It
+The script included with this project isn't much more than this. It
 performs a few extra niceties (implicitly `sudo`s if necessary, turns
 off terminal echo, disables Ctrl-C, and kills the session on Ctrl-D),
 but not much more. Ctrl-C was disabled so a user who's forgotten that
-this is terminal is being used to monitor another user's session doesn't
+this terminal is being used to monitor another user's session doesn't
 instinctively kill it with Ctrl-C.
 
 ## Limitations
