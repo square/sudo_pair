@@ -30,6 +30,7 @@ pub(crate) struct Socket {
 }
 
 impl Socket {
+    #[cfg_attr(feature="cargo-clippy", allow(similar_names))]
     pub(crate) fn open<P: AsRef<Path>>(
         path: P,
         uid:  uid_t,
