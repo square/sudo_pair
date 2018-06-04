@@ -20,31 +20,50 @@
 //!
 //! [sudo_plugin]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 
-#![warn(anonymous_parameters)]
-#![warn(box_pointers)]
+#![warn(bad_style)]
+#![warn(future_incompatible)]
+#![warn(rust_2018_compatibility)]
+#![warn(rust_2018_idioms)]
+#![warn(unused)]
+
+#![warn(bare_trait_objects)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
-#![warn(trivial_numeric_casts)]
+#![warn(missing_docs)]
+#![warn(single_use_lifetimes)]
 #![warn(unreachable_pub)]
 #![warn(unstable_features)]
-#![warn(unused_extern_crates)]
 #![warn(unused_import_braces)]
+#![warn(unused_lifetimes)]
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
-#![allow(missing_docs)]
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-#![allow(trivial_casts)]
+// this entire crate is unsafe code
 #![allow(unsafe_code)]
 
+// this entire crate is generated code
+#![allow(missing_docs)]
+#![allow(non_camel_case_types)]
+#![allow(trivial_casts)]
+#![allow(trivial_numeric_casts)]
+
 #![cfg_attr(feature="cargo-clippy", warn(clippy))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_complexity))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_correctness))]
 #![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_perf))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_style))]
+
+// this entire crate is generated code
 #![cfg_attr(feature="cargo-clippy", allow(similar_names))]
 #![cfg_attr(feature="cargo-clippy", allow(type_complexity))]
-#![cfg_attr(feature="cargo-clippy", allow(unseparated_literal_suffix))]
+
+// TODO: we can remove `bindgen` as a direct dependency and just bundle
+// its output since it's static; these should pass much more reliably
+// then
+//
+// #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
 
 extern crate libc;
 

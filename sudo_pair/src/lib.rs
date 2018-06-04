@@ -29,26 +29,42 @@
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
 // TODO: implement change_winsize
 
-#![warn(anonymous_parameters)]
+#![warn(bad_style)]
+#![warn(future_incompatible)]
+#![warn(rust_2018_compatibility)]
+#![warn(rust_2018_idioms)]
+#![warn(unused)]
+
+#![warn(bare_trait_objects)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
 #![warn(missing_docs)]
+#![warn(single_use_lifetimes)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
 #![warn(unreachable_pub)]
 #![warn(unstable_features)]
-#![warn(unused_extern_crates)]
 #![warn(unused_import_braces)]
+#![warn(unused_lifetimes)]
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
-// this library is fundamentally built upon unsafe code
+// this entire crate is unsafe code
 #![allow(unsafe_code)]
 
 #![cfg_attr(feature="cargo-clippy", warn(clippy))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_complexity))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_correctness))]
 #![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
-#![cfg_attr(feature="cargo-clippy", allow(similar_names))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_perf))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy_style))]
+
+// TODO: we can remove `bindgen` as a direct dependency and just bundle
+// its output since it's static; these should pass much more reliably
+// then
+//
+// #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
 
 extern crate libc;
 
@@ -567,6 +583,9 @@ impl PluginOptions {
     }
 }
 
+// TODO: single_use_lifetimes was committed, but I'm not sure there's
+// actually a way to satisfy the linter for the time being
+#[allow(single_use_lifetimes)]
 impl<'a> From<&'a OptionMap> for PluginOptions {
     fn from(map: &'a OptionMap) -> Self {
         Self {
