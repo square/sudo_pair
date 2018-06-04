@@ -89,6 +89,9 @@ The full list of options are as follows:
 
   This is the location of the approval binary. The approval command itself needs to run under the privileges of the destination user or group, and this is done so using sudo, so it must be exempted from requiring its own pair approval.
 
+* `whitelist` (default: `[]`)
+  This is a list of paths to executables that are exempt from requiring a pair. Logically, `binary_path` is considered an implicit part of this whitelist.
+
 * `user_prompt_path` (default: `/etc/sudo_pair.prompt.user`)
 
   This is the location of the prompt template to display to the user invoking sudo; if no template is found at this location, an extremely minimal default will be printed. See the [Prompts](#prompts) section for more details.

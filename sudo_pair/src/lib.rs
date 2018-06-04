@@ -328,8 +328,9 @@ impl SudoPair {
             return true;
         }
 
-        // exempt if the approval command is the command being invoked
-        if self.is_sudoing_approval_command() {
+        // exempt if the user is running an explicitly-whitelisted
+        // executable
+        if self.is_sudoing_whitelisted_executable() {
             return true;
         }
 
@@ -393,8 +394,16 @@ impl SudoPair {
         )
     }
 
-    fn is_sudoing_approval_command(&self) -> bool {
-        self.plugin.command_info.command == self.options.binary_path
+    fn is_sudoing_whitelisted_executable(&self) -> bool {
+        if self.plugin.command_info.command == self.options.binary_path {
+            return true;
+        }
+
+        if self.options.whitelist.contains(&self.plugin.command_info.command) {
+            return true;
+        }
+
+        return false;
     }
 
     fn is_sudoing_to_user(&self) -> bool {
@@ -534,6 +543,13 @@ struct PluginOptions {
     /// Default: `"/usr/bin/sudo_approve"`
     binary_path: PathBuf,
 
+    /// `whitelist` is a list of paths to executables that are exempt
+    /// from requiring a pair. Logically, `binary_path` is considered
+    /// an implicit part of this whitelist.
+    ///
+    /// Default: `[]`
+    whitelist: HashSet<PathBuf>,
+
     /// `user_prompt_path` is the location of the prompt template to
     /// display to the user invoking sudo; if no template is found at
     /// this location, an extremely minimal default will be printed.
@@ -591,6 +607,9 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
         Self {
             binary_path: map.get("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
+
+            whitelist: map.get("whitelist")
+                .unwrap_or_default(),
 
             user_prompt_path: map.get("user_prompt_path")
                 .unwrap_or_else(|_| DEFAULT_USER_PROMPT_PATH.into()),
