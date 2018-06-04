@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- New `whitelist` plugin option allows for naming binaries to be exempt from requiring a pair.
+
 ### Changed
 - No longer fails to build on warnings, unless being run in CI
 
