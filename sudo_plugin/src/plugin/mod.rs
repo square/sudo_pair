@@ -249,7 +249,7 @@ impl Plugin {
 pub struct Tty(File);
 
 impl Tty {
-    fn try_from(path: &Path) -> io::Result<Tty> {
+    fn try_from(path: &Path) -> io::Result<Self> {
         OpenOptions::new().write(true).open(path).map(Tty)
     }
 }

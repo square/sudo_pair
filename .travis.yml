@@ -6,13 +6,12 @@ rust:
   - nightly
 
 env:
-  - RUSTFLAGS="-D warnings"
+  - RUSTFLAGS="-A unknown-lints -D warnings"
 
 script:
   - cargo build
   - cargo test
-  - 'if [[ "${TRAVIS_RUST_VERSION}" = "nightly" ]]; then cargo install --force clippy; fi'
-  - 'if [[ "${TRAVIS_RUST_VERSION}" = "nightly" ]]; then cargo clippy; fi'
+  - 'if [[ "${TRAVIS_RUST_VERSION}" = "nightly" ]]; then cargo install --force clippy; cargo clippy; fi'
 
 cache: cargo
 
