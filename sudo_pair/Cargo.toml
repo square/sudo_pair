@@ -1,6 +1,6 @@
 [package]
 name    = "sudo_pair"
-version = "0.9.2"
+version = "0.10.0"
 license = "Apache-2.0"
 
 authors     = ["Stephen Touset <stephen@squareup.com>"]
