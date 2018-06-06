@@ -71,7 +71,34 @@ install -o root -g root -m 0644 ./sample/etc/sudo.prompt.user /etc/sudo.prompt.u
 install -o root -g root -m 0644 ./sample/etc/sudo.prompt.pair /etc/sudo.prompt.pair
 ```
 
+This only places the plugin files into their expected locations. The plugin
+will not be enabled yet until you follow the [configuration](#configuration)
+steps below.
+
 ## Configuration
+
+### `/etc/sudoers`
+
+By default, `/etc/sudoers` will not tell logging plugins to log output for
+any commands. You will need to enable this by either telling `sudo` to enable
+logging for all commands (and opt out any commands you wish to bypass pairing
+for) or by opting individual commands into logging.
+
+Example (default to log, opt out of individual commands):
+
+```
+Defaults log_output
+
+%wheel ALL = (ALL) NOLOG_OUTPUT: /bin/cat, /bin/ls
+```
+
+Example (opt into individual commands)
+
+```
+%wheel ALL = (ALL) LOG_OUTPUT: /usr/bin/visudo
+```
+
+### `/etc/sudo.conf`
 
 The plugin can be provided several options to modify its behavior. These
 options are provided to the plugin by adding them to the end of the
@@ -88,9 +115,6 @@ The full list of options are as follows:
 * `binary_path` (default: `/usr/bin/sudo_approve`)
 
   This is the location of the approval binary. The approval command itself needs to run under the privileges of the destination user or group, and this is done so using sudo, so it must be exempted from requiring its own pair approval.
-
-* `whitelist` (default: `[]`)
-  This is a list of paths to executables that are exempt from requiring a pair. Logically, `binary_path` is considered an implicit part of this whitelist.
 
 * `user_prompt_path` (default: `/etc/sudo_pair.prompt.user`)
 

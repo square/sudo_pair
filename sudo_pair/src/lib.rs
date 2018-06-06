@@ -105,8 +105,8 @@ sudo_io_plugin! {
         close:      close,
         log_ttyout: log_ttyout,
         log_stdin:  log_disabled,
-        log_stdout: log_ttyout,
-        log_stderr: log_ttyout,
+        log_stdout: log_stdout,
+        log_stderr: log_stderr,
      }
 }
 
@@ -177,6 +177,30 @@ impl SudoPair {
     }
 
     fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
+        if !self.plugin.command_info.iolog_ttyout {
+            return Ok(())
+        }
+
+        self.log_output(log)
+    }
+
+    fn log_stdout(&mut self, log: &[u8]) -> Result<()> {
+        if !self.plugin.command_info.iolog_stdout {
+            return Ok(())
+        }
+
+        self.log_output(log)
+    }
+
+    fn log_stderr(&mut self, log: &[u8]) -> Result<()> {
+        if !self.plugin.command_info.iolog_stderr {
+            return Ok(())
+        }
+
+        self.log_output(log)
+    }
+
+    fn log_output(&mut self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
         self.socket.as_mut().map_or(Ok(()), |socket| {
             socket
@@ -316,6 +340,11 @@ impl SudoPair {
             return true;
         }
 
+        // policy plugins can inform us that logging is unnecessary
+        if self.is_exempted_from_logging() {
+            return true;
+        }
+
         // exempt if the user who's sudoing is in a group that's exempt
         // from having to pair
         if self.is_sudoing_from_exempted_gid() {
@@ -325,12 +354,6 @@ impl SudoPair {
         // exempt if none of the gids of the user we're sudoing into are
         // in the set of gids we enforce pairing for
         if !self.is_sudoing_to_enforced_gid() {
-            return true;
-        }
-
-        // exempt if the user is running an explicitly-whitelisted
-        // executable
-        if self.is_sudoing_whitelisted_executable() {
             return true;
         }
 
@@ -358,6 +381,22 @@ impl SudoPair {
                 self.plugin.user_info.groups.iter().cloned().collect()
             );
 
+            return true;
+        }
+
+        false
+    }
+
+    ///
+    /// Returns true if the policy plugin has not given us any
+    /// facilities to log output for.
+    ///
+    fn is_exempted_from_logging(&self) -> bool {
+        if
+            !self.plugin.command_info.iolog_ttyout &&
+            !self.plugin.command_info.iolog_stdout &&
+            !self.plugin.command_info.iolog_stderr
+        {
             return true;
         }
 
@@ -392,18 +431,6 @@ impl SudoPair {
         !self.options.gids_enforced.is_disjoint(
             &self.plugin.runas_gids()
         )
-    }
-
-    fn is_sudoing_whitelisted_executable(&self) -> bool {
-        if self.plugin.command_info.command == self.options.binary_path {
-            return true;
-        }
-
-        if self.options.whitelist.contains(&self.plugin.command_info.command) {
-            return true;
-        }
-
-        return false;
     }
 
     fn is_sudoing_to_user(&self) -> bool {
@@ -543,13 +570,6 @@ struct PluginOptions {
     /// Default: `"/usr/bin/sudo_approve"`
     binary_path: PathBuf,
 
-    /// `whitelist` is a list of paths to executables that are exempt
-    /// from requiring a pair. Logically, `binary_path` is considered
-    /// an implicit part of this whitelist.
-    ///
-    /// Default: `[]`
-    whitelist: HashSet<PathBuf>,
-
     /// `user_prompt_path` is the location of the prompt template to
     /// display to the user invoking sudo; if no template is found at
     /// this location, an extremely minimal default will be printed.
@@ -607,9 +627,6 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
         Self {
             binary_path: map.get("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
-
-            whitelist: map.get("whitelist")
-                .unwrap_or_default(),
 
             user_prompt_path: map.get("user_prompt_path")
                 .unwrap_or_else(|_| DEFAULT_USER_PROMPT_PATH.into()),
