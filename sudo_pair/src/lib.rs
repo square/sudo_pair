@@ -340,6 +340,11 @@ impl SudoPair {
             return true;
         }
 
+        // exempt if the approval command is the command being invoked
+        if self.is_sudoing_approval_command() {
+            return true;
+        }
+
         // policy plugins can inform us that logging is unnecessary
         if self.is_exempted_from_logging() {
             return true;
@@ -385,6 +390,10 @@ impl SudoPair {
         }
 
         false
+    }
+
+    fn is_sudoing_approval_command(&self) -> bool {
+        self.plugin.command_info.command == self.options.binary_path
     }
 
     ///

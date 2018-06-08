@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2018-06-08
+
+### Fixed
+- The approval command is once again implicitly whitelisted, this was unintentionally removed when adding support for obeying `log_output` hinting in `/etc/sudoers`.
+
 ## [0.11.0] - 2018-06-06
 
 ### Added
@@ -47,6 +52,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - First public release, stabilization pending feedback from the community
 
 [Unreleased]: https://github.com/square/sudo_pair/compare/sudo_pair-v0.11.0...master
+[0.11.1]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.11.0...sudo_pair-v0.11.1
 [0.11.0]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.10.0...sudo_pair-v0.11.0
 [0.10.0]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.9.2...sudo_pair-v0.10.0
 [0.9.2]:      https://github.com/square/sudo_pair/compare/sudo_pair-v0.9.1...sudo_pair-v0.9.2
