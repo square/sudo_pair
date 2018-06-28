@@ -110,8 +110,7 @@ pub trait AsSudoPluginRetval {
     fn as_sudo_io_plugin_log_retval(&self) -> c_int;
 }
 
-impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval
-    for ::std::result::Result<T, E> {
+impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval for ::std::result::Result<T, E> {
     fn as_sudo_io_plugin_open_retval(&self) -> c_int {
         match *self {
             Ok(_)      => sys::SUDO_PLUGIN_OPEN_SUCCESS,
