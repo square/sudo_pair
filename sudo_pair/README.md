@@ -2,6 +2,8 @@ sudo_pair
 =========
 
 [![Build Status](https://travis-ci.org/square/sudo_pair.svg?branch=master)](https://travis-ci.org/square/sudo_pair)
+[![Latest Version](https://img.shields.io/github/release/square/sudo_pair.svg)](https://github.com/square/sudo_pair/releases)
+[![License](https://img.shields.io/github/license/square/sudo_pair.svg)](https://github.com/square/sudo_pair)
 
 `sudo_pair` is a [plugin for sudo][sudo_plugin_man] that requires another
 human to approve and monitor privileged sudo sessions.
