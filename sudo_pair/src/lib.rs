@@ -329,14 +329,14 @@ impl SudoPair {
 
     fn is_exempt(&self) -> bool {
         // root is always exempt
-        if self.is_sudoing_from_root() {
+        if self.plugin.is_sudoing_from_root() {
             return true;
         }
 
         // a user sudoing entirely to themselves is weird, but I can't
         // see any reason not to let them do it without approval since
         // they can already do everything as themselves anyway
-        if self.is_sudoing_to_themselves() {
+        if self.plugin.is_sudoing_to_themselves() {
             return true;
         }
 
@@ -365,33 +365,6 @@ impl SudoPair {
         false
     }
 
-    fn is_sudoing_from_root(&self) -> bool {
-        // theoretically, root's `uid` should be 0, but it's probably
-        // safest to check whatever user `sudo` is running as since sudo
-        // is pretty much by definition going to be running setuid;
-        // hypothetically with selinux someone could have sudo owned by
-        // some non-root user that has the caps needed for sudoing around
-        //
-        // note that the `euid` will always be the owner of the `sudo`
-        // binary
-        self.plugin.user_info.uid == self.plugin.user_info.euid
-    }
-
-    fn is_sudoing_to_themselves(&self) -> bool {
-        // if they're not sudoing to a new uid or to a new gid, they're
-        // just becoming themselves... right?
-        if !self.is_sudoing_to_user() && !self.is_sudoing_to_group() {
-            debug_assert_eq!(
-                self.plugin.runas_gids(),
-                self.plugin.user_info.groups.iter().cloned().collect()
-            );
-
-            return true;
-        }
-
-        false
-    }
-
     fn is_sudoing_approval_command(&self) -> bool {
         self.plugin.command_info.command == self.options.binary_path
     }
@@ -412,24 +385,6 @@ impl SudoPair {
         false
     }
 
-    fn is_sudoing_to_user_and_group(&self) -> bool {
-        // if a user is doing `sudo -u ${u} -g ${g}`, we don't have a
-        // way to ensure that the pair can act with permissions of both
-        // the new user and the new group; ignoring this would allow
-        // someone to gain a group privilege through a pair who doesn't
-        // also have that group privilege
-        //
-        // note that we don't use `is_sudoing_to_group` because sudoing
-        // to a new user typically implicitly comes along with sudoing
-        // to a new group which is fine, what we want to avoid is the
-        // user explicitly providing a *different* group
-        if self.is_sudoing_to_user() && self.is_sudoing_to_explicit_group() {
-            return true
-        }
-
-        false
-    }
-
     fn is_sudoing_from_exempted_gid(&self) -> bool {
         !self.options.gids_exempted.is_disjoint(
             &self.plugin.user_info.groups.iter().cloned().collect()
@@ -440,19 +395,6 @@ impl SudoPair {
         !self.options.gids_enforced.is_disjoint(
             &self.plugin.runas_gids()
         )
-    }
-
-    fn is_sudoing_to_user(&self) -> bool {
-        self.plugin.user_info.uid != self.plugin.command_info.runas_euid
-    }
-
-    fn is_sudoing_to_group(&self) -> bool {
-        self.plugin.user_info.gid != self.plugin.command_info.runas_egid
-    }
-
-    // returns true if `-g` was specified
-    fn is_sudoing_to_explicit_group(&self) -> bool {
-        self.plugin.settings.runas_group.is_some()
     }
 
     fn socket_path(&self) -> PathBuf {
@@ -477,7 +419,7 @@ impl SudoPair {
         // if we're doing `sudo -g`, so that the sudoing user can't
         // silently self-approve by manually connecting to the socket
         // without needing to invoke sudo
-        if self.is_sudoing_to_user() {
+        if self.plugin.is_sudoing_to_user() {
             self.plugin.command_info.runas_euid
         } else {
             // don't change the owner; chown accepts a uid of -1
@@ -490,7 +432,7 @@ impl SudoPair {
     fn socket_gid(&self) -> gid_t {
         // this should only be changed if the user is sudoing to a group
         // explicitly, not only if they're gaining a new primary `gid`
-        if self.is_sudoing_to_explicit_group() {
+        if self.plugin.is_sudoing_to_explicit_group() {
             self.plugin.command_info.runas_egid
         } else {
             // don't change the owner; chown accepts a uid of -1
@@ -505,7 +447,7 @@ impl SudoPair {
         // approver to also be able to act as the same `euid`; this is
         // the first check, because if euid changes egid is also likely
         // to change
-        if self.is_sudoing_to_user() {
+        if self.plugin.is_sudoing_to_user() {
             return libc::S_IWUSR; // from <sys/stat.h>, writable by the user
         }
 
@@ -516,7 +458,7 @@ impl SudoPair {
         // I *think* since the above statement returns only, this is
         // true if and only if `is_sudoing_to_group()` is true, but I'm
         // using the explicit version here for safety
-        if self.is_sudoing_to_explicit_group() {
+        if self.plugin.is_sudoing_to_explicit_group() {
             return libc::S_IWGRP; // from <sys/stat.h>, writable by the group
         }
 
