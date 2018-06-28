@@ -140,6 +140,11 @@ The full list of options are as follows:
 
   Note that root is *always* exempt.
 
+* `self_approval` (default: false)
+  This is a boolean ("true" or "false") that controls whether or not users are allowed to approve their own commands. When a user approves their own command this way, a message is sent to syslog.
+
+  This capability is provided so that engineers can act unilaterally in the event of an emergency when no-one else is available. Since it is effectively a complete bypass of this plugin, the intent is that using this capability should invoke something drastic (e.g., immediately page an oncall security engineer).
+
 ## Prompts
 
 This plugin allows you to configure the prompts that are displayed to
@@ -258,6 +263,7 @@ Given the security-sensitive nature of this project, it is an explicit
 goal to have a minimal set of dependencies. Currently, those are:
 
 * [rust-lang/libc][libc]
+* [rust-lang-nursery/rand][rand]
 * [rust-lang-nursery/rust-bindgen][bindgen]
 * [rust-lang-nursery/failure][failure]
 * [rust-lang-nursery/error-chain][error-chain] (to be removed)
@@ -285,6 +291,7 @@ See [LICENSE-APACHE](LICENSE-APACHE) for details.
 
 [sudo_plugin_man]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 [libc]: https://github.com/rust-lang/libc
+[rand]: https://github.com/rust-lang-nursery/rand
 [bindgen]: https://github.com/rust-lang-nursery/rust-bindgen
 [error-chain]: https://github.com/rust-lang-nursery/error-chain
 [failure]: https://github.com/rust-lang-nursery/failure

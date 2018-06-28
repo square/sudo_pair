@@ -24,6 +24,7 @@ declare -r SUDO_SOCKET_PATH="/var/run/sudo_pair"
 
 pair() {
     declare -r socket="${1}"
+    declare -r token="${2}"
 
     # restore TTY settings on exit
     # shellcheck disable=SC2064
@@ -40,26 +41,30 @@ pair() {
     clear
 
     # prompt the user to approve
-    socat STDIO unix-connect:"${socket}"
+    #
+    # The `kill $!` trick warrants some explanation. `$!` evaluates to
+    # the `pid` of the most-recent subshell, so this kills the echo/cat
+    # subshell when the `socat` has finished. This is necessary because
+    # the subshell won't exit automatically when `socat` end of the pipe
+    # closes. It only closes when it tries to send more data to the pipe
+    # (which causes a SIGPIPE to get sent). So the `kill` ensures the
+    # subshell is killed without the user having to type something
+    # additional that would cause the command to exit.
+    { socat STDIO unix-connect:"${socket}"; kill $!; } < <(
+        echo -n "${token}" ; cat -
+    )
 }
 
 usage() {
-    echo "Usage: $(basename -- "$0") uid pid"
+    echo "Usage: $(basename -- "$0") pid"
     exit 1
 }
 
 main() {
     declare -r socket_path="${1}"
-    declare -ri uid="${2}"
-    declare -ri pid="${3}"
+    declare -ri pid="${2}"
 
-    # if we're running this under `sudo`, we want to know the original
-    # user's `uid` from `SUDO_UID`; if not, it's jsut their normal `uid`
-    declare -i ruid
-    ruid="${SUDO_UID:-$(id -u)}"
-    declare -r ruid
-
-    declare -r socket="${socket_path}/${uid}.${pid}.sock"
+    declare -r socket="${socket_path}/${pid}.sock"
 
     declare -i socket_uid socket_gid
     socket_uid="$(stat -c '%u' "${socket}")"
@@ -72,20 +77,10 @@ main() {
     socket_mode="$(stat -c '%a' "${socket}")"
     declare -r socket_user socket_group socket_mode
 
-    # if the user approving the command is the same as the user who
-    # invoked `sudo` in the first place, abort
-    #
-    # another option would be to allow the session, but log it in a way
-    # that it immediately pages oncall security engineers; such an
-    # approach is useful in production systems in that it allows for a
-    # in-case-of-fire-break-glass workaround so engineers can respond to
-    # a outage in the middle of the night
-    #
-    # this responsibility will be moved into the plugin itself when time
-    # allots
-    if [[ "${uid}" -eq "${ruid}" ]]; then
-        echo "Users may not approve their own sudo session"
-        exit 1
+    if [[ ! ${SUDO_PAIR_TOKEN:-} ]]; then
+        declare -x SUDO_PAIR_TOKEN
+        SUDO_PAIR_TOKEN=$(socat STDOUT unix-connect:"${socket}")
+        declare -r SUDO_PAIR_TOKEN
     fi
 
     # if we can write:          pair
@@ -93,11 +88,11 @@ main() {
     # if group-owner can write: sudo to them and try again
     # if none, die
     if [ -w "${socket}" ]; then
-        pair "${socket}"
+        pair "${socket}" "${SUDO_PAIR_TOKEN}"
     elif [[ $(( 8#${socket_mode} & 8#200 )) -ne 0 ]]; then
-        sudo -u "${socket_user}" "${0}" "${uid}" "${pid}"
+        sudo -u "${socket_user}" "${0}" "${pid}"
     elif [[ $(( 8#${socket_mode} & 8#020 )) -ne 0 ]]; then
-        sudo -g "${socket_group}" "${0}" "${uid}" "${pid}"
+        sudo -g "${socket_group}" "${0}" "${pid}"
     else
         echo "The socket for this sudo session is neither user- nor group-writable."
         exit 2
@@ -105,6 +100,6 @@ main() {
 }
 
 case "$#" in
-    2) main "${SUDO_SOCKET_PATH}" "$1" "$2" ;;
+    1) main "${SUDO_SOCKET_PATH}" "$1" ;;
     *) usage ;;
 esac

@@ -125,6 +125,60 @@ impl Socket {
         self.socket.shutdown(Shutdown::Both)
     }
 
+    #[cfg(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "fuchsia",
+    ))]
+    pub(crate) fn peer_euid(&self) -> Result<uid_t> {
+        unsafe {
+            let cred : libc::ucred     = mem::uninitialized();
+            let size : libc::socklen_t = mem::size_of::<libc::ucred>() as _;
+
+            if libc::getsockopt(
+                self.socket.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_PEERCRED,
+                &mut cred as _,
+                &mut size,
+            ) == -1 {
+                return Err(Error::last_os_error());
+            }
+
+            // `getsockopt` should fill out the `ucred` pointer
+            // completely, no more and no less
+            debug_assert!(size == mem::size_of::<libc::ucred>() as _);
+
+            Ok(cred.uid)
+        }
+    }
+
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "ios",
+        target_os = "freebsd",
+        target_os = "dragonfly",
+        target_os = "openbsd",
+        target_os = "netbsd",
+        target_os = "bitrig",
+    ))]
+    pub(crate) fn peer_euid(&self) -> Result<uid_t> {
+        unsafe {
+            let mut uid : uid_t = mem::uninitialized();
+            let mut gid : gid_t = mem::uninitialized();
+
+            if libc::getpeereid(
+                self.socket.as_raw_fd(),
+                &mut uid,
+                &mut gid
+            ) == -1 {
+                return Err(Error::last_os_error());
+            }
+
+            Ok(uid)
+        }
+    }
+
     fn unlink(path: &Path) -> Result<()> {
         match fs::metadata(&path).map(|md| md.file_type().is_socket()) {
             // file exists, is a socket; delete it

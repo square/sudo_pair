@@ -19,6 +19,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 libc        = '0'
+rand        = '0'
 failure     = '0'
 sudo_plugin = { version = "1.1", path = "../sudo_plugin" }
 
