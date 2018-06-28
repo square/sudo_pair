@@ -67,12 +67,8 @@
 // #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
 
 extern crate libc;
-
-#[macro_use]
-extern crate error_chain;
-
-#[macro_use]
-extern crate sudo_plugin;
+#[macro_use] extern crate error_chain;
+#[macro_use] extern crate sudo_plugin;
 
 mod template;
 mod socket;
@@ -113,7 +109,7 @@ sudo_io_plugin! {
 struct SudoPair {
     plugin:  &'static sudo_plugin::Plugin,
     options: PluginOptions,
-    socket:  Option<Socket>
+    socket:  Option<Socket>,
 }
 
 impl SudoPair {
@@ -173,7 +169,7 @@ impl SudoPair {
 
     fn close(&mut self, _: i64, _: i64) {
         // if we have a socket, close it
-        let _ = self.socket.as_mut().map(|s| s.close());
+        let _ = self.socket.as_mut().map(Socket::close);
     }
 
     fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
