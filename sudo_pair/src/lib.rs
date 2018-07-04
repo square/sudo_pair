@@ -115,22 +115,20 @@ struct SudoPair {
 impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
         // TODO: convert all outgoing errors to be unauthorized errors
-        let options = PluginOptions::from(&plugin.plugin_options);
-
         let mut pair = Self {
             plugin,
-            options,
-            socket: None,
+            options: PluginOptions::from(&plugin.plugin_options),
+            socket:  None,
         };
+
+        if pair.is_exempt() {
+            return Ok(pair)
+        }
 
         if pair.is_sudoing_to_user_and_group() {
             bail!(ErrorKind::Unauthorized(
                 "sudo_pair doesn't support sudoing to both a user and a group".into()
             ));
-        }
-
-        if pair.is_exempt() {
-            return Ok(pair)
         }
 
         let template_spec = pair.template_spec();
