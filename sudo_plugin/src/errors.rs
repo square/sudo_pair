@@ -83,9 +83,9 @@ error_chain! {
 
         /// An error which can be returned if the user is not authorized
         /// to invoke sudo with the provided command and/or options.
-        Unauthorized(reason: String) {
+        Unauthorized {
             description("command unauthorized"),
-            display("command unauthorized: {}", reason),
+            display("command unauthorized"),
         }
     }
 }
@@ -129,15 +129,15 @@ impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval for ::std::result::Result<T, E
 impl AsSudoPluginRetval for Error {
     fn as_sudo_io_plugin_open_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized(_), _) => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
-            Error(_, _)                          => sys::SUDO_PLUGIN_OPEN_FAILURE,
+            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
+            Error(_, _)                       => sys::SUDO_PLUGIN_OPEN_FAILURE,
         }
     }
 
     fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized(_), _) => sys::SUDO_PLUGIN_OPEN_FAILURE,
-            Error(_, _)                          => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
+            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_OPEN_FAILURE,
+            Error(_, _)                       => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
         }
     }
 }

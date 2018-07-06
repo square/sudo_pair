@@ -67,12 +67,15 @@
 // #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
 
 extern crate libc;
-#[macro_use] extern crate error_chain;
+extern crate failure;
+#[macro_use] extern crate failure_derive;
 #[macro_use] extern crate sudo_plugin;
 
+mod errors;
 mod template;
 mod socket;
 
+use errors::*;
 use template::Spec;
 use socket::Socket;
 
@@ -84,7 +87,8 @@ use std::path::PathBuf;
 
 use libc::{gid_t, mode_t, uid_t};
 
-use sudo_plugin::errors::*;
+use failure::ResultExt;
+
 use sudo_plugin::OptionMap;
 
 const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
@@ -126,9 +130,7 @@ impl SudoPair {
         }
 
         if pair.is_sudoing_to_user_and_group() {
-            bail!(ErrorKind::Unauthorized(
-                "sudo_pair doesn't support sudoing to both a user and a group".into()
-            ));
+            Err(ErrorKind::SudoToUserAndGroup)?;
         }
 
         let template_spec = pair.template_spec();
@@ -197,12 +199,10 @@ impl SudoPair {
     fn log_output(&mut self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
         self.socket.as_mut().map_or(Ok(()), |socket| {
-            socket
-                .write_all(log)
-                .chain_err(|| ErrorKind::Unauthorized(
-                    "pair terminated the session".into()
-                ))
-        })
+            socket.write_all(log)
+        }).context(ErrorKind::SessionTerminated)?;
+
+        Ok(())
     }
 
     fn log_disabled(&mut self, _: &[u8]) -> Result<()> {
@@ -211,9 +211,7 @@ impl SudoPair {
             return Ok(());
         }
 
-        bail!(ErrorKind::Unauthorized(
-            "redirection of stdin to paired sessions is prohibited".into()
-        ));
+        Err(ErrorKind::StdinRedirected)?
     }
 
     fn local_pair_prompt(&self, template_spec: &Spec) {
@@ -269,7 +267,7 @@ impl SudoPair {
             self.socket_uid(),
             self.socket_gid(),
             self.socket_mode(),
-        ).chain_err(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
+        ).context(ErrorKind::CommunicationError)?;
 
         self.socket = Some(socket);
 
@@ -287,14 +285,13 @@ impl SudoPair {
 
         let socket = self.socket
             .as_mut()
-            .ok_or_else(|| ErrorKind::Unauthorized("unable to connect to a pair".into()))?;
+            .ok_or(ErrorKind::CommunicationError)?;
 
         socket.write_all(&prompt[..])
-            .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
+            .context(ErrorKind::CommunicationError)?;
 
-        // ensure the entire prompt was written to the pair
         socket.flush()
-            .chain_err(|| ErrorKind::Unauthorized("unable to ask pair for approval".into()))?;
+            .context(ErrorKind::CommunicationError)?;
 
         // default `response` to something other than success, since
         // `read` might return without actually having written anything;
@@ -308,7 +305,7 @@ impl SudoPair {
         // value because if the read was successful, we're guaranteed to
         // have read at least one byte
         let _ = socket.read(&mut response)
-            .chain_err(|| ErrorKind::Unauthorized("denied by pair".into()))?;
+            .context(ErrorKind::SessionDeclined)?;
 
         // echo back out the response, since the client is anticipated
         // to be noecho
@@ -317,7 +314,7 @@ impl SudoPair {
 
         match &response {
             b"y" | b"Y" => Ok(()),
-            _           => Err(ErrorKind::Unauthorized("denied by pair".into()).into()),
+            _           => Err(ErrorKind::SessionDeclined)?,
         }
     }
 

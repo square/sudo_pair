@@ -18,9 +18,11 @@ name       = "sudo_pair"
 crate-type = ["cdylib"]
 
 [dependencies]
-libc        = '0'
-error-chain = '0'
-sudo_plugin = { version = "1.1", path = "../sudo_plugin" }
+libc           = '0'
+error-chain    = '0'
+failure        = '0'
+failure_derive = '0'
+sudo_plugin    = { version = "1.1", path = "../sudo_plugin" }
 
 [badges]
 travis-ci = { repository = "square/sudo_pair" }
