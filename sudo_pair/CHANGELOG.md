@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - The `-u` and `-g` flags can now both be used in exempt sessions.
 
+### Changed
+- Errors are handled through the `failure` crate rather than `error-chain`.
+
 ## [0.11.1] - 2018-06-08
 
 ### Fixed

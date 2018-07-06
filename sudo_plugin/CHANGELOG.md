@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - No longer fails to build on warnings, unless being run in CI
+- Allows plugins to use any error library they wish, as long as the error
+  types returned in `Result`s implement `Into<sudo_plugin::errors::Error>`.
 
 ## [1.1.0] - 2018-05-18
 

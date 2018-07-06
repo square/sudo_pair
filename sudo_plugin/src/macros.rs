@@ -36,21 +36,24 @@
 /// }
 ///
 /// struct Example {
+///     plugin: &'static sudo_plugin::Plugin
 /// }
 ///
 /// impl Example {
 ///     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
 ///         plugin.stdout().write(b"example sudo plugin initialized");
 ///
-///         Ok(Example {})
+///         Ok(Example { plugin })
 ///     }
 ///
 ///     fn close(&mut self, _: i32, _: i32) {
-///         println!("example sudo plugin exited");
+///         self.plugin.stdout().write(b"example sudo plugin exited");
 ///     }
 ///
 ///     fn log_stdout(&mut self, _: &[u8]) -> Result<()> {
-///         println!("example sudo plugin received output on stdout");
+///         self.plugin.stdout().write(
+///             b"example sudo plugin received output on stdout"
+///         );
 ///
 ///         Ok(())
 ///     }
