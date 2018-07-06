@@ -23,8 +23,6 @@
 /// # #[macro_use] extern crate sudo_plugin;
 /// extern crate libc;
 ///
-/// # fn main() { } // TODO(rust 1.27): remove this line
-///
 /// use sudo_plugin::errors::*;
 /// use std::io::Write;
 ///
@@ -36,21 +34,24 @@
 /// }
 ///
 /// struct Example {
+///     plugin: &'static sudo_plugin::Plugin
 /// }
 ///
 /// impl Example {
 ///     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
 ///         plugin.stdout().write(b"example sudo plugin initialized");
 ///
-///         Ok(Example {})
+///         Ok(Example { plugin })
 ///     }
 ///
 ///     fn close(&mut self, _: i32, _: i32) {
-///         println!("example sudo plugin exited");
+///         self.plugin.stdout().write(b"example sudo plugin exited");
 ///     }
 ///
 ///     fn log_stdout(&mut self, _: &[u8]) -> Result<()> {
-///         println!("example sudo plugin received output on stdout");
+///         self.plugin.stdout().write(
+///             b"example sudo plugin received output on stdout"
+///         );
 ///
 ///         Ok(())
 ///     }
@@ -68,6 +69,8 @@
 #[macro_export]
 macro_rules! sudo_io_plugin {
     ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {
+        use ::sudo_plugin::errors::AsSudoPluginRetval;
+
         static mut PLUGIN:   Option<sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                 = None;
 
@@ -126,7 +129,7 @@ macro_rules! sudo_io_static_fn {
         ) -> ::libc::c_int {
             unsafe fn stderr(
                 printf: sudo_plugin::sys::sudo_printf_t,
-                error:  &Error,
+                error:  &::sudo_plugin::errors::Error,
             ) -> ::libc::c_int {
                 // if printf is a NULL pointer or if the `write_error`
                 // call fails, we don't really have anything productive
@@ -168,7 +171,7 @@ macro_rules! sudo_io_static_fn {
 
             match instance {
                 Ok(i)  => $instance = Some(i),
-                Err(e) => return stderr(plugin_printf, &e),
+                Err(e) => return stderr(plugin_printf, &e.into()),
             }
 
             sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
@@ -230,10 +233,12 @@ macro_rules! sudo_io_fn {
                 len as _,
             );
 
-            let result = $instance
+            let result : ::std::result::Result<(), ::sudo_plugin::errors::Error> = $instance
                 .as_mut()
-                .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
-                .and_then(|i| i.$fn(slice) );
+                .map_or_else(
+                  || Err(::sudo_plugin::errors::ErrorKind::Uninitialized.into()),
+                  |i| i.$fn(slice).map_err(|e| e.into()),
+                );
 
             // if there was an error (and we can unwrap the plugin),
             // write it out
@@ -255,10 +260,12 @@ macro_rules! sudo_io_fn {
             lines: ::libc::c_uint,
             cols:  ::libc::c_uint,
         ) {
-            let result = $instance
+            let result : ::std::result::Result<(), ::sudo_plugin::errors::Error> = $instance
                 .as_mut()
-                .ok_or(::sudo_plugin::errors::ErrorKind::Uninitialized.into())
-                .and_then(|i| i.$fn(lines as _, cols as _) );
+                .map_or_else(
+                  || Err(::sudo_plugin::errors::ErrorKind::Uninitialized.into()),
+                  |i| i.$fn(slice).map_err(|e| e.into()),
+                );
 
             // if there was an error (and we can unwrap the plugin),
             // write it out

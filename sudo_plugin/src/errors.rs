@@ -20,6 +20,7 @@
 #![allow(bare_trait_objects)]
 #![allow(renamed_and_removed_lints)]
 #![allow(single_use_lifetimes)]
+#![allow(variant_size_differences)]
 
 use super::version::Version;
 
@@ -51,21 +52,6 @@ impl fmt::Display for IoFacility {
 
 error_chain! {
     errors {
-        /// An error which can be returned when an option provided to the
-        /// plugin cannot be parsed to the required type.
-        ParseFailure(name: String) {
-            description("sudo plugin was invoked with malformed options"),
-            display("sudo plugin was invoked with a malformed {}", name),
-        }
-
-        /// An error which can be returned when performing I/O to the
-        /// invoking user using one of the supported communications
-        /// facilities.
-        IoError(facility: IoFacility) {
-            description("sudo plugin was unable to perform I/O"),
-            display("sudo plugin was unable to perform I/O using facility {}", facility),
-        }
-
         /// An error which can be returned when the requsested plugin API
         /// version is incompatible with the version implemented by this
         /// library.
@@ -83,9 +69,9 @@ error_chain! {
 
         /// An error which can be returned if the user is not authorized
         /// to invoke sudo with the provided command and/or options.
-        Unauthorized(reason: String) {
+        Unauthorized {
             description("command unauthorized"),
-            display("command unauthorized: {}", reason),
+            display("command unauthorized"),
         }
     }
 }
@@ -129,15 +115,15 @@ impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval for ::std::result::Result<T, E
 impl AsSudoPluginRetval for Error {
     fn as_sudo_io_plugin_open_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized(_), _) => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
-            Error(_, _)                          => sys::SUDO_PLUGIN_OPEN_FAILURE,
+            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
+            Error(_, _)                       => sys::SUDO_PLUGIN_OPEN_FAILURE,
         }
     }
 
     fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized(_), _) => sys::SUDO_PLUGIN_OPEN_FAILURE,
-            Error(_, _)                          => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
+            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_OPEN_FAILURE,
+            Error(_, _)                       => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
         }
     }
 }

@@ -259,7 +259,8 @@ goal to have a minimal set of dependencies. Currently, those are:
 
 * [rust-lang/libc][libc]
 * [rust-lang-nursery/rust-bindgen][bindgen]
-* [rust-lang-nursery/error-chain][error-chain]
+* [rust-lang-nursery/failure][failure]
+* [rust-lang-nursery/error-chain][error-chain] (to be removed)
 
 ## Contributions
 
@@ -286,4 +287,5 @@ See [LICENSE-APACHE](LICENSE-APACHE) for details.
 [libc]: https://github.com/rust-lang/libc
 [bindgen]: https://github.com/rust-lang-nursery/rust-bindgen
 [error-chain]: https://github.com/rust-lang-nursery/error-chain
+[failure]: https://github.com/rust-lang-nursery/failure
 [airtight-hatchway]: https://blogs.msdn.microsoft.com/oldnewthing/20060508-22/?p=31283
