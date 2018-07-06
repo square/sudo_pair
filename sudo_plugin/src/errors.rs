@@ -20,6 +20,7 @@
 #![allow(bare_trait_objects)]
 #![allow(renamed_and_removed_lints)]
 #![allow(single_use_lifetimes)]
+#![allow(variant_size_differences)]
 
 use super::version::Version;
 
@@ -51,21 +52,6 @@ impl fmt::Display for IoFacility {
 
 error_chain! {
     errors {
-        /// An error which can be returned when an option provided to the
-        /// plugin cannot be parsed to the required type.
-        ParseFailure(name: String) {
-            description("sudo plugin was invoked with malformed options"),
-            display("sudo plugin was invoked with a malformed {}", name),
-        }
-
-        /// An error which can be returned when performing I/O to the
-        /// invoking user using one of the supported communications
-        /// facilities.
-        IoError(facility: IoFacility) {
-            description("sudo plugin was unable to perform I/O"),
-            display("sudo plugin was unable to perform I/O using facility {}", facility),
-        }
-
         /// An error which can be returned when the requsested plugin API
         /// version is incompatible with the version implemented by this
         /// library.

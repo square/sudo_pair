@@ -23,8 +23,6 @@
 /// # #[macro_use] extern crate sudo_plugin;
 /// extern crate libc;
 ///
-/// # fn main() { } // TODO(rust 1.27): remove this line
-///
 /// use sudo_plugin::errors::*;
 /// use std::io::Write;
 ///
