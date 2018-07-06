@@ -77,17 +77,17 @@ macro_rules! sudo_io_plugin {
         #[no_mangle]
         #[allow(non_upper_case_globals)]
         #[allow(missing_docs)]
-        pub static $name: sudo_plugin::sys::io_plugin = {
-            sudo_plugin::sys::io_plugin {
+        pub static $name: ::sudo_plugin::sys::io_plugin = {
+            ::sudo_plugin::sys::io_plugin {
                 open: sudo_io_static_fn!(
                     open, $name, PLUGIN, INSTANCE, $ty, open
                 ),
 
                 $( $cb: sudo_io_fn!($cb, $name, PLUGIN, INSTANCE, $fn) ),*,
 
-                .. sudo_plugin::sys::io_plugin {
-                    type_:            sudo_plugin::sys::SUDO_IO_PLUGIN,
-                    version:          sudo_plugin::sys::SUDO_API_VERSION,
+                .. ::sudo_plugin::sys::io_plugin {
+                    type_:            ::sudo_plugin::sys::SUDO_IO_PLUGIN,
+                    version:          ::sudo_plugin::sys::SUDO_API_VERSION,
                     open:             None,
                     close:            None,
                     show_version:     None,
@@ -117,8 +117,8 @@ macro_rules! sudo_io_static_fn {
     ) => {{
         unsafe extern "C" fn open(
             version:            ::libc::c_uint,
-            conversation:       sudo_plugin::sys::sudo_conv_t,
-            plugin_printf:      sudo_plugin::sys::sudo_printf_t,
+            conversation:       ::sudo_plugin::sys::sudo_conv_t,
+            plugin_printf:      ::sudo_plugin::sys::sudo_printf_t,
             settings_ptr:       *const *mut ::libc::c_char,
             user_info_ptr:      *const *mut ::libc::c_char,
             command_info_ptr:   *const *mut ::libc::c_char,
@@ -128,7 +128,7 @@ macro_rules! sudo_io_static_fn {
             plugin_options_ptr: *const *mut ::libc::c_char,
         ) -> ::libc::c_int {
             unsafe fn stderr(
-                printf: sudo_plugin::sys::sudo_printf_t,
+                printf: ::sudo_plugin::sys::sudo_printf_t,
                 error:  &::sudo_plugin::errors::Error,
             ) -> ::libc::c_int {
                 // if printf is a NULL pointer or if the `write_error`
@@ -139,16 +139,16 @@ macro_rules! sudo_io_static_fn {
                         ::std::sync::Mutex::new(printf)
                     );
 
-                    let _ = sudo_plugin::Printf {
+                    let _ = ::sudo_plugin::Printf {
                         facility: printf,
-                        level:    sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
+                        level:    ::sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
                     }.write_error(stringify!($name).as_bytes(), error);
                 }
 
                 return error.as_sudo_io_plugin_open_retval();
             }
 
-            let plugin = sudo_plugin::Plugin::new(
+            let plugin = ::sudo_plugin::Plugin::new(
                 version,
                 argc, argv,
                 conversation,
@@ -174,7 +174,7 @@ macro_rules! sudo_io_static_fn {
                 Err(e) => return stderr(plugin_printf, &e.into()),
             }
 
-            sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
+            ::sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
         }
 
         Some(open)
@@ -226,9 +226,9 @@ macro_rules! sudo_io_fn {
     ) => {{
         unsafe extern "C" fn $log_fn(
             buf: *const ::libc::c_char,
-            len: ::libc::c_uint,
+            len:        ::libc::c_uint,
         ) -> ::libc::c_int {
-            let slice = std::slice::from_raw_parts(
+            let slice = ::std::slice::from_raw_parts(
                 buf as *const _,
                 len as _,
             );
