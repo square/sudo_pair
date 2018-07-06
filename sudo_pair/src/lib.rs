@@ -18,7 +18,6 @@
 //! another engineer approve and monitor any privileged sessions.
 
 // TODO: remove all to_string_lossy
-// TODO: switch from error_chain to failure crate?
 // TODO: error message when /var/run/sudo_pair missing
 // TODO: enable the ability to respond to `sudo --version`
 // TODO: iolog in `sudoreplay(8)` format
@@ -68,7 +67,6 @@
 
 extern crate libc;
 extern crate failure;
-#[macro_use] extern crate failure_derive;
 #[macro_use] extern crate sudo_plugin;
 
 mod errors;
