@@ -71,8 +71,8 @@ macro_rules! sudo_io_plugin {
     ( $name:ident : $ty:ty { $($cb:ident : $fn:ident),* $(,)* } ) => {
         use ::sudo_plugin::errors::AsSudoPluginRetval;
 
-        static mut PLUGIN:   Option<sudo_plugin::Plugin> = None;
-        static mut INSTANCE: Option<$ty>                 = None;
+        static mut PLUGIN:   Option<::sudo_plugin::Plugin> = None;
+        static mut INSTANCE: Option<$ty>                   = None;
 
         #[no_mangle]
         #[allow(non_upper_case_globals)]
