@@ -66,20 +66,18 @@ main() {
 
     declare -r socket="${socket_path}/${pid}.sock"
 
-    declare -i socket_uid socket_gid
-    socket_uid="$(stat -c '%u' "${socket}")"
-    socket_gid="$(stat -c '%g' "${socket}")"
-    declare -r socket_uid socket_gid
+    declare -i socket_uid socket_gid socket_mode
+    IFS=, read socket_uid socket_gid socket_mode < <(
+      stat -c '%u,%g,%a' "${socket}"
+    )
+    declare -r socket_uid socket_gid socket_mode
 
-    declare socket_user socket_group socket_mode
-    socket_user="$(getent passwd "${socket_uid}" | cut -d: -f1)"
-    socket_group="$(getent group "${socket_gid}" | cut -d: -f1)"
-    socket_mode="$(stat -c '%a' "${socket}")"
-    declare -r socket_user socket_group socket_mode
-
-    if [[ ! ${SUDO_PAIR_TOKEN:-} ]]; then
+    # if we don't have an authentication token from the pipe yet, get
+    # one (and export it as an environment variable in case we have to
+    # call ourselves again under `sudo`)
+    if [[ -z ${SUDO_PAIR_TOKEN:-} ]]; then
         declare -x SUDO_PAIR_TOKEN
-        SUDO_PAIR_TOKEN=$(socat STDOUT unix-connect:"${socket}")
+        SUDO_PAIR_TOKEN=$(socat unix-connect:"${socket}" STDOUT)
         declare -r SUDO_PAIR_TOKEN
     fi
 
@@ -90,9 +88,9 @@ main() {
     if [ -w "${socket}" ]; then
         pair "${socket}" "${SUDO_PAIR_TOKEN}"
     elif [[ $(( 8#${socket_mode} & 8#200 )) -ne 0 ]]; then
-        sudo -u "${socket_user}" "${0}" "${pid}"
+        sudo -u \#"${socket_uid}" "${0}" "${pid}"
     elif [[ $(( 8#${socket_mode} & 8#020 )) -ne 0 ]]; then
-        sudo -g "${socket_group}" "${0}" "${pid}"
+        sudo -g \#"${socket_gid}" "${0}" "${pid}"
     else
         echo "The socket for this sudo session is neither user- nor group-writable."
         exit 2
