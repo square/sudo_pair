@@ -50,6 +50,10 @@ pair() {
     # (which causes a SIGPIPE to get sent). So the `kill` ensures the
     # subshell is killed without the user having to type something
     # additional that would cause the command to exit.
+    #
+    # FIXME: Technically, `echo` puts a secret value into an process
+    # argument list, which isn't great. However, the window for
+    # exploitation here is microscopic.
     { socat STDIO unix-connect:"${socket}"; kill $!; } < <(
         echo -n "${token}" ; cat -
     )

@@ -282,7 +282,13 @@ impl SudoPair {
         ).context(ErrorKind::CommunicationError)?;
 
         let mut response : [u8; 16] = [0; 16];
-        let _ = socket.read_exact(&mut response)
+
+        // TODO: read_exact will cause this process to block
+        // indefinitely (even on Ctrl-C) until the correct number of
+        // bytes are read; this won't happen in normal circumstances,
+        // but a bug in (or untimely exit of) the approval script can
+        // cause this process to hang and require being killed
+        socket.read_exact(&mut response)
             .context(ErrorKind::CommunicationError)?;
 
         // non-constant comparison is fine here since a comparison
