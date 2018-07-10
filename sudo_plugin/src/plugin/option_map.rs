@@ -68,6 +68,12 @@ impl OptionMap {
             // separators might not exist (e.g., in the case of parsing
             // plugin options; for this case, we use the full entry as
             // both the name of the key and its value
+            //
+            // indexing into an array can panic, but there's no cleaner
+            // way in rust to split a byte array on a delimiter, and
+            // the code above selects `sep` such that it's guaranteed to
+            // be within the slice
+            #[cfg_attr(feature = "cargo-clippy", allow(indexing_slicing))]
             let (k, v) = match sep {
                 Some(s) => { ( &bytes[..s], &bytes[s+1..] ) }
                 None    => { ( &bytes[..],  &bytes[..] ) }
