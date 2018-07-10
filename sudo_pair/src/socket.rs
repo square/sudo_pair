@@ -132,14 +132,22 @@ impl Socket {
     ))]
     pub(crate) fn peer_euid(&self) -> Result<uid_t> {
         unsafe {
-            let cred : libc::ucred     = mem::uninitialized();
-            let size : libc::socklen_t = mem::size_of::<libc::ucred>() as _;
+            let mut cred : libc::ucred     = mem::uninitialized();
+            let mut size : libc::socklen_t = mem::size_of::<libc::ucred>() as _;
+
+            // TODO: we use a temporary variable and coercion to go from
+            // `&mut libc::ucred to *mut libc::ucred` as a stepping
+            // stone to `*mut libc::c_void` due to Rust misfiring a
+            // warning about trivial casts
+            //
+            //     https://github.com/rust-lang/rust/issues/52200
+            let cred_p : *mut libc::ucred = &mut cred;
 
             if libc::getsockopt(
                 self.socket.as_raw_fd(),
                 libc::SOL_SOCKET,
                 libc::SO_PEERCRED,
-                &mut cred as _,
+                cred_p as _,
                 &mut size,
             ) == -1 {
                 return Err(Error::last_os_error());
