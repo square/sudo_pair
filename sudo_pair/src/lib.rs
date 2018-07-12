@@ -26,6 +26,7 @@
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
 // TODO: implement change_winsize
+// TODO: convert all outgoing errors to be unauthorized errors
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
@@ -66,6 +67,8 @@
 
 extern crate libc;
 extern crate failure;
+extern crate rand;
+
 #[macro_use] extern crate sudo_plugin;
 
 mod errors;
@@ -94,7 +97,7 @@ const DEFAULT_PAIR_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.pair";
 const DEFAULT_SOCKET_DIR       : &str       = "/var/run/sudo_pair";
 const DEFAULT_GIDS_ENFORCED    : [gid_t; 1] = [0];
 
-const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p %u'\n";
+const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p'\n";
 const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
 sudo_io_plugin! {
@@ -115,53 +118,47 @@ struct SudoPair {
 
 impl SudoPair {
     fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
-        // TODO: convert all outgoing errors to be unauthorized errors
-        let mut pair = Self {
+        let mut session = Self {
             plugin,
             options: PluginOptions::from(&plugin.plugin_options),
             socket:  None,
         };
 
-        if pair.is_exempt() {
-            return Ok(pair)
+        // sessions without a socket are bypassed entirely, so if the
+        // session is exempt we can go ahead and return what we already
+        // have
+        if session.is_exempt() {
+            return Ok(session)
         }
 
-        if pair.is_sudoing_to_user_and_group() {
+        // based on the current authorization model, allowing `-u` and
+        // `-g` simultaneously would let a user who can
+        // `sudo -g ${group}` approve a `sudo -u ${user} -g ${group}`
+        // even if they can't `sudo -u ${user}`, so we disable the
+        // capability entirely
+        if session.is_sudoing_to_user_and_group() {
             Err(ErrorKind::SudoToUserAndGroup)?;
         }
 
-        let template_spec = pair.template_spec();
+        let template_spec = session.template_spec();
 
-        pair.local_pair_prompt(&template_spec);
-        pair.remote_pair_connect()?;
-        pair.remote_pair_prompt(&template_spec)?;
-
-        // TODO(security): provide a configurable option to deny or log
-        // if the remote euid is the same as the local euid. For some
-        // reason I convinced myself that this is necessary to implement
-        // in the client and not the pair plugin, but I can't remember
-        // what the reasoning was at the moment.
+        // We want to know the actual user on the other end of the
+        // socket in order to enforce restrictions around self-approval.
         //
-        // Oh, now I remember. It *has* to be done on the client,
-        // because the approval script is run under `sudo` itself so
-        // that we can verify the pairer is also capable of doing the
-        // task the user invoking `sudo` is trying to do. Unfortunately,
-        // the OS APIs we have to determine the other side of the
-        // connection only tell us the *euid*, not the *uid*. So we end
-        // up with the euid of `root` which isn't helpful. So this kind
-        // of check *must* be done on the client.
-        //
-        // Except I have an idea for how to solve this plugin-side. Open
-        // a socket writable by all. When someone connects, get the
-        // credentials of the peer and send them a cryptographically-
-        // random token. Close the socket and reopen a new one as we
-        // currently do. Instead of expecting a `y`, expect the token.
-        // This binds their ability to approve the session (able to
-        // write to the socket) with their original identity (proven
-        // through providing the token from their original user). This
-        // shouldn't be too hard, but I haven't gotten around to it yet.
+        // To do this, we initially allow any user to connect to the
+        // socket. We then record their euid and then we hand them a
+        // cryptographically-random token. The socket is closed and a
+        // new one is opened with restricted permissions. When a client
+        // connects to this socket, we expect them to echo the token
+        // back to us before we ask for their approval.
+        let peer_token : [u8; 16] = rand::random();
 
-        Ok(pair)
+        session.local_pair_prompt(&template_spec);
+        session.remote_pair_connect_unprivileged(&peer_token)?;
+        session.remote_pair_connect_privileged(&peer_token)?;
+        session.remote_pair_prompt(&template_spec)?;
+
+        Ok(session)
     }
 
     fn close(&mut self, _: i64, _: i64) {
@@ -253,18 +250,52 @@ impl SudoPair {
             .ok_or_else(||self.plugin.stderr().write_all(&prompt));
     }
 
-    fn remote_pair_connect(&mut self) -> Result<()> {
-        if self.socket.is_some() {
-            return Ok(());
+    fn remote_pair_connect_unprivileged(&mut self, token: &[u8; 16]) -> Result<()> {
+        let mut socket = Socket::open(
+            self.socket_path(),
+            self.socket_uid(),
+            self.socket_gid(),
+            libc::S_IWUSR | libc::S_IWGRP | libc::S_IWOTH,
+        ).context(ErrorKind::CommunicationError)?;
+
+        let peer_euid = socket.peer_euid()
+            .context(ErrorKind::CommunicationError)?;
+
+        if peer_euid == self.plugin.user_info.uid {
+            // TODO: log or abort
         }
 
+        socket
+            .write_all(token)
+            .context(ErrorKind::CommunicationError)?;
+
+        Ok(())
+    }
+
+    fn remote_pair_connect_privileged(&mut self, token: &[u8; 16]) -> Result<()> {
         // TODO: clearly indicate when the socket path is missing
-        let socket = Socket::open(
+        let mut socket = Socket::open(
             self.socket_path(),
             self.socket_uid(),
             self.socket_gid(),
             self.socket_mode(),
         ).context(ErrorKind::CommunicationError)?;
+
+        let mut response : [u8; 16] = [0; 16];
+
+        // TODO: read_exact will cause this process to block
+        // indefinitely (even on Ctrl-C) until the correct number of
+        // bytes are read; this won't happen in normal circumstances,
+        // but a bug in (or untimely exit of) the approval script can
+        // cause this process to hang and require being killed
+        socket.read_exact(&mut response)
+            .context(ErrorKind::CommunicationError)?;
+
+        // non-constant comparison is fine here since a comparison
+        // failure results in an immediate exit
+        if response != *token {
+            Err(ErrorKind::SessionDeclined)?;
+        }
 
         self.socket = Some(socket);
 
@@ -444,19 +475,8 @@ impl SudoPair {
     }
 
     fn socket_path(&self) -> PathBuf {
-        // we encode the originating `uid` into the pathname since
-        // there's no other (easy) way for the approval command to probe
-        // for this information
-        //
-        // note that we want the *`uid`* and not the `euid` here since
-        // we want to know who the real user is and not the `uid` of the
-        // owner of `sudo`
         self.options.socket_dir.join(
-            format!(
-                "{}.{}.sock",
-                self.plugin.user_info.uid,
-                self.plugin.user_info.pid,
-            )
+            format!("{}.sock", self.plugin.user_info.pid)
         )
     }
 
@@ -606,6 +626,21 @@ struct PluginOptions {
     ///
     /// Default: `[]` (however, root is *always* exempt)
     gids_exempted: HashSet<gid_t>,
+
+    /// `self_approval` is a boolean ("true" or "false") that controls
+    /// whether or not users are allowed to approve their own commands.
+    /// When a user approves their own command this way, a message is
+    /// sent to syslog.
+    ///
+    /// This capability is provided so that engineers can act
+    /// unilaterally in the event of an emergency when no-one else is
+    /// available. Since it is effectively a complete bypass of this
+    /// plugin, the intent is that using this capability should invoke
+    /// something drastic (e.g., immediately page an oncall security
+    /// engineer).
+    ///
+    /// Default: `false`
+    self_approval: bool,
 }
 
 impl PluginOptions {
@@ -639,6 +674,9 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
 
             gids_exempted: map.get("gids_exempted")
                 .unwrap_or_default(),
+
+            self_approval: map.get("self_approval")
+                .unwrap_or(false),
         }
     }
 }
