@@ -37,8 +37,8 @@ impl Version {
         &MINIMUM
     }
 
-    pub fn supported(&self) -> bool {
-        self >= Self::minimum()
+    pub fn supported(self) -> bool {
+        self >= *Self::minimum()
     }
 
     pub fn check(self) -> Result<Self> {

@@ -20,7 +20,7 @@ pub(crate) enum ErrorKind {
 }
 
 impl ErrorKind {
-    fn as_str(&self) -> &str {
+    fn as_str(self) -> &'static str {
         match self {
             ErrorKind::CommunicationError => "couldn't establish communications with the pair",
             ErrorKind::SessionDeclined    => "pair declined the session",
@@ -51,14 +51,14 @@ impl Display for Error {
 impl Fail for Error {}
 
 impl From<ErrorKind> for Error {
-    fn from(kind: ErrorKind) -> Error {
-        Error::from(Context::new(kind))
+    fn from(kind: ErrorKind) -> Self {
+        Self::from(Context::new(kind))
     }
 }
 
 impl From<Context<ErrorKind>> for Error {
-    fn from(inner: Context<ErrorKind>) -> Error {
-        Error { inner: inner }
+    fn from(inner: Context<ErrorKind>) -> Self {
+        Self { inner }
     }
 }
 
@@ -68,8 +68,8 @@ impl From<Context<ErrorKind>> for Error {
 /// converted to an Unauthorized error.
 ///
 impl From<Error> for SudoPluginError {
-    fn from(error: Error) -> SudoPluginError {
-        SudoPluginError::with_chain(
+    fn from(error: Error) -> Self {
+        Self::with_chain(
             error.compat(),
             SudoPluginErrorKind::Unauthorized
         )
@@ -81,7 +81,7 @@ impl From<Error> for SudoPluginError {
 /// implicitly wrapped in a new `Error`.
 ///
 impl From<ErrorKind> for SudoPluginError {
-    fn from(kind: ErrorKind) -> SudoPluginError {
-        SudoPluginError::from(Error::from(kind))
+    fn from(kind: ErrorKind) -> Self {
+        Self::from(Error::from(kind))
     }
 }

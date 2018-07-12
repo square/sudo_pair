@@ -12,6 +12,11 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+// these warnings are unavoidable with names like `uid` and `gid`, and
+// such names are natural to use for this problem domain so should not
+// be avoided
+#![cfg_attr(feature="cargo-clippy", allow(similar_names))]
+
 use std::ffi::CString;
 use std::fs;
 use std::io::{Read, Write, Result, Error, ErrorKind};
@@ -30,7 +35,6 @@ pub(crate) struct Socket {
 }
 
 impl Socket {
-    #[cfg_attr(feature="cargo-clippy", allow(similar_names))]
     pub(crate) fn open<P: AsRef<Path>>(
         path: P,
         uid:  uid_t,

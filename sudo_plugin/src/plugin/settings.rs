@@ -199,6 +199,11 @@ pub struct NetAddr {
 impl FromSudoOption for NetAddr {
     type Err = AddrParseError;
 
+    // indexing into an array can panic, but there's no cleaner way in
+    // rust to split a byte array on a delimiter, and the code below
+    // selects the midpoint such that it's guaranteed to be within the
+    // slice
+    #[cfg_attr(feature = "cargo-clippy", allow(indexing_slicing))]
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let bytes = s.as_bytes();
         let mid   = bytes.iter()
