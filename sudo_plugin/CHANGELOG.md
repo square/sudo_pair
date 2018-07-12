@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- Automatic support for `-V` flag, which prints the version of `sudo` and any
+  active plugins
+
 ### Changed
 - No longer fails to build on warnings, unless being run in CI
 - Allows plugins to use any error library they wish, as long as the error

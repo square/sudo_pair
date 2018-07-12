@@ -18,7 +18,7 @@ use super::option_map::*;
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 
-use libc::{gid_t, mode_t, uid_t};
+use libc::{self, gid_t, mode_t, uid_t};
 
 #[derive(Debug)]
 pub struct CommandInfo {
@@ -64,15 +64,21 @@ pub struct CommandInfo {
 
 impl CommandInfo {
     pub fn try_from(value: OptionMap) -> Result<Self> {
+        let runas_gid = value.get("runas_gid")
+            .unwrap_or_else(|_| unsafe { libc::getegid() });
+
+        let runas_uid = value.get("runas_uid")
+            .unwrap_or_else(|_| unsafe { libc::geteuid() });
+
         Ok(Self {
-            command:       value.get("command")?,
-            runas_gid:     value.get("runas_gid")?,
-            runas_uid:     value.get("runas_uid")?,
-            runas_egid:    value.get("runas_egid")
-                .unwrap_or(value.get("runas_gid")?),
-            runas_euid:    value.get("runas_euid")
-                .unwrap_or(value.get("runas_uid")?),
-            umask:         value.get("umask")?,
+            // in the event that the `-V` flag is passed to `sudo`,
+            // there's no command
+            command:       value.get("command").unwrap_or_default(),
+            runas_gid,
+            runas_uid,
+            runas_egid:    value.get("runas_egid").unwrap_or(runas_gid),
+            runas_euid:    value.get("runas_euid").unwrap_or(runas_uid),
+            umask:         value.get("umask").unwrap_or(0o7777),
 
             chroot:            value.get("chroot")            .ok(),
             close_from:        value.get("closefrom")         .ok(),
