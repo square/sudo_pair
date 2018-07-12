@@ -74,7 +74,7 @@ macro_rules! sudo_io_plugin {
         static mut PLUGIN:   Option<::sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                   = None;
 
-        const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+        const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
         #[no_mangle]
         #[allow(non_upper_case_globals)]
@@ -113,7 +113,7 @@ macro_rules! sudo_io_plugin {
                 #[cfg_attr(feature="cargo-clippy", allow(write_literal))]
                 let _ = writeln!(plugin.stdout(),
                     "{} I/O plugin version {}",
-                    stringify!($name), VERSION
+                    stringify!($name), VERSION.unwrap_or("unknown")
                 );
             }
 
