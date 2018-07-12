@@ -19,7 +19,6 @@
 
 // TODO: remove all to_string_lossy
 // TODO: error message when /var/run/sudo_pair missing
-// TODO: enable the ability to respond to `sudo --version`
 // TODO: iolog in `sudoreplay(8)` format
 // TODO: rustfmt
 // TODO: double-check all `as`-casts

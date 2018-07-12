@@ -74,23 +74,23 @@ macro_rules! sudo_io_plugin {
         static mut PLUGIN:   Option<::sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                   = None;
 
+        const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
         #[no_mangle]
         #[allow(non_upper_case_globals)]
         #[allow(missing_docs)]
         pub static $name: ::sudo_plugin::sys::io_plugin = {
             ::sudo_plugin::sys::io_plugin {
-                open: sudo_io_static_fn!(
-                    open, $name, PLUGIN, INSTANCE, $ty, open
-                ),
-
+                // construct the plugin using any callbacks specified
                 $( $cb: sudo_io_fn!($cb, $name, PLUGIN, INSTANCE, $fn) ),*,
 
+                // and for anything not specified, use the defaults
                 .. ::sudo_plugin::sys::io_plugin {
                     type_:            ::sudo_plugin::sys::SUDO_IO_PLUGIN,
                     version:          ::sudo_plugin::sys::SUDO_API_VERSION,
-                    open:             None,
+                    open:             sudo_io_static_fn!(open, $name, PLUGIN, INSTANCE, $ty, open),
                     close:            None,
-                    show_version:     None,
+                    show_version:     Some(show_version),
                     log_ttyin:        None,
                     log_ttyout:       None,
                     log_stdin:        None,
@@ -102,6 +102,23 @@ macro_rules! sudo_io_plugin {
                 }
             }
         };
+
+        unsafe extern "C" fn show_version(
+            _verbose: ::libc::c_int,
+        ) -> ::libc::c_int {
+            if let Some(plugin) = PLUGIN.as_ref() {
+                // disable the write_literal lint since it has a known
+                // bug that fires when you use a macro that expands to
+                // a literal (e.g., `stringify!`)
+                #[cfg_attr(feature="cargo-clippy", allow(write_literal))]
+                let _ = writeln!(plugin.stdout(),
+                    "{} I/O plugin version {}",
+                    stringify!($name), VERSION
+                );
+            }
+
+            0
+        }
     }
 }
 
@@ -167,9 +184,18 @@ macro_rules! sudo_io_static_fn {
 
             // unwrap should be panic-safe here, since we just assigned
             // a value to $plugin
-            let instance = <$ty>::$fn($plugin.as_ref().unwrap());
+            let plugin = $plugin.as_ref().unwrap();
 
-            match instance {
+            // if the command is empty, to the best of my knowledge
+            // we're being called with `-V` to report our version; in
+            // this case there's no reason to fully the plugin through
+            // its `open` function
+            if plugin.command_info.command == ::std::path::PathBuf::default() {
+                return ::sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS;
+            }
+
+            // call the plugin's open function
+            match <$ty>::$fn(plugin) {
                 Ok(i)  => $instance = Some(i),
                 Err(e) => return stderr(plugin_printf, &e.into()),
             }
@@ -186,7 +212,7 @@ macro_rules! sudo_io_fn {
     ( close , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{
         unsafe extern "C" fn close(
             exit_status: ::libc::c_int,
-            error:       ::libc::c_int
+            error:       ::libc::c_int,
         ) {
             if let Some(i) = $instance.as_mut() {
                 i.$fn(exit_status as _, error as _)
