@@ -10,8 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Builds using Rust 2018
 - No longer fails to build on warnings, unless being run in CI
-- Bindgen-generated bindings are committed directly so we can remove
-  bindgen from the list of build dependencies
+- Bindgen-generated bindings are committed directly so we can remove bindgen from the list of build dependencies
 
 ## [1.1.0] - 2018-05-18
 

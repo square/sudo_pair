@@ -64,6 +64,7 @@ use crate::template::Spec;
 use crate::socket::Socket;
 
 use std::collections::HashSet;
+use std::ffi::CString;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
@@ -608,6 +609,39 @@ impl PluginOptions {
 #[allow(single_use_lifetimes)]
 impl<'a> From<&'a OptionMap> for PluginOptions {
     fn from(map: &'a OptionMap) -> Self {
+        let groups_enforced : HashSet<String> = map.get("groups_enforced")
+            .unwrap_or_default();
+
+        let mut gids_enforced : HashSet<gid_t> = groups_enforced
+            .iter()
+            .filter_map(|groupname| groupname_to_gid(groupname))
+            .chain(map.get("gids_enforced"))
+            .collect();
+
+        // TODO: I feel like this is a bit of a hack, but we want to use the
+        // value of `DEFAULT_GIDS_ENFORCED` if neither `gids_enforced` nor
+        // `groups_enforced` were specified in the plugin options. There's
+        // probably a cleaner way to do this, but at least this approach does
+        // work so we can always clean it up later.
+        if !map.contains_key("gids_enforced") && !map.contains_key("groups_enforced") {
+            // if neither of these is provided, the `gids_enforced` shouldn't
+            // have any elements inside it
+            debug_assert!(gids_enforced.is_empty());
+
+            for gid in &DEFAULT_GIDS_ENFORCED {
+                let _ = gids_enforced.insert(*gid);
+            }
+        }
+
+        let groups_exempted : HashSet<String> = map.get("groups_exempted")
+            .unwrap_or_default();
+
+        let gids_exempted : HashSet<gid_t> = groups_exempted
+            .iter()
+            .filter_map(|groupname| groupname_to_gid(groupname))
+            .chain(map.get("gids_exempted"))
+            .collect();
+
         Self {
             binary_path: map.get("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
@@ -621,11 +655,16 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
             socket_dir: map.get("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
-            gids_enforced: map.get("gids_enforced")
-                .unwrap_or_else(|_| DEFAULT_GIDS_ENFORCED.iter().cloned().collect()),
-
-            gids_exempted: map.get("gids_exempted")
-                .unwrap_or_default(),
+            gids_enforced,
+            gids_exempted,
         }
     }
+}
+
+/// Converts a POSIX `groupname` into its equivalent `gid` using `getgrnam(3)`.
+/// If the groupname cannot be found, returns `None`.
+fn groupname_to_gid(groupname: &str) -> Option<gid_t> {
+    CString::new(groupname).ok()
+        .and_then(|g| unsafe { libc::getgrnam(g.as_ptr()).as_ref() })
+        .map(|g| g.gr_gid)
 }

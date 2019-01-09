@@ -121,6 +121,18 @@ impl OptionMap {
     pub fn get_bytes(&self, k: &[u8]) -> Option<&[u8]> {
         self.0.get(k).map(Vec::as_slice)
     }
+
+    /// Returns whether or not the OptionMap contains the given named
+    /// key.
+    pub fn contains_key(&self, k: &str) -> bool {
+        self.contains_key_bytes(k.as_bytes())
+    }
+
+    /// Returns whether or not the OptionMap contains the given bytes
+    /// as a key.
+    pub fn contains_key_bytes(&self, k: &[u8]) -> bool {
+        self.0.contains_key(k)
+    }
 }
 
 #[cfg(test)]
@@ -130,10 +142,6 @@ mod tests {
     use std::collections::HashSet;
     use std::path::PathBuf;
     use std::ptr;
-
-    impl FromSudoOptionList for String {
-        const SEPARATOR: char = '|';
-    }
 
     #[test]
     fn new_parses_string_keys() {
@@ -245,21 +253,20 @@ mod tests {
     fn get_parses_lists() {
         let map = unsafe { OptionMap::from_raw([
             b"ints=1,2,3\0".as_ptr() as _,
-            b"strs=a|b|c\0".as_ptr() as _,
-            b"str=a,b,c\0" .as_ptr() as _,
+            b"strs=a,b,c\0".as_ptr() as _,
+            b"str=a|b|c\0" .as_ptr() as _,
             ptr::null(),
         ].as_ptr()) };
 
         assert_eq!(vec![1, 2, 3],       map.get::<Vec<u8>>("ints")    .unwrap());
         assert_eq!(vec!["a", "b", "c"], map.get::<Vec<String>>("strs").unwrap());
-        assert_eq!(vec!["a,b,c"],       map.get::<Vec<String>>("str") .unwrap());
+        assert_eq!(vec!["a|b|c"],       map.get::<Vec<String>>("str") .unwrap());
     }
 
     #[test]
     fn get_parses_hashsets() {
-
         let map = unsafe { OptionMap::from_raw([
-            b"nums=1|2|3\0".as_ptr() as _,
+            b"nums=1,2,3\0".as_ptr() as _,
             ptr::null(),
         ].as_ptr()) };
 
