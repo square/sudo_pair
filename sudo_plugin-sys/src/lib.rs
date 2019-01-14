@@ -22,8 +22,10 @@
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
+#![warn(nonstandard_style)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
+#![warn(rustdoc)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -64,8 +66,6 @@
 // then
 //
 // #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
-
-extern crate libc;
 
 use libc::{c_int, c_uint};
 
