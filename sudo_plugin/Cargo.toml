@@ -2,6 +2,7 @@
 name    = "sudo_plugin"
 version = "1.1.0"
 license = "Apache-2.0"
+edition = "2018"
 
 authors     = ["Stephen Touset <stephen@squareup.com>"]
 description = "Macros to easily write custom sudo plugins"

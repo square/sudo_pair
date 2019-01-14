@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use super::errors::*;
+use crate::errors::*;
 
 use std::fmt;
 
@@ -61,7 +61,7 @@ impl From<c_uint> for Version {
 }
 
 impl fmt::Display for Version {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.major, self.minor)
     }
 }

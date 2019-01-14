@@ -20,8 +20,10 @@
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
+#![warn(nonstandard_style)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
+#![warn(rustdoc)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -59,18 +61,9 @@
 //
 // #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
 
-pub extern crate sudo_plugin_sys;
-
-extern crate libc;
-
-#[macro_use]
-extern crate error_chain;
-
-#[macro_use]
-pub mod macros;
-
-pub mod plugin;
 pub mod errors;
+pub mod macros;
+pub mod plugin;
 
 mod version;
 

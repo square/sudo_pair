@@ -22,12 +22,15 @@
 #![allow(single_use_lifetimes)]
 #![allow(variant_size_differences)]
 
-use super::version::Version;
+use crate::version::Version;
 
 use std::fmt;
 
 use sudo_plugin_sys as sys;
 use libc::c_int;
+use error_chain::*;
+
+pub use error_chain::bail;
 
 /// The list of supported facilities to communicate with the end-user.
 #[derive(Clone, Copy, Debug)]
@@ -42,7 +45,7 @@ pub enum IoFacility {
 }
 
 impl fmt::Display for IoFacility {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             IoFacility::PluginPrintf => write!(f, "plugin_printf"),
             IoFacility::Conversation => write!(f, "conversation"),
