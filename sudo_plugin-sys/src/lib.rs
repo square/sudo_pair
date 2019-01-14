@@ -69,7 +69,7 @@
 
 use libc::{c_int, c_uint};
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+include!("bindings.rs");
 
 pub type sudo_printf_non_null_t = unsafe extern "C" fn(
     msg_type:   ::std::os::raw::c_int,
