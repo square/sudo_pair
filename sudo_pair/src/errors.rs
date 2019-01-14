@@ -32,7 +32,7 @@ impl ErrorKind {
 }
 
 impl Display for ErrorKind {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         self.as_str().fmt(f)
     }
 }
@@ -43,7 +43,7 @@ pub(crate) struct Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         self.inner.fmt(f)
     }
 }
