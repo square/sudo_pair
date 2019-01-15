@@ -72,7 +72,7 @@ impl OptionMap {
             // way in rust to split a byte array on a delimiter, and
             // the code above selects `sep` such that it's guaranteed to
             // be within the slice
-            #[cfg_attr(feature = "cargo-clippy", allow(indexing_slicing))]
+            #[cfg_attr(feature="cargo-clippy", allow(clippy::indexing_slicing))]
             let (k, v) = match sep {
                 Some(s) => { ( &bytes[..s], &bytes[s+1..] ) }
                 None    => { ( &bytes[..],  &bytes[..] ) }

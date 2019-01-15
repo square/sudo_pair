@@ -44,22 +44,11 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_complexity))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_correctness))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_perf))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_style))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
 
 // this warns on names that are out of our control like argv, argc, uid,
 // and gid
-#![cfg_attr(feature="cargo-clippy", allow(similar_names))]
-
-// TODO: we can remove `bindgen` as a direct dependency and just bundle
-// its output since it's static; these should pass much more reliably
-// then
-//
-// #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
+#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
 
 pub mod errors;
 pub mod macros;

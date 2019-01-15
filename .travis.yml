@@ -8,10 +8,13 @@ rust:
 env:
   - RUSTFLAGS="-A unknown-lints -D warnings"
 
+before_script:
+  - rustup component add clippy
+
 script:
   - cargo build
   - cargo test
-  - 'if [[ "${TRAVIS_RUST_VERSION}" = "nightly" ]]; then cargo install --force clippy; cargo clippy; fi'
+  - cargo clippy
 
 cache: cargo
 

@@ -179,7 +179,7 @@ macro_rules! sudo_io_plugin {
                 // disable the write_literal lint since it has a known
                 // bug that fires when you use a macro that expands to
                 // a literal (e.g., `stringify!`)
-                #[cfg_attr(feature="cargo-clippy", allow(write_literal))]
+                #[cfg_attr(feature="cargo-clippy", allow(clippy::write_literal))]
                 let _ = writeln!(plugin.stdout(),
                     "{} I/O plugin version {}",
                     stringify!($name), VERSION.unwrap_or("unknown")
