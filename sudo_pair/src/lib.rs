@@ -29,8 +29,10 @@
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
+#![warn(nonstandard_style)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
+#![warn(rustdoc)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -64,17 +66,13 @@
 //
 // #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
 
-extern crate libc;
-extern crate failure;
-#[macro_use] extern crate sudo_plugin;
-
 mod errors;
 mod template;
 mod socket;
 
-use errors::*;
-use template::Spec;
-use socket::Socket;
+use crate::errors::*;
+use crate::template::Spec;
+use crate::socket::Socket;
 
 use std::collections::HashSet;
 use std::fs::File;
@@ -86,7 +84,7 @@ use libc::{gid_t, mode_t, uid_t};
 
 use failure::ResultExt;
 
-use sudo_plugin::OptionMap;
+use sudo_plugin::*;
 
 const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
 const DEFAULT_USER_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.user";
@@ -108,13 +106,13 @@ sudo_io_plugin! {
 }
 
 struct SudoPair {
-    plugin:  &'static sudo_plugin::Plugin,
+    plugin:  &'static Plugin,
     options: PluginOptions,
     socket:  Option<Socket>,
 }
 
 impl SudoPair {
-    fn open(plugin: &'static sudo_plugin::Plugin) -> Result<Self> {
+    fn open(plugin: &'static Plugin) -> Result<Self> {
         // TODO: convert all outgoing errors to be unauthorized errors
         let mut pair = Self {
             plugin,

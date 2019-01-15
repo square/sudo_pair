@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use super::super::errors::*;
+use crate::errors::*;
 use super::option_map::*;
 
 use std::os::unix::io::RawFd;

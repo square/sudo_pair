@@ -20,9 +20,7 @@
 /// # Example
 ///
 /// ```rust
-/// # #[macro_use] extern crate sudo_plugin;
-/// extern crate libc;
-///
+/// use sudo_plugin::*;
 /// use sudo_plugin::errors::*;
 /// use std::io::Write;
 ///
@@ -193,6 +191,8 @@ macro_rules! sudo_io_plugin {
     }
 }
 
+/// Internal macro used by `sudo_io_plugin` that  generates the actual
+/// callback implementations for I/O plugins.
 #[macro_export]
 macro_rules! sudo_io_fn {
     ( close , $name:tt , $plugin:expr , $instance:expr , $fn:ident ) => {{

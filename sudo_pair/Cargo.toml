@@ -2,6 +2,7 @@
 name    = "sudo_pair"
 version = "0.11.1"
 license = "Apache-2.0"
+edition = "2018"
 
 authors     = ["Stephen Touset <stephen@squareup.com>"]
 description = "sudo IO-plugin to require a live human pair"

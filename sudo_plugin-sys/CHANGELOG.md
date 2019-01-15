@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Changed
+- Builds using Rust 2018
 - No longer fails to build on warnings, unless being run in CI
 
 ## [1.1.0] - 2018-05-18

@@ -2,6 +2,7 @@
 name    = "sudo_plugin-sys"
 version = "1.1.0"
 license = "Apache-2.0"
+edition = "2018"
 
 authors     = ["Stephen Touset <stephen@squareup.com>"]
 description = "Bindings to the sudo plugin API"
@@ -19,7 +20,7 @@ build = "build.rs"
 libc = '0'
 
 [build-dependencies]
-bindgen = '0.37'
+bindgen = '0'
 
 [badges]
 travis-ci = { repository = "square/sudo_pair" }
