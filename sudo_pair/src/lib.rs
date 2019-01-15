@@ -53,18 +53,7 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_complexity))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_correctness))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_pedantic))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_perf))]
-#![cfg_attr(feature="cargo-clippy", warn(clippy_style))]
-
-// TODO: we can remove `bindgen` as a direct dependency and just bundle
-// its output since it's static; these should pass much more reliably
-// then
-//
-// #![cfg_attr(feature="cargo-clippy", warn(clippy_cargo))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
 
 mod errors;
 mod template;

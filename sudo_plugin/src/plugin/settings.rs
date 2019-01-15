@@ -203,7 +203,7 @@ impl FromSudoOption for NetAddr {
     // rust to split a byte array on a delimiter, and the code below
     // selects the midpoint such that it's guaranteed to be within the
     // slice
-    #[cfg_attr(feature = "cargo-clippy", allow(indexing_slicing))]
+    #[cfg_attr(feature="cargo-clippy", allow(clippy::indexing_slicing))]
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let bytes = s.as_bytes();
         let mid   = bytes.iter()
