@@ -52,10 +52,6 @@
 
 #![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
 
-// this entire crate is generated code
-#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
-#![cfg_attr(feature="cargo-clippy", allow(clippy::type_complexity))]
-
 use libc::{c_int, c_uint};
 
 include!("bindings.rs");

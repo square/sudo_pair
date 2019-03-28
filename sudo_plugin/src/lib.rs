@@ -46,10 +46,6 @@
 
 #![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
 
-// this warns on names that are out of our control like argv, argc, uid,
-// and gid
-#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
-
 pub mod errors;
 pub mod macros;
 pub mod plugin;

@@ -133,8 +133,8 @@ mod tests {
         let mut spec     = Spec::new();
         let     template = b"a: %a, b: %b";
 
-        let _ = spec.replace(b'a', &b"foo"[..]);
-        let _ = spec.replace(b'b', &b"bar"[..]);
+        spec.replace(b'a', &b"foo"[..]);
+        spec.replace(b'b', &b"bar"[..]);
 
         assert_eq!(
             b"a: foo, b: bar"[..],
@@ -147,8 +147,8 @@ mod tests {
         let mut spec     = Spec::new();
         let     template = b"%a%a%a%b%a%a%b";
 
-        let _ = spec.replace(b'a', &b"x"[..]);
-        let _ = spec.replace(b'b', &b"y"[..]);
+        spec.replace(b'a', &b"x"[..]);
+        spec.replace(b'b', &b"y"[..]);
 
         assert_eq!(
             b"xxxyxxy"[..],

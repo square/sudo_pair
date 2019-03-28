@@ -12,11 +12,6 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-// these warnings are unavoidable with names like `uid` and `gid`, and
-// such names are natural to use for this problem domain so should not
-// be avoided
-#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
-
 use std::ffi::CString;
 use std::fs;
 use std::io::{Read, Write, Result, Error, ErrorKind};
@@ -43,11 +38,11 @@ impl Socket {
     ) -> Result<Self> {
         let path = path.as_ref();
 
-        Self::enforce_ownership(&path)?;
+        Self::enforce_ownership(path)?;
 
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
-        Self::unlink(&path)?;
+        Self::unlink(path)?;
 
         // by default, ensure no permissions on the created socket since
         // we're going to customize them immediately afterward
@@ -113,7 +108,7 @@ impl Socket {
         // because we want to unlink the socket regardless) and b) it's
         // more important to continue the sudo session than to worry
         // about filesystem janitorial work
-        let _ = Self::unlink(&path);
+        let _ = Self::unlink(path);
 
         // restore the process' original umask
         let _ = unsafe { libc::umask(umask) };

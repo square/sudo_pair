@@ -54,6 +54,27 @@
 #![allow(unsafe_code)]
 
 #![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::pedantic))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::nursery))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::clone_on_ref_ptr))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::decimal_literal_representation))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::else_if_without_else))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::float_arithmetic))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::float_cmp_const))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::indexing_slicing))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::mem_forget))]
+// #![cfg_attr(feature="cargo-clippy", warn(clippy::missing_docs_in_private_items))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::multiple_inherent_impl))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::multiple_inherent_impl))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::print_stdout))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::result_unwrap_used))]
+// #![cfg_attr(feature="cargo-clippy", warn(clippy::shadow_reuse))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::shadow_same))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::unimplemented))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::use_debug))]
+#![cfg_attr(feature="cargo-clippy", warn(clippy::wrong_pub_self_convention))]
+
+#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
 
 mod errors;
 mod template;
@@ -341,7 +362,7 @@ impl SudoPair {
         false
     }
 
-    fn is_sudoing_from_root(&self) -> bool {
+    const fn is_sudoing_from_root(&self) -> bool {
         // theoretically, root's `uid` should be 0, but it's probably
         // safest to check whatever user `sudo` is running as since sudo
         // is pretty much by definition going to be running setuid;
@@ -418,11 +439,11 @@ impl SudoPair {
         )
     }
 
-    fn is_sudoing_to_user(&self) -> bool {
+    const fn is_sudoing_to_user(&self) -> bool {
         self.plugin.user_info.uid != self.plugin.command_info.runas_euid
     }
 
-    fn is_sudoing_to_group(&self) -> bool {
+    const fn is_sudoing_to_group(&self) -> bool {
         self.plugin.user_info.gid != self.plugin.command_info.runas_egid
     }
 

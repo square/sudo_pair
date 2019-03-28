@@ -90,8 +90,6 @@ impl Plugin {
     /// facilities.
     ///
     /// Returns an error if there was a problem initializing the plugin.
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::new_ret_no_self))]
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_sign_loss))]
     #[cfg_attr(feature="cargo-clippy", allow(clippy::too_many_arguments))]
     pub unsafe fn new(
         version:        c_uint,
@@ -325,7 +323,6 @@ impl Write for Printf {
             // cast is only necessary because Rust interprets the
             // `#define`'d constants as `u32` when they're treated by
             // sudo as `i32`.
-            #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_possible_wrap))]
             (self.facility.lock().unwrap())(self.level as i32, message.as_ptr())
         };
 
