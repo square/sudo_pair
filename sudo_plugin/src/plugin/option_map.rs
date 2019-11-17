@@ -45,6 +45,8 @@ impl OptionMap {
     /// strings in "key=value" format with the array terminated by a
     /// NULL pointer.
     ///
+    /// # Safety
+    ///
     /// This method cannot be safe, since it relies on the caller to
     /// place a NULL byte as the final array entry. In the absence of
     /// such a NULL byte, there is no other way to detect the end of

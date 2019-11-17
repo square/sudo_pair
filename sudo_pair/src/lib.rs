@@ -114,7 +114,7 @@ impl SudoPair {
         }
 
         if pair.is_sudoing_to_user_and_group() {
-            Err(ErrorKind::SudoToUserAndGroup)?;
+            return Err(ErrorKind::SudoToUserAndGroup.into());
         }
 
         let template_spec = pair.template_spec();
@@ -195,7 +195,7 @@ impl SudoPair {
             return Ok(());
         }
 
-        Err(ErrorKind::StdinRedirected)?
+        Err(ErrorKind::StdinRedirected.into())
     }
 
     fn local_pair_prompt(&self, template_spec: &Spec) {
@@ -298,7 +298,7 @@ impl SudoPair {
 
         match &response {
             b"y" | b"Y" => Ok(()),
-            _           => Err(ErrorKind::SessionDeclined)?,
+            _           => Err(ErrorKind::SessionDeclined.into()),
         }
     }
 
