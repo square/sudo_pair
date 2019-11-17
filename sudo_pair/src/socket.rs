@@ -70,9 +70,12 @@ impl Socket {
                 }
 
                 let     fd      = listener.as_raw_fd();
-                let mut readfds = mem::uninitialized();
+                let mut readfds = mem::MaybeUninit::<libc::fd_set>::uninit();
 
-                libc::FD_ZERO(&mut readfds);
+                libc::FD_ZERO(readfds.as_mut_ptr());
+
+                let mut readfds = readfds.assume_init();
+
                 libc::FD_SET(fd, &mut readfds);
 
                 // rust automatically wraps the `accept()` function in a
@@ -157,14 +160,16 @@ impl Socket {
         )?;
 
         unsafe {
-            let mut stat : libc::stat = mem::uninitialized();
+            let mut stat = mem::MaybeUninit::<libc::stat>::uninit();
 
             if libc::stat(
                 parent.as_ptr(),
-                &mut stat
+                stat.as_mut_ptr()
             ) == -1 {
                 return Err(Error::last_os_error());
             }
+
+            let stat = stat.assume_init();
 
             if stat.st_mode & libc::S_IFDIR == 0 {
                 return Err(Error::new(ErrorKind::Other, format!(
@@ -258,11 +263,13 @@ fn ctrl_c_aborts_syscalls<F, T>(func: F) -> Result<T>
     where F: FnOnce() -> T
 {
     unsafe {
-        let mut sigaction_old  = ::std::mem::uninitialized();
+        let mut sigaction_old  = mem::MaybeUninit::<libc::sigaction>::uninit();
         let     sigaction_null = ::std::ptr::null_mut();
 
         // retrieve the existing handler
-        sigaction(libc::SIGINT, sigaction_null, &mut sigaction_old)?;
+        sigaction(libc::SIGINT, sigaction_null, sigaction_old.as_mut_ptr())?;
+
+        let sigaction_old = sigaction_old.assume_init();
 
         // copy the old handler, but mask out SA_RESTART
         let mut sigaction_new = sigaction_old;
