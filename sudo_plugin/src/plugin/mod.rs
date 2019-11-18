@@ -93,6 +93,7 @@ impl Plugin {
     #[cfg_attr(feature="cargo-clippy", allow(clippy::new_ret_no_self))]
     #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_sign_loss))]
     #[cfg_attr(feature="cargo-clippy", allow(clippy::too_many_arguments))]
+    #[cfg_attr(feature="cargo-clippy", allow(clippy::missing_safety_doc))]
     pub unsafe fn new(
         version:        c_uint,
         argc:           c_int,
@@ -330,7 +331,7 @@ impl Write for Printf {
         };
 
         if ret == -1 {
-            Err(io::Error::last_os_error())?;
+            return Err(io::Error::last_os_error());
         }
 
         // TODO: replace the cast, but for now we've checked for it
