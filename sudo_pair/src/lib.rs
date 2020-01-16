@@ -64,6 +64,7 @@ use crate::template::Spec;
 use crate::socket::Socket;
 
 use std::collections::HashSet;
+use std::ffi::CString;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::ffi::OsStrExt;
@@ -406,13 +407,13 @@ impl SudoPair {
     }
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
-        !self.options.gids_exempted.is_disjoint(
+        !self.options.gids_exempted().is_disjoint(
             &self.plugin.user_info.groups.iter().cloned().collect()
         )
     }
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
-        !self.options.gids_enforced.is_disjoint(
+        !self.options.gids_enforced().is_disjoint(
             &self.plugin.runas_gids()
         )
     }
@@ -581,7 +582,8 @@ struct PluginOptions {
     /// pair approve their session.
     ///
     /// Default: `[0]` (e.g., root)
-    gids_enforced: HashSet<gid_t>,
+    gids_enforced:   HashSet<gid_t>,
+    groups_enforced: HashSet<String>,
 
     /// `gids_exempted` is a comma-separated list of gids whose users
     /// will be exempted from the requirements of sudo_pair. Note that
@@ -592,7 +594,8 @@ struct PluginOptions {
     /// outages without needing to find a pair.
     ///
     /// Default: `[]` (however, root is *always* exempt)
-    gids_exempted: HashSet<gid_t>,
+    gids_exempted:   HashSet<gid_t>,
+    groups_exempted: HashSet<String>,
 }
 
 impl PluginOptions {
@@ -600,6 +603,28 @@ impl PluginOptions {
         self.binary_path.file_name().unwrap_or_else(||
             self.binary_path.as_os_str()
         ).as_bytes()
+    }
+
+    fn gids_enforced(&self) -> HashSet<gid_t> {
+        let gids_enforced : HashSet<gid_t> = self.groups_enforced
+            .iter()
+            .filter_map(|groupname| groupname_to_gid(groupname))
+            .chain(self.gids_enforced.clone())
+            .collect();
+
+        if gids_enforced.is_empty() {
+            return DEFAULT_GIDS_ENFORCED.iter().cloned().collect()
+        }
+
+        gids_enforced
+    }
+
+    fn gids_exempted(&self) -> HashSet<gid_t> {
+        self.groups_exempted
+            .iter()
+            .filter_map(|groupname| groupname_to_gid(groupname))
+            .chain(self.gids_exempted.clone())
+            .collect()
     }
 }
 
@@ -622,10 +647,24 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
             gids_enforced: map.get("gids_enforced")
-                .unwrap_or_else(|_| DEFAULT_GIDS_ENFORCED.iter().cloned().collect()),
+                .unwrap_or_default(),
+
+            groups_enforced: map.get("groups_enforced")
+                .unwrap_or_default(),
 
             gids_exempted: map.get("gids_exempted")
                 .unwrap_or_default(),
+
+            groups_exempted: map.get("groups_exempted")
+                .unwrap_or_default(),
         }
     }
+}
+
+/// Converts a POSIX `groupname` into its equivalent `gid` using `getgrnam(3)`.
+/// If the groupname cannot be found, returns `None`.
+fn groupname_to_gid(groupname: &str) -> Option<gid_t> {
+    CString::new(groupname).ok()
+        .and_then(|g| unsafe { libc::getgrnam(g.as_ptr()).as_ref() })
+        .map(|g| g.gr_gid)
 }

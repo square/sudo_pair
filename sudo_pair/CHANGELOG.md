@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- New `groups_exempted` and `groups_enforced` alternatives to `gids_exempted` and `gids_enforced`.
+
 ### Fixed
 - The `-u` and `-g` flags can now both be used in exempt sessions.
 

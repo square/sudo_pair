@@ -164,3 +164,4 @@ impl FromSudoOptionList for u32 {}
 impl FromSudoOptionList for i64 {}
 impl FromSudoOptionList for u64 {}
 impl FromSudoOptionList for PathBuf {}
+impl FromSudoOptionList for String {}

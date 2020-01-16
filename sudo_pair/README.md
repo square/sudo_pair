@@ -130,15 +130,19 @@ The full list of options are as follows:
 
   This is the path where this plugin will store sockets for sessions that are pending approval. This directory must be owned by root and only writable by root, or the plugin will abort.
 
-* `gids_enforced` (default: `0`)
+* `gids_enforced`, `groups_enforced` (default: `0`)
 
-  This is a comma-separated list of gids that sudo_pair will gate access to. If a user is `sudo`ing to a user that is a member of one of these groups, they will be required to have a pair approve their session.
+  These are comma-separated lists of gids and groupnames, respectively, that sudo_pair will gate acces to. If a user is `sudo`ing to a user that is a member of one of these groups, they will be required to have a pair approve their session. If either of these options are provided, the default will not be used.
 
-* `gids_exempted` (default: none)
+  If a particular groupname cannot be resolved into a gid, it will be silently ignored. If both options are provided, the effective value is their logical union after groupname to gid resolution.
 
-  This is a comma-separated list of gids whose users will be exempted from the requirements of sudo_pair. Note that this is not the opposite of the `gids_enforced` flag. Whereas `gids_enforced` gates access *to* groups, `gids_exempted` exempts users sudoing *from* groups. For instance, this setting can be used to ensure that oncall sysadmins can respond to outages without needing to find a pair.
+* `gids_exempted`, `groups_exempted` (default: none)
 
-  Note that root is *always* exempt.
+  These are comma-separated lists of gids and groupnames, respectively, whose users will be exempted from the requirements of sudo_pair. *Note that this is not the opposite of the `gids_enforced` flag.* Whereas `gids_enforced` gates access *to* groups, `gids_exempted` exempts users sudoing *from* groups. For instance, this setting can be used to ensure that oncall sysadmins can respond to outages without needing to find a pair.
+
+  Note that uid `0` (root) is *always* exempt.
+
+  If a particular groupname cannot be resolved into a gid, it will be silently ignored. If both options are provided, the effective value is their logical union after groupname to gid resolution.
 
 ## Prompts
 
