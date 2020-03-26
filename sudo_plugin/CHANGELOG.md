@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.2.0] - 2020-03-26
+
 ### Added
 - Automatic support for `-V` flag, which prints the version of `sudo` and any
   active plugins
@@ -32,5 +34,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Macros to simplify writing sudo plugins
 - Full compatibility with plugin API versions up to 1.12
 
-[Unreleased]: https://github.com/square/sudo_pair/compare/sudo_pair-v1.1.0...master
+[Unreleased]: https://github.com/square/sudo_pair/compare/sudo_pair-v1.2.0...master
+[1.2.0]:      https://github.com/square/sudo_pair/compare/sudo_pair-v1.1.0...sudo_pair-v1.2.0
 [1.1.0]:      https://github.com/square/sudo_pair/compare/sudo_pair-v1.0.0...sudo_pair-v1.1.0

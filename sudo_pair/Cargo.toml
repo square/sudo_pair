@@ -1,6 +1,6 @@
 [package]
 name    = "sudo_pair"
-version = "0.11.1"
+version = "1.0.0"
 license = "Apache-2.0"
 edition = "2018"
 
@@ -21,7 +21,7 @@ crate-type = ["cdylib"]
 [dependencies]
 libc        = '0'
 failure     = '0'
-sudo_plugin = { version = "1.1", path = "../sudo_plugin" }
+sudo_plugin = { version = "1.2", path = "../sudo_plugin" }
 
 [badges]
 travis-ci = { repository = "square/sudo_pair" }
