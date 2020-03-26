@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.0.0] - 2020-03-26
+
 ### Fixed
 - The `-u` and `-g` flags can now both be used in exempt sessions.
 
@@ -60,7 +62,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - First public release, stabilization pending feedback from the community
 
-[Unreleased]: https://github.com/square/sudo_pair/compare/sudo_pair-v0.11.0...master
+[Unreleased]: https://github.com/square/sudo_pair/compare/sudo_pair-v1.0.0...master
+[1.0.0]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.11.1...sudo_pair-v1.0.0
 [0.11.1]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.11.0...sudo_pair-v0.11.1
 [0.11.0]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.10.0...sudo_pair-v0.11.0
 [0.10.0]:     https://github.com/square/sudo_pair/compare/sudo_pair-v0.9.2...sudo_pair-v0.10.0

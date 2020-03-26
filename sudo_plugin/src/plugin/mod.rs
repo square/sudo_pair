@@ -30,8 +30,6 @@ use self::command_info::CommandInfo;
 use self::settings::Settings;
 use self::user_info::UserInfo;
 
-use sudo_plugin_sys;
-
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
