@@ -239,6 +239,88 @@ impl Plugin {
 
         set
     }
+
+    ///
+    /// Returns `true` if the user invoking sudo is not the same as the
+    /// effective user the command will be run under.
+    ///
+    pub fn is_sudoing_to_user(&self) -> bool {
+        self.user_info.uid != self.command_info.runas_euid
+    }
+
+    ///
+    /// Returns `true` if the group of the user invoking sudo is not the
+    /// same as the effective group the command will be run under.
+    ///
+    pub fn is_sudoing_to_group(&self) -> bool {
+        self.user_info.gid != self.command_info.runas_egid
+    }
+
+    ///
+    /// Returns `true` if the `-g` flag was provided.
+    ///
+    pub fn is_sudoing_to_explicit_group(&self) -> bool {
+        self.settings.runas_group.is_some()
+    }
+
+    ///
+    /// Returns `true` if the user invoking sudo is not the same as the
+    /// effective user the command will be run under *and* the `-g` flag
+    /// was provided. The latter is necessary as sudoing to a different
+    /// user will typically also cause the user to inherit a new primary
+    /// group (unless the `-P` flag is used).
+    ///
+    pub fn is_sudoing_to_user_and_group(&self) -> bool {
+        // if a user is doing `sudo -u ${u} -g ${g}`, we don't have a
+        // way to ensure that the pair can act with permissions of both
+        // the new user and the new group; ignoring this would allow
+        // someone to gain a group privilege through a pair who doesn't
+        // also have that group privilege
+        //
+        // note that we don't use `is_sudoing_to_group` because sudoing
+        // to a new user typically implicitly comes along with sudoing
+        // to a new group which is fine, what we want to avoid is the
+        // user explicitly providing a *different* group
+        if self.is_sudoing_to_user() && self.is_sudoing_to_explicit_group() {
+            return true
+        }
+
+        false
+    }
+
+    ///
+    /// Returns `true` if the command will be run under the same
+    /// `euid` and `egid` as the invoking user.
+    pub fn is_sudoing_to_themselves(&self) -> bool {
+        if !self.is_sudoing_to_user() && !self.is_sudoing_to_group() {
+            // if they're not sudoing to a new uid or to a new gid,
+            // they're just becoming themselves... right?
+            debug_assert_eq!(
+                self.runas_gids(),
+                self.user_info.groups.iter().cloned().collect()
+            );
+
+            return true;
+        }
+
+        false
+    }
+
+    ///
+    /// Returns `true` if the user invoking `sudo` is the owner of the
+    /// `sudo` binary (typically `root`).
+    ///
+    pub fn is_sudoing_from_root(&self) -> bool {
+        // theoretically, root's `uid` should be 0, but it's probably
+        // safest to check whatever user `sudo` is running as since sudo
+        // is pretty much by definition going to be running setuid;
+        // hypothetically with selinux someone could have sudo owned by
+        // some non-root user that has the caps needed for sudoing around
+        //
+        // note that the `euid` will always be the owner of the `sudo`
+        // binary
+        self.user_info.uid == self.user_info.euid
+    }
 }
 
 ///
