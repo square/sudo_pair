@@ -56,15 +56,9 @@
 #![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
 #![cfg_attr(feature="cargo-clippy", allow(clippy::type_complexity))]
 
-use libc::{c_int, c_uint};
+use std::os::raw::{c_int, c_uint};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-
-pub type sudo_printf_non_null_t = unsafe extern "C" fn(
-    msg_type:   ::std::os::raw::c_int,
-    fmt: *const ::std::os::raw::c_char,
-    ...
-) -> ::std::os::raw::c_int;
 
 pub const SUDO_API_VERSION: c_uint =
     SUDO_API_VERSION_MAJOR << 16 | SUDO_API_VERSION_MINOR;

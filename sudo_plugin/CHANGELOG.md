@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- Incorporated `plugin_name` and `plugin_version` into the `Plugin` struct
+
+### Changed
+- Wrapped `printf_facility` plugin argument into a dedicated `PrintFacility`
+  struct to wrap all user communication.
+- Moved much of the work done in the `sudo_io_plugin!` macro to non-macro code.
+
 ## [1.2.0] - 2020-03-26
 
 ### Added
