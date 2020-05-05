@@ -45,6 +45,13 @@ use libc::{c_char, c_int, c_uint, gid_t};
 /// values passed to the underlying `open` callback.
 #[allow(missing_debug_implementations)]
 pub struct Plugin {
+    /// The name of the plugin. This will be the generally be the same
+    /// as the name of the exported C struct.
+    pub plugin_name: String,
+
+    /// The version of the plugin.
+    pub plugin_version: Option<String>,
+
     /// The plugin API version supported by the invoked `sudo` command.
     pub version: Version,
 

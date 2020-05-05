@@ -72,8 +72,6 @@ macro_rules! sudo_io_plugin {
         static mut PLUGIN:   Option<::sudo_plugin::Plugin> = None;
         static mut INSTANCE: Option<$ty>                   = None;
 
-        const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
-
         #[no_mangle]
         #[allow(non_upper_case_globals)]
         #[allow(missing_docs)]
@@ -135,6 +133,8 @@ macro_rules! sudo_io_plugin {
             }
 
             let plugin = ::sudo_plugin::Plugin::new(
+                stringify!($name).into(),
+                option_env!("CARGO_PKG_VERSION").map(Into::into),
                 version,
                 argc, argv,
                 conversation,
@@ -157,8 +157,8 @@ macro_rules! sudo_io_plugin {
 
             // if the command is empty, to the best of my knowledge
             // we're being called with `-V` to report our version; in
-            // this case there's no reason to fully the plugin through
-            // its `open` function
+            // this case there's no reason to fully invoke the plugin
+            // through its `open` function
             if plugin.command_info.command == ::std::path::PathBuf::default() {
                 return ::sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS;
             }
@@ -180,9 +180,11 @@ macro_rules! sudo_io_plugin {
                 // bug that fires when you use a macro that expands to
                 // a literal (e.g., `stringify!`)
                 #[cfg_attr(feature="cargo-clippy", allow(clippy::write_literal))]
-                let _ = writeln!(plugin.stdout(),
+                let _ = writeln!(
+                    plugin.stdout(),
                     "{} I/O plugin version {}",
-                    stringify!($name), VERSION.unwrap_or("unknown")
+                    plugin.plugin_name,
+                    plugin.plugin_version.as_deref().unwrap_or("<unknown>"),
                 );
             }
 
@@ -283,7 +285,7 @@ macro_rules! sudo_io_fn {
             // write it out
             if let (Some(p), Err(e)) = ($plugin.as_ref(), result.as_ref()) {
                 let _ = p.stderr().write_error(
-                    stringify!($name).as_bytes(),
+                    p.plugin_name.as_bytes(),
                     e,
                 );
             }
