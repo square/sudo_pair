@@ -15,6 +15,7 @@
 use crate::errors::*;
 use super::option_map::*;
 
+use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use libc::{gid_t, pid_t, uid_t};
@@ -42,8 +43,10 @@ pub struct UserInfo {
     pub raw: OptionMap,
 }
 
-impl UserInfo {
-    pub fn try_from(value: OptionMap) -> Result<Self> {
+impl TryFrom<OptionMap> for UserInfo {
+    type Error = Error;
+
+    fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
             cwd:    value.get("cwd")?,
             egid:   value.get("egid")?,
