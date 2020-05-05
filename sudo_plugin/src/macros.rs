@@ -111,45 +111,33 @@ macro_rules! sudo_io_plugin {
             user_env_ptr:       *const *mut ::libc::c_char,
             plugin_options_ptr: *const *mut ::libc::c_char,
         ) -> ::libc::c_int {
-            unsafe fn stderr(
-                printf: ::sudo_plugin::sys::sudo_printf_t,
-                error:  &::sudo_plugin::errors::Error,
-            ) -> ::libc::c_int {
-                // if printf is a NULL pointer or if the `write_error`
-                // call fails, we don't really have anything productive
-                // to do
-                if let Some(printf) = printf {
-                    let printf = ::std::sync::Arc::new(
-                        ::std::sync::Mutex::new(printf)
-                    );
-
-                    let _ = ::sudo_plugin::Printf {
-                        facility: printf,
-                        level:    ::sudo_plugin::sys::SUDO_CONV_ERROR_MSG,
-                    }.write_error(stringify!($name).as_bytes(), error);
-                }
-
-                return error.as_sudo_io_plugin_open_retval();
-            }
+            let (mut stdout, mut stderr) = ::sudo_plugin::plugin::PrintFacility::new(
+                Some(stringify!($name)), plugin_printf
+            );
 
             let plugin = ::sudo_plugin::Plugin::new(
                 stringify!($name).into(),
                 option_env!("CARGO_PKG_VERSION").map(Into::into),
                 version,
                 argc, argv,
-                conversation,
-                plugin_printf,
                 settings_ptr,
                 user_info_ptr,
                 command_info_ptr,
                 user_env_ptr,
                 plugin_options_ptr,
+
+                stdout,
+                stderr.clone(), // we need stderr ourselves if `open` fails
+                conversation,
             );
 
             match plugin {
                 Ok(p)  => PLUGIN = Some(p),
-                Err(e) => return stderr(plugin_printf, &e),
-            }
+                Err(e) => {
+                    let _ = stderr.write_error(&e);
+                    return e.as_sudo_io_plugin_open_retval();
+                },
+            };
 
             // unwrap should be panic-safe here, since we just assigned
             // a value to $plugin
@@ -166,7 +154,11 @@ macro_rules! sudo_io_plugin {
             // call the plugin's `open` function
             match <$ty>::open(plugin) {
                 Ok(i)  => INSTANCE = Some(i),
-                Err(e) => return stderr(plugin_printf, &e.into()),
+                Err(e) => {
+                    let e: ::sudo_plugin::errors::Error = e.into();
+                    let _ = stderr.write_error(&e);
+                    return e.as_sudo_io_plugin_open_retval();
+                },
             }
 
             ::sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
@@ -257,10 +249,7 @@ macro_rules! sudo_io_fn {
             // if there was an error (and we can unwrap the plugin),
             // write it out
             if let (Some(p), Err(e)) = ($plugin.as_ref(), result.as_ref()) {
-                let _ = p.stderr().write_error(
-                    stringify!($name).as_bytes(),
-                    e,
-                );
+                let _ = p.stderr().write_error(&e);
             }
 
             result.as_sudo_io_plugin_log_retval()

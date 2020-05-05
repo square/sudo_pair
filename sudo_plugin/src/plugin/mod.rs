@@ -39,7 +39,6 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 use std::slice;
-use std::sync::{Arc, Mutex};
 
 use libc::{c_char, c_int, c_uint, gid_t};
 
@@ -85,8 +84,10 @@ pub struct Plugin {
     /// `plugin_options["disabled"] => "disabled"`).
     pub plugin_options: OptionMap,
 
-    printf:        Arc<Mutex<sudo_plugin_sys::sudo_printf_non_null_t>>,
-    _conversation: sudo_plugin_sys::sudo_conv_t,
+    stdout: PrintFacility,
+    stderr: PrintFacility,
+
+    _conversation: crate::sys::sudo_conv_t,
 }
 
 impl Plugin {
@@ -102,33 +103,37 @@ impl Plugin {
     #[cfg_attr(feature="cargo-clippy", allow(clippy::too_many_arguments))]
     #[cfg_attr(feature="cargo-clippy", allow(clippy::missing_safety_doc))]
     pub unsafe fn new(
+        plugin_name:    String,
+        plugin_version: Option<String>,
         version:        c_uint,
         argc:           c_int,
         argv:           *const *mut c_char,
-        conversation:   sudo_plugin_sys::sudo_conv_t,
-        plugin_printf:  sudo_plugin_sys::sudo_printf_t,
         settings:       *const *mut c_char,
         user_info:      *const *mut c_char,
         command_info:   *const *mut c_char,
         user_env:       *const *mut c_char,
         plugin_options: *const *mut c_char,
+        stdout:         PrintFacility,
+        stderr:         PrintFacility,
+        conversation:   crate::sys::sudo_conv_t,
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
 
-        // verify we've been given needed callbacks; we actually store the
-        // Option-wrapped variants (instead of unwrapping them) because
-        // those are the types the `sudo_plugin_sys` crate exports
-        let printf = plugin_printf.ok_or(ErrorKind::Uninitialized)?;
-        let _      = conversation .ok_or(ErrorKind::Uninitialized)?;
-
         // parse the argv into the command being run
-        let mut argv    = slice::from_raw_parts(argv, argc as usize).to_vec();
-        let     command = argv
-            .drain(..)
-            .map(|ptr| CStr::from_ptr(ptr).to_owned())
+        let mut argv = slice::from_raw_parts(
+            argv,
+            argc as usize
+        ).to_vec();
+
+        let command = argv
+            .iter_mut()
+            .map(|ptr| CStr::from_ptr(*ptr).to_owned())
             .collect();
 
         let plugin = Self {
+            plugin_name,
+            plugin_version,
+
             version,
             command,
 
@@ -140,7 +145,9 @@ impl Plugin {
             user_env:       OptionMap  ::from_raw(user_env as _),
             plugin_options: OptionMap  ::from_raw(plugin_options as _),
 
-            printf: Arc::new(Mutex::new(printf)),
+            stdout,
+            stderr,
+
             _conversation: conversation,
         };
 
@@ -151,22 +158,16 @@ impl Plugin {
     /// Returns a facility implementing `std::io::Write` that emits to
     /// the invoking user's STDOUT.
     ///
-    pub fn stdout(&self) -> Printf {
-        Printf {
-            facility: self.printf.clone(),
-            level:    sudo_plugin_sys::SUDO_CONV_INFO_MSG
-        }
+    pub fn stdout(&self) -> PrintFacility {
+        self.stdout.clone()
     }
 
     ///
     /// Returns a facility implementing `std::io::Write` that emits to
     /// the invoking user's STDERR.
     ///
-    pub fn stderr(&self) -> Printf {
-        Printf {
-            facility: self.printf.clone(),
-            level:    sudo_plugin_sys::SUDO_CONV_ERROR_MSG
-        }
+    pub fn stderr(&self) -> PrintFacility {
+        self.stderr.clone()
     }
 
     ///
@@ -270,85 +271,5 @@ impl Write for Tty {
 
     fn flush(&mut self) -> io::Result<()> {
         self.0.flush()
-    }
-}
-
-///
-/// A facility implementing `std::io::Write` that allows printing
-/// output to the user invoking `sudo`. Technically, the user may
-/// not be present on a local tty, but this will be wired up to a
-/// `printf`-like function that outputs to either STDOUT or STDERR.
-///
-#[derive(Debug)]
-pub struct Printf {
-    /// A *non-null* function pointer to a `sudo_printf_t` printf
-    /// facility
-    //
-    // TODO: non-nullness should be validated here
-    pub facility: Arc<Mutex<sudo_plugin_sys::sudo_printf_non_null_t>>,
-
-    /// A `sudo_conv_message` bitflag to indicate how and where the
-    /// message should be printed.
-    //
-    // TODO: level should be bitflags and validated
-    pub level: u32,
-}
-
-impl Printf {
-    ///
-    /// Writes a formatted error to the user via the configured
-    /// facility.
-    ///
-    pub fn write_error(&mut self, tag: &[u8], error: &Error) -> io::Result<()> {
-        // errors are prefixed with a newline for clarity, since they
-        // might be emitted while an existing line has output on it
-        let mut message = vec![b'\n'];
-        let mut stack   = vec![];
-
-        // this is necessary since error_chain::Iter doesn't implement
-        // `DoubleEndedIterator`, so we can't reverse it without pushing
-        // everything onto a vec first
-        for e in error.iter() {
-            stack.push(e);
-        }
-
-        for e in stack.iter().rev() {
-            message.extend_from_slice(tag);
-            message.extend_from_slice(format!(": {}", e).as_bytes());
-            message.push(b'\n');
-        }
-
-        self.write_all(&message[..]).and_then(|_| self.flush() )
-    }
-}
-
-impl Write for Printf {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let message = CString::new(buf).map_err(|err|
-            io::Error::new(io::ErrorKind::InvalidData, err)
-        )?;
-
-        let ret = unsafe {
-            // TODO: this should be bitflags at some point, but the
-            // cast is only necessary because Rust interprets the
-            // `#define`'d constants as `u32` when they're treated by
-            // sudo as `i32`.
-            #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_possible_wrap))]
-            (self.facility.lock().unwrap())(self.level as i32, message.as_ptr())
-        };
-
-        if ret == -1 {
-            return Err(io::Error::last_os_error());
-        }
-
-        // TODO: replace the cast, but for now we've checked for it
-        // being negative so there's no possibility of wraparound
-        #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_sign_loss))]
-        Ok(ret as _)
-    }
-
-    // TODO: is there any meaningful implementation of this method?
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
     }
 }
