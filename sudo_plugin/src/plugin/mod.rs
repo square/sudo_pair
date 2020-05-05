@@ -19,12 +19,14 @@ mod option_map;
 mod command_info;
 mod settings;
 mod user_info;
+mod print_facility;
 mod traits;
 
 use super::errors::*;
 use super::version::Version;
 
 pub use self::option_map::OptionMap;
+pub use self::print_facility::PrintFacility;
 
 use self::command_info::CommandInfo;
 use self::settings::Settings;
