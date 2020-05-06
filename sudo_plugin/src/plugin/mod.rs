@@ -32,6 +32,7 @@ use self::command_info::CommandInfo;
 use self::settings::Settings;
 use self::user_info::UserInfo;
 
+use std::convert::TryInto;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
@@ -137,13 +138,11 @@ impl Plugin {
             version,
             command,
 
-            // TODO(rust 1.27): convert `try_from` calls to `into` when
-            // the TryFrom trait stabilizes
-            settings:       Settings   ::try_from(OptionMap::from_raw(settings as _))?,
-            user_info:      UserInfo   ::try_from(OptionMap::from_raw(user_info as _))?,
-            command_info:   CommandInfo::try_from(OptionMap::from_raw(command_info as _))?,
-            user_env:       OptionMap  ::from_raw(user_env as _),
-            plugin_options: OptionMap  ::from_raw(plugin_options as _),
+            settings:       OptionMap::from_raw(settings as _).try_into()?,
+            user_info:      OptionMap::from_raw(user_info as _).try_into()?,
+            command_info:   OptionMap::from_raw(command_info as _).try_into()?,
+            user_env:       OptionMap::from_raw(user_env as _),
+            plugin_options: OptionMap::from_raw(plugin_options as _),
 
             stdout,
             stderr,

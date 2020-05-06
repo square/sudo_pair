@@ -15,6 +15,7 @@
 use crate::errors::*;
 use super::option_map::*;
 
+use std::convert::TryFrom;
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 
@@ -62,8 +63,10 @@ pub struct CommandInfo {
     pub raw: OptionMap,
 }
 
-impl CommandInfo {
-    pub fn try_from(value: OptionMap) -> Result<Self> {
+impl TryFrom<OptionMap> for CommandInfo {
+    type Error = Error;
+
+    fn try_from(value: OptionMap) -> Result<Self> {
         let runas_gid = value.get("runas_gid")
             .unwrap_or_else(|_| unsafe { libc::getegid() });
 
