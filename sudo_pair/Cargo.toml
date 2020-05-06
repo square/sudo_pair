@@ -18,10 +18,19 @@ keywords   = [ "sudo", "sudo-plugin", "dual-control", "sox" ]
 name       = "sudo_pair"
 crate-type = ["cdylib"]
 
+[features]
+default  = ["syslog"]
+journald = ["slog-journald"]
+syslog   = ["slog-syslog"]
+
 [dependencies]
 libc        = '0'
 failure     = '0'
+slog        = '2'
 sudo_plugin = { version = "1.2", path = "../sudo_plugin" }
+
+slog-journald = { version = "2",    optional = true }
+slog-syslog   = { version = "0.12", optional = true }
 
 [badges]
 travis-ci = { repository = "square/sudo_pair" }

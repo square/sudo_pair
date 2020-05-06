@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## Added
+- Structured logging to syslog and journald through the `slog` crate. Enabled
+  through an optional feature.
+
 ## [1.0.0] - 2020-03-26
 
 ### Fixed
