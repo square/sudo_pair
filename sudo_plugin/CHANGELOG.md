@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 - Incorporated `plugin_name` and `plugin_version` into the `Plugin` struct
+- `Drop::drop` is called on plugins when sudo exits
 
 ### Changed
 - Wrapped `printf_facility` plugin argument into a dedicated `PrintFacility`
