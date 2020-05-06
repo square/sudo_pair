@@ -16,16 +16,55 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let bindings_path = PathBuf::from(env::var("OUT_DIR").unwrap())
+        .join("bindings.rs");
 
-    bindgen::Builder::default()
-        .header("include/bindings.h")
-        // we provide a default sudo_plugin.h in case it's not available
-        // on the system
+    bindings::generate(&bindings_path);
+}
+
+#[cfg(not(feature = "generate_bindings"))]
+mod bindings {
+    use std::fs;
+    use std::path::Path;
+
+    #[cfg(target_arch = "x86_64")]
+    const TARGET_ARCH : &str = "x86-64";
+
+    #[cfg(target_arch = "x86")]
+    const TARGET_ARCH : &str = "x86";
+
+    const SUDO_PLUGIN_API_VERSIONS : &[&str] = &[
+        #[cfg(feature = "min_sudo_plugin_1_9")]
+        "1.9",
+
+        #[cfg(feature = "min_sudo_plugin_1_12")]
+        "1.12",
+    ];
+
+    pub fn generate(out_path: &Path) {
+        let in_path = format!(
+            "src/bindings/sudo_plugin-{}.{}.rs",
+            SUDO_PLUGIN_API_VERSIONS.last().unwrap(),
+            TARGET_ARCH,
+        );
+
+        fs::copy(in_path, out_path).unwrap();
+    }
+}
+
+#[cfg(feature = "generate_bindings")]
+mod bindings {
+    use bindgen::Builder;
+    use std::path::Path;
+
+    pub fn generate(out_path: &Path) {
+      Builder::default()
+        .clang_arg("-I /usr/include")
         .clang_arg("-I include")
+        .header("include/bindings.h")
         .generate()
-        .expect("Unable to generate bindings")
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+        .unwrap()
+        .write_to_file(out_path)
+        .unwrap()
+    }
 }
