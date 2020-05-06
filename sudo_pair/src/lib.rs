@@ -98,22 +98,61 @@ struct SudoPair {
     plugin:  &'static Plugin,
     options: PluginOptions,
     socket:  Option<Socket>,
+
+    slog: slog::Logger,
 }
 
 impl SudoPair {
     fn open(plugin: &'static Plugin) -> Result<Self> {
+        let mut slog = slog(
+            &plugin.plugin_name,
+            &plugin.plugin_version.as_deref().unwrap_or("<unknown>"),
+        );
+
+        slog::debug!(slog, "plugin initializing");
+
+        let args : Vec<_> = plugin.command.iter()
+            .skip(1)
+            .map (|arg| arg.to_string_lossy())
+            .collect();
+
+        slog = slog::Logger::new(&slog, slog::o!(
+            "uid"           => &plugin.user_info.uid,
+            "runas_euid"    => &plugin.command_info.runas_euid,
+            "runas_egid"    => &plugin.command_info.runas_egid,
+            "command"       => plugin.command_info.command.to_string_lossy().into_owned(),
+            "args"          => format!("{:?}", args),
+        ));
+
+        let options = PluginOptions::from(&plugin.plugin_options);
+
+        slog::debug!(slog, "initialized with plugin options:";
+             "plugin_options" => &options
+        );
+
         // TODO: convert all outgoing errors to be unauthorized errors
         let mut pair = Self {
             plugin,
-            options: PluginOptions::from(&plugin.plugin_options),
+            options,
             socket:  None,
+
+            slog,
         };
 
         if pair.is_exempt() {
+            slog::info!(pair.slog, "pair session exempt from pairing requirements");
+
             return Ok(pair)
         }
 
+        slog::info!(pair.slog, "pair session required");
+
         if pair.is_sudoing_to_user_and_group() {
+            slog::error!(pair.slog, "both -u and -g were provided to sudo"; slog::o!(
+                "user"  => &pair.plugin.settings.runas_user,
+                "group" => &pair.plugin.settings.runas_group,
+            ));
+
             return Err(ErrorKind::SudoToUserAndGroup.into());
         }
 
@@ -148,12 +187,18 @@ impl SudoPair {
         // through providing the token from their original user). This
         // shouldn't be too hard, but I haven't gotten around to it yet.
 
+        slog::info!(pair.slog, "pair session started");
+
         Ok(pair)
     }
 
     fn close(&mut self, _: i64, _: i64) {
+        slog::trace!(self.slog, "pair session ending");
+
         // if we have a socket, close it
         let _ = self.socket.as_mut().map(Socket::close);
+
+        slog::info!(self.slog, "pair session ended");
     }
 
     fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
@@ -186,6 +231,8 @@ impl SudoPair {
             socket.write_all(log)
         }).context(ErrorKind::SessionTerminated)?;
 
+        slog::trace!(self.slog, "{{{} bytes sent}}", log.len());
+
         Ok(())
     }
 
@@ -205,7 +252,14 @@ impl SudoPair {
             .and_then(|file| file.bytes().collect() )
             .unwrap_or_else(|_| DEFAULT_USER_PROMPT.into() );
 
+        slog::trace!(self.slog, "local prompt template loaded");
+
         let prompt = template_spec.expand(&template[..]);
+
+        // NOTE: I don't think it's adviseable to log the evaluated
+        // template here since it likely contains ANSI escape sequences
+        // that clear the terminal, adjust color/width, etc.
+        slog::trace!(self.slog, "local prompt template evaluated");
 
         // If sudo has detected the user's TTY, we try to print to it
         // directly. If we don't have a TTY or fail to open/write to
@@ -228,7 +282,7 @@ impl SudoPair {
         // EINVAL is raised by the underlying libc vfprintf call, which
         // appears to only be problematic if the underlying write fails.
         // As far as I can tell, this only happens if something isn't
-        // aligned correctly and the `fd` is opened with`O_DIRECT`. But
+        // aligned correctly and the `fd` is opened with `O_DIRECT`. But
         // it seems unlikely that STDIN is opened that way or that
         // anything Rust allocates is misaligned. The other possibility
         // is that STDIN is "unsuitable for writing" which also seems
@@ -237,15 +291,36 @@ impl SudoPair {
         // pick up where I left off.
         let _ = self.plugin.tty().as_mut()
             .and_then(|tty| tty.write_all(&prompt).ok() )
-            .ok_or_else(||self.plugin.stderr().write_all(&prompt));
+            .ok_or_else(|| self.plugin.stderr().write_all(&prompt));
+
+        slog::trace!(self.slog, "local prompt rendered");
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {
+        let slog = slog::Logger::new(&self.slog, slog::o!(
+            "socket_path" => self.socket_path().to_string_lossy().into_owned(),
+        ));
+
+        slog::debug!(slog, "socket initializing";
+            "socket_uid"  => self.socket_uid(),
+            "socket_gid"  => self.socket_gid(),
+            "socket_mode" => format!("{:#06o}", self.socket_mode()),
+        );
+
         if self.socket.is_some() {
+            slog::warn!(slog, "socket unexpectedly already initialized");
+
+            // TODO: this is probably an error, since we should never
+            // expect the socket to have already been created
             return Ok(());
         }
 
+        slog::info!(slog, "socket waiting for pair to connect...");
+
         // TODO: clearly indicate when the socket path is missing
+        // this is currently being hidden by the `context` method which
+        // ironically hides the extra context instead of providing extra
+        // context
         let socket = Socket::open(
             self.socket_path(),
             self.socket_uid(),
@@ -254,6 +329,8 @@ impl SudoPair {
         ).context(ErrorKind::CommunicationError)?;
 
         self.socket = Some(socket);
+
+        slog::info!(slog, "socket connected");
 
         Ok(())
     }
@@ -265,7 +342,11 @@ impl SudoPair {
             .and_then(|file| file.bytes().collect() )
             .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.into() );
 
+        slog::trace!(self.slog, "remote prompt loaded");
+
         let prompt = template_spec.expand(&template[..]);
+
+        slog::trace!(self.slog, "remote prompt evaluated");
 
         let socket = self.socket
             .as_mut()
@@ -277,11 +358,16 @@ impl SudoPair {
         socket.flush()
             .context(ErrorKind::CommunicationError)?;
 
+
+        slog::trace!(self.slog, "remote prompt rendered");
+
         // default `response` to something other than success, since
         // `read` might return without actually having written anything;
         // this prevents us from being required to check the number of
         // bytes actually read from `read`
         let mut response : [u8; 1] = [b'n'];
+
+        slog::debug!(self.slog, "remote prompt awaiting response...");
 
         // read exactly one byte back from the socket for the
         // response (`read_exact` isn't used because it will capture
@@ -291,20 +377,35 @@ impl SudoPair {
         let _ = socket.read(&mut response)
             .context(ErrorKind::SessionDeclined)?;
 
+        slog::debug!(self.slog, "remote pair responded";
+            "response" => String::from_utf8_lossy(&response[..]).into_owned(),
+        );
+
         // echo back out the response, since the client is anticipated
         // to be noecho
         let _ = socket.write_all(&response[..]);
         let _ = socket.write_all(b"\n");
 
         match &response {
-            b"y" | b"Y" => Ok(()),
-            _           => Err(ErrorKind::SessionDeclined.into()),
-        }
+            b"y" | b"Y" => (),
+            _           => {
+                slog::warn!(self.slog, "remote pair declined session");
+                return Err(ErrorKind::SessionDeclined.into());
+            }
+        };
+
+        slog::info!(self.slog, "remote pair approved session");
+
+        Ok(())
     }
 
     fn is_exempt(&self) -> bool {
         // root is always exempt
         if self.is_sudoing_from_root() {
+            slog::debug!(self.slog, "sudo initiated by root";
+                "user_info.uid" => self.plugin.user_info.uid,
+            );
+
             return true;
         }
 
@@ -312,30 +413,48 @@ impl SudoPair {
         // see any reason not to let them do it without approval since
         // they can already do everything as themselves anyway
         if self.is_sudoing_to_themselves() {
+            slog::debug!(self.slog, "sudo to current user";
+                "user_info.uid"          => self.plugin.user_info.uid,
+                "command_info.runas_uid" => self.plugin.command_info.runas_uid,
+            );
+
             return true;
         }
 
         // exempt if the approval command is the command being invoked
         if self.is_sudoing_approval_command() {
+            slog::debug!(self.slog, "sudo running approval command";
+                "command_info.command"       => self.plugin.command_info.command.to_string_lossy().into_owned(),
+                "plugin_options.binary_path" => self.options.binary_path.to_string_lossy().into_owned(),
+            );
+
             return true;
         }
 
         // policy plugins can inform us that logging is unnecessary
         if self.is_exempted_from_logging() {
+            slog::debug!(self.slog, "sudo command exempted from logging");
+
             return true;
         }
 
         // exempt if the user who's sudoing is in a group that's exempt
         // from having to pair
         if self.is_sudoing_from_exempted_gid() {
+            slog::debug!(self.slog, "sudo from exempt group id");
+
             return true;
         }
 
         // exempt if none of the gids of the user we're sudoing into are
         // in the set of gids we enforce pairing for
         if !self.is_sudoing_to_enforced_gid() {
+            slog::debug!(self.slog, "sudo to unenforced group id");
+
             return true;
         }
+
+        slog::debug!(self.slog, "sudo session requires a pair");
 
         false
     }
@@ -418,6 +537,9 @@ impl SudoPair {
     }
 
     fn is_sudoing_to_user(&self) -> bool {
+        // `plugin.settings.runas_user` tells us the value of `-u`, but
+        // by checking the change in uid, we can exclude cases where
+        // they're sudoing to themselves
         self.plugin.user_info.uid != self.plugin.command_info.runas_euid
     }
 
@@ -502,8 +624,6 @@ impl SudoPair {
     }
 
     fn template_spec(&self) -> Spec {
-        // TODO: document these somewhere useful for users of this plugin
-        // TODO: provide groupname of gid?
         // TODO: provide username of runas_euid?
         // TODO: provide groupname of runas_egid?
         let mut spec = Spec::with_escape(b'%');
@@ -543,6 +663,12 @@ impl SudoPair {
         spec.replace(b'W', self.plugin.user_info.cols.to_string());
 
         spec
+    }
+}
+
+impl Drop for SudoPair {
+    fn drop(&mut self) {
+        slog::debug!(self.slog, "plugin exiting");
     }
 }
 
@@ -628,4 +754,41 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
                 .unwrap_or_default(),
         }
     }
+}
+
+impl slog::Value for PluginOptions {
+    fn serialize(&self, _: &slog::Record<'_>, key: slog::Key, serializer: &mut dyn slog::Serializer) -> slog::Result {
+        serializer.emit_str(key, &format!("{:?}", self))
+    }
+}
+
+#[cfg(all(target_os = "macos", feature = "syslog"))]
+const SYSLOG_PATH: &str = "/private/var/run/syslog";
+
+#[cfg(all(not(target_os = "macos"), feature = "syslog"))]
+const SYSLOG_PATH: &str = "/dev/log";
+
+// TODO: can we only compile slog in when logging features are enabled?
+fn slog(name: &str, version: &str) -> slog::Logger {
+    use slog::Drain;
+
+    #[cfg(not(any(feature = "syslog", feature = "journald")))]
+    let drain = slog::Drain::Discard;
+
+    #[cfg(feature = "syslog")]
+    let drain = slog_syslog::SyslogBuilder::new()
+        .unix(SYSLOG_PATH)
+        .facility(slog_syslog::Facility::LOG_AUTH)
+        .start()
+        .unwrap() // TODO: remove unwrap
+        .ignore_res(); // TODO: handle errors
+
+    #[cfg(feature = "journald")]
+    let drain = slog_journald::JournaldDrain
+        .ignore_res(); // TODO: handle errors
+
+    slog::Logger::root(drain, slog::o!(
+        "plugin_name"    => name   .to_owned(),
+        "plugin_version" => version.to_owned()
+    ))
 }

@@ -85,7 +85,7 @@ macro_rules! sudo_io_plugin {
                     type_:            ::sudo_plugin::sys::SUDO_IO_PLUGIN,
                     version:          ::sudo_plugin::sys::SUDO_API_VERSION,
                     open:             Some(open),
-                    close:            None,
+                    close:            Some(close),
                     show_version:     Some(show_version),
                     log_ttyin:        None,
                     log_ttyout:       None,
@@ -164,6 +164,14 @@ macro_rules! sudo_io_plugin {
             ::sudo_plugin::sys::SUDO_PLUGIN_OPEN_SUCCESS
         }
 
+        unsafe extern "C" fn close(
+            _exit_status: ::libc::c_int,
+            _error:       ::libc::c_int,
+        ) {
+            // force the instance to be dropped
+            let _ = INSTANCE.take();
+        }
+
         unsafe extern "C" fn show_version(
             _verbose: ::libc::c_int,
         ) -> ::libc::c_int {
@@ -194,8 +202,8 @@ macro_rules! sudo_io_fn {
             exit_status: ::libc::c_int,
             error:       ::libc::c_int,
         ) {
-            if let Some(i) = $instance.as_mut() {
-                i.$fn(exit_status as _, error as _)
+            if let Some(mut i) = $instance.take() {
+                i.$fn(exit_status as _, error as _);
             }
         }
 
