@@ -67,3 +67,21 @@ pub const SUDO_PLUGIN_OPEN_SUCCESS       : c_int =  1;
 pub const SUDO_PLUGIN_OPEN_FAILURE       : c_int =  0;
 pub const SUDO_PLUGIN_OPEN_GENERAL_ERROR : c_int = -1;
 pub const SUDO_PLUGIN_OPEN_USAGE_ERROR   : c_int = -2;
+
+pub const IO_PLUGIN_EMPTY : io_plugin = io_plugin {
+    type_:            SUDO_IO_PLUGIN,
+    version:          SUDO_API_VERSION,
+    open:             None,
+    close:            None,
+    show_version:     None,
+    log_ttyin:        None,
+    log_ttyout:       None,
+    log_stdin:        None,
+    log_stdout:       None,
+    log_stderr:       None,
+    register_hooks:   None,
+    deregister_hooks: None,
+
+    #[cfg(feature = "min_sudo_plugin_1_12")]
+    change_winsize: None,
+};

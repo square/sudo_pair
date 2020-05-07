@@ -87,14 +87,7 @@ macro_rules! sudo_io_plugin {
                     open:             Some(open),
                     close:            Some(close),
                     show_version:     Some(show_version),
-                    log_ttyin:        None,
-                    log_ttyout:       None,
-                    log_stdin:        None,
-                    log_stdout:       None,
-                    log_stderr:       None,
-                    register_hooks:   None,
-                    deregister_hooks: None,
-                    change_winsize:   None,
+                    .. ::sudo_plugin::sys::IO_PLUGIN_EMPTY
                 }
             }
         };

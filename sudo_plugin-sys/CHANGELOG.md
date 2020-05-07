@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- Reimplemented direct-commit of bindgen-generated bindings. Bindings
+  are generated for 64-bit and 32-bit targets, but bindings can be
+  generated at compile-time with an optional feature.
+- Support for newer sudo_plugin API features can be enabled with
+  optional features, that opt in to pregenerated bindings for more
+  recent versions of `sudo_plugin.h`.
+
 ### Removed
 
 - Removed `sudo_printf_non_null_t`.
