@@ -20,6 +20,7 @@ mod command_info;
 mod settings;
 mod user_info;
 mod print_facility;
+mod conv_prompt;
 mod traits;
 
 use super::errors::*;
@@ -27,6 +28,7 @@ use super::version::Version;
 
 pub use self::option_map::OptionMap;
 pub use self::print_facility::PrintFacility;
+pub use self::conv_prompt::ConversationPrompt;
 
 use self::command_info::CommandInfo;
 use self::settings::Settings;
@@ -151,6 +153,10 @@ impl Plugin {
         };
 
         Ok(plugin)
+    }
+
+    pub fn communicate(&self, prompts: Vec<ConversationPrompt>) {
+        
     }
 
     ///
