@@ -1,11 +1,13 @@
 use crate::sys;
 
 use std::sync::{Arc, Mutex};
-use sudo_plugin_sys::{sudo_conv_t, sudo_conv_message};
+use sudo_plugin_sys::{sudo_conv_t, sudo_conv_message, sudo_conv_reply};
 use std::io;
 use std::ffi::CString;
+use std::mem;
+use std::ptr;
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 #[repr(u32)]
 pub enum ConvMsgType {
     ConvPromptEchoOff  = sys::SUDO_CONV_PROMPT_ECHO_OFF, /* do not echo user input */
@@ -18,6 +20,7 @@ pub enum ConvMsgType {
     //ConvPreferTTY      = sys::SUDO_CONV_PREFER_TTY, /* flag: use tty if possible */
 }
 
+#[derive(Clone, Debug)]
 pub struct ConversationPrompt {
     pub msg_type: ConvMsgType,
     pub timeout: i32,
@@ -25,8 +28,11 @@ pub struct ConversationPrompt {
 }
 
 impl ConversationPrompt {
-    fn convert_to_conv_message(self) -> Result<sudo_conv_message, &'static str> {
-        let message = CString::new(self.msg).expect("Couldn't create cstring");
+    fn convert_to_conv_message(&self) -> io::Result<sudo_conv_message> {
+        // TODO: can I get rid of this clone?
+        let message = CString::new(self.msg.clone()).map_err(|err|
+            io::Error::new(io::ErrorKind::Other, err)
+        )?;
 
         Ok(sudo_conv_message {
             msg_type: self.msg_type as i32,
@@ -47,24 +53,45 @@ impl ConversationFacility {
         Self { facility: conv }
     }
 
-    pub fn communicate(&mut self, mut prompts: Vec<ConversationPrompt>) -> io::Result<()> {
+    pub fn communicate(&mut self, prompts: &[ConversationPrompt]) -> io::Result<()> {
         let guard = self.facility.lock().map_err(|_err|
             io::Error::new(io::ErrorKind::Other, "couldn't aquire conversation mutex")
         )?;
         
         // check that a conversation pointer was provided
-        let _conv = guard.ok_or_else(||
+        let conv = guard.ok_or_else(||
             io::Error::new(io::ErrorKind::NotConnected, "no conv pntr provided")
         )?;
 
         // convert ConversationPrompt to sudo_conv_message and store it in an array
-        // also create a cstring to store the responses
-        prompts.shrink_to_fit();
-        let ptr = prompts.as_mut_ptr();
-        let len = prompts.len();
-        
-        // call the conversations API
+        let mut sudo_conv_prompts: Vec<sudo_conv_message> = prompts.iter()
+            .map(|x| x.convert_to_conv_message())
+            .collect::<io::Result<Vec<sudo_conv_message>>>()?;
+        sudo_conv_prompts.shrink_to_fit();
+        let prompt_ptr = sudo_conv_prompts.as_mut_ptr();
+        let len = sudo_conv_prompts.len() as i32;
+        // make sure that sudo_conv_prompts doesn't get dealloced by rust
+        mem::forget(sudo_conv_prompts);
+        // make the responses vector
+        let mut replies = Vec::new();
+        for _ in 0..len {
+            let reply_string = CString::new("").map_err(|err|
+                io::Error::new(io::ErrorKind::InvalidData, err)
+            )?;
+            replies.push(sudo_conv_reply {
+                reply: reply_string.into_raw()
+            });
+        }
+        replies.shrink_to_fit();
+        let reply_ptr = replies.as_mut_ptr();
+        // TODO: do I need to forget this here?
+        //mem::forget(replies);
 
+        // call the conversations API
+        let _count = unsafe {
+            // (num_msgs, msgs[], replies[], callback*)
+            (conv)(len, prompt_ptr, reply_ptr, ptr::null_mut())
+        };
         Ok(())
     }
 }
