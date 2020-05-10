@@ -155,10 +155,6 @@ impl Plugin {
         Ok(plugin)
     }
 
-    pub fn communicate(&self, prompts: Vec<ConversationPrompt>) {
-        
-    }
-
     ///
     /// Returns a facility implementing `std::io::Write` that emits to
     /// the invoking user's STDOUT.

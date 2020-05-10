@@ -1,7 +1,9 @@
 use crate::sys;
 
 use std::sync::{Arc, Mutex};
-use sudo_plugin_sys::sudo_conv_t;
+use sudo_plugin_sys::{sudo_conv_t, sudo_conv_message};
+use std::io;
+use std::ffi::CString;
 
 #[derive(Clone, Debug)]
 #[repr(u32)]
@@ -22,6 +24,47 @@ pub struct ConversationPrompt {
     pub msg: String
 }
 
+impl ConversationPrompt {
+    fn convert_to_conv_message(self) -> Result<sudo_conv_message, &'static str> {
+        let message = CString::new(self.msg).expect("Couldn't create cstring");
+
+        Ok(sudo_conv_message {
+            msg_type: self.msg_type as i32,
+            timeout: self.timeout,
+            msg: message.as_ptr()
+        })
+    } 
+}
+
 pub struct ConversationFacility {
     facility: Arc<Mutex<sudo_conv_t>>,
+}
+
+impl ConversationFacility {
+    #[must_use]
+    pub unsafe fn new(conv: sudo_conv_t) -> Self {
+        let conv = Arc::new(Mutex::new(conv));
+        Self { facility: conv }
+    }
+
+    pub fn communicate(&mut self, mut prompts: Vec<ConversationPrompt>) -> io::Result<()> {
+        let guard = self.facility.lock().map_err(|_err|
+            io::Error::new(io::ErrorKind::Other, "couldn't aquire conversation mutex")
+        )?;
+        
+        // check that a conversation pointer was provided
+        let _conv = guard.ok_or_else(||
+            io::Error::new(io::ErrorKind::NotConnected, "no conv pntr provided")
+        )?;
+
+        // convert ConversationPrompt to sudo_conv_message and store it in an array
+        // also create a cstring to store the responses
+        prompts.shrink_to_fit();
+        let ptr = prompts.as_mut_ptr();
+        let len = prompts.len();
+        
+        // call the conversations API
+
+        Ok(())
+    }
 }
