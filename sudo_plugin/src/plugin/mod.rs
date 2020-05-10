@@ -20,7 +20,8 @@ mod command_info;
 mod settings;
 mod user_info;
 mod print_facility;
-mod conv_facility;
+/// conv_facility exposes the conversation API
+pub mod conv_facility;
 mod traits;
 
 use super::errors::*;
