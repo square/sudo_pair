@@ -27,6 +27,11 @@ pub struct ConversationPrompt {
     pub msg: String
 }
 
+#[derive(Clone, Debug)]
+pub struct ConversationReply {
+    pub reply: String
+}
+
 impl ConversationPrompt {
     fn convert_to_conv_message(&self) -> io::Result<sudo_conv_message> {
         // TODO: can I get rid of this clone?
@@ -42,6 +47,7 @@ impl ConversationPrompt {
     } 
 }
 
+#[derive(Clone, Debug)]
 pub struct ConversationFacility {
     facility: Arc<Mutex<sudo_conv_t>>,
 }
@@ -70,8 +76,10 @@ impl ConversationFacility {
         sudo_conv_prompts.shrink_to_fit();
         let prompt_ptr = sudo_conv_prompts.as_mut_ptr();
         let len = sudo_conv_prompts.len() as i32;
+        
         // make sure that sudo_conv_prompts doesn't get dealloced by rust
         mem::forget(sudo_conv_prompts);
+        
         // make the responses vector
         let mut replies = Vec::new();
         for _ in 0..len {
@@ -92,6 +100,13 @@ impl ConversationFacility {
             // (num_msgs, msgs[], replies[], callback*)
             (conv)(len, prompt_ptr, reply_ptr, ptr::null_mut())
         };
+
+        // TODO: change to creating a real return value
+        unsafe {
+            for reply in replies {
+                print!("{:?}", CString::from_raw(reply.reply));
+            }
+        }
         Ok(())
     }
 }

@@ -107,6 +107,9 @@ macro_rules! sudo_io_plugin {
             let (mut stdout, mut stderr) = ::sudo_plugin::plugin::PrintFacility::new(
                 Some(stringify!($name)), plugin_printf
             );
+            let conversaton_f = ::sudo_plugin::plugin::ConversationFacility::new(
+                conversation
+            );
 
             let plugin = ::sudo_plugin::Plugin::new(
                 stringify!($name).into(),
@@ -122,6 +125,7 @@ macro_rules! sudo_io_plugin {
                 stdout,
                 stderr.clone(), // we need stderr ourselves if `open` fails
                 conversation,
+                conversaton_f,
             );
 
             match plugin {

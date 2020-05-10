@@ -28,7 +28,7 @@ use super::version::Version;
 
 pub use self::option_map::OptionMap;
 pub use self::print_facility::PrintFacility;
-pub use self::conv_facility::ConversationPrompt;
+pub use self::conv_facility::ConversationFacility;
 
 use self::command_info::CommandInfo;
 use self::settings::Settings;
@@ -90,6 +90,8 @@ pub struct Plugin {
     stdout: PrintFacility,
     stderr: PrintFacility,
 
+    conversation_f: ConversationFacility,
+
     _conversation: crate::sys::sudo_conv_t,
 }
 
@@ -119,6 +121,7 @@ impl Plugin {
         stdout:         PrintFacility,
         stderr:         PrintFacility,
         conversation:   crate::sys::sudo_conv_t,
+        conversation_f: ConversationFacility,
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
 
@@ -150,6 +153,7 @@ impl Plugin {
             stderr,
 
             _conversation: conversation,
+            conversation_f
         };
 
         Ok(plugin)
@@ -169,6 +173,14 @@ impl Plugin {
     ///
     pub fn stderr(&self) -> PrintFacility {
         self.stderr.clone()
+    }
+
+    ///
+    /// Returns a facility implementing `std::io::Write` that emits to
+    /// the invoking user's STDERR.
+    ///
+    pub fn conversation(&self) -> ConversationFacility {
+        self.conversation_f.clone()
     }
 
     ///
