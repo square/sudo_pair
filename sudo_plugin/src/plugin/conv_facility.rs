@@ -59,7 +59,8 @@ impl ConversationPrompt {
         Ok(sudo_conv_message {
             msg_type: self.msg_type as i32,
             timeout: self.timeout,
-            msg: message.as_ptr()
+            // msg: message.as_ptr()
+            msg: message.into_raw()
         })
     } 
 }
@@ -81,7 +82,7 @@ impl ConversationFacility {
 
     /// Take in a slice of ConversationPrompts and call the communicate() API exposed by
     /// the sudo plugin. Will return a slice of ConversationReply
-    pub fn communicate(&mut self, prompts: &[ConversationPrompt]) -> io::Result<()> {
+    pub fn communicate(&mut self, prompts: &[ConversationPrompt]) -> io::Result<i32> {
         let guard = self.facility.lock().map_err(|_err|
             io::Error::new(io::ErrorKind::Other, "couldn't aquire conversation mutex")
         )?;
@@ -105,30 +106,31 @@ impl ConversationFacility {
         // make the responses vector
         let mut replies = Vec::new();
         for _ in 0..len {
-            let reply_string = CString::new("").map_err(|err|
-                io::Error::new(io::ErrorKind::InvalidData, err)
-            )?;
+            // let reply_string = CString::new("").map_err(|err|
+            //     io::Error::new(io::ErrorKind::InvalidData, err)
+            // )?;
             replies.push(sudo_conv_reply {
-                reply: reply_string.into_raw()
+                reply: ptr::null_mut()
             });
         }
         replies.shrink_to_fit();
         let reply_ptr = replies.as_mut_ptr();
         // TODO: do I need to forget this here?
-        //mem::forget(replies);
+        mem::forget(replies);
 
         // call the conversations API
-        let _count = unsafe {
+        let count = unsafe {
             // (num_msgs, msgs[], replies[], callback*)
             (conv)(len, prompt_ptr, reply_ptr, ptr::null_mut())
         };
+        
 
         // TODO: change to creating a real return value
-        unsafe {
-            for reply in replies {
-                print!("{:?}", CString::from_raw(reply.reply));
-            }
-        }
-        Ok(())
+        // unsafe {
+        //     for reply in replies {
+        //         print!("{:?}", CString::from_raw(reply.reply));
+        //     }
+        // }
+        Ok(count)
     }
 }
