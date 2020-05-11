@@ -6,6 +6,7 @@ use std::io;
 use std::ffi::CString;
 use std::mem;
 use std::ptr;
+use std::slice;
 
 /// ConvMsgType is the type of conversation promp as specified by 
 /// the sudo plugin
@@ -46,6 +47,18 @@ pub struct ConversationReply {
     /// The reply by the user
     pub reply: String
 }
+impl ConversationReply {
+    fn from_conv_reply(scr: &sudo_conv_reply) -> Option<ConversationReply> {
+        if scr.reply == ptr::null_mut() {
+            return None;
+        }
+        unsafe { 
+            return Some( ConversationReply {
+                reply: CString::from_raw(scr.reply).into_string().expect("error converting reply to String")
+            });
+        }
+    }
+}
 
 impl ConversationPrompt {
     /// This is an internal method for converting a ConversationPrompt to the
@@ -82,7 +95,7 @@ impl ConversationFacility {
 
     /// Take in a slice of ConversationPrompts and call the communicate() API exposed by
     /// the sudo plugin. Will return a slice of ConversationReply
-    pub fn communicate(&mut self, prompts: &[ConversationPrompt]) -> io::Result<i32> {
+    pub fn communicate(&mut self, prompts: &[ConversationPrompt]) -> io::Result<Vec<Option<ConversationReply>>> {
         let guard = self.facility.lock().map_err(|_err|
             io::Error::new(io::ErrorKind::Other, "couldn't aquire conversation mutex")
         )?;
@@ -106,9 +119,6 @@ impl ConversationFacility {
         // make the responses vector
         let mut replies = Vec::new();
         for _ in 0..len {
-            // let reply_string = CString::new("").map_err(|err|
-            //     io::Error::new(io::ErrorKind::InvalidData, err)
-            // )?;
             replies.push(sudo_conv_reply {
                 reply: ptr::null_mut()
             });
@@ -123,6 +133,13 @@ impl ConversationFacility {
             // (num_msgs, msgs[], replies[], callback*)
             (conv)(len, prompt_ptr, reply_ptr, ptr::null_mut())
         };
+
+        let creplies: &[sudo_conv_reply] = unsafe {
+            slice::from_raw_parts(reply_ptr, len as usize)
+        };
+        let replies = creplies.iter().map(|x| ConversationReply::from_conv_reply(x))
+            .collect::<Vec<Option<ConversationReply>>>();
+
         
 
         // TODO: change to creating a real return value
@@ -131,6 +148,6 @@ impl ConversationFacility {
         //         print!("{:?}", CString::from_raw(reply.reply));
         //     }
         // }
-        Ok(count)
+        Ok(replies)
     }
 }
