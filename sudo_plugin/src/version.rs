@@ -13,18 +13,12 @@
 // permissions and limitations under the License.
 
 use crate::errors::*;
+use crate::sys::SUDO_API_VERSION;
 
 use std::fmt;
+use std::os::raw::c_uint;
 
-use libc::c_uint;
-
-const MINIMUM_MAJOR: u16 = 1;
-const MINIMUM_MINOR: u16 = 9;
-
-const MINIMUM: Version = Version {
-    major: MINIMUM_MAJOR,
-    minor: MINIMUM_MINOR,
-};
+const MINIMUM: Version = Version::from_ffi(SUDO_API_VERSION);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Version {
@@ -33,7 +27,18 @@ pub struct Version {
 }
 
 impl Version {
-    pub fn minimum() -> &'static Self {
+    pub const fn new(major: u16, minor: u16) -> Self {
+        Self { major, minor }
+    }
+
+    pub const fn from_ffi(version: c_uint) -> Self {
+        Self::new(
+            (version >> 16)     as _,
+            (version &  0xffff) as _,
+        )
+    }
+
+    pub const fn minimum() -> &'static Self {
         &MINIMUM
     }
 
@@ -51,12 +56,8 @@ impl Version {
 }
 
 impl From<c_uint> for Version {
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_possible_truncation))]
     fn from(version: c_uint) -> Self {
-        Self {
-            major: (version >> 16)     as _,
-            minor: (version &  0xffff) as _,
-        }
+        Self::from_ffi(version)
     }
 }
 

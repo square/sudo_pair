@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Wrapped `printf_facility` plugin argument into a dedicated `PrintFacility`
   struct to wrap all user communication.
 - Moved much of the work done in the `sudo_io_plugin!` macro to non-macro code.
+- Autodetect what version of the `sudo_plugin` API is supported by the version
+  of `sudo_plugin-sys` we're linked against.
 
 ## [1.2.0] - 2020-03-26
 
