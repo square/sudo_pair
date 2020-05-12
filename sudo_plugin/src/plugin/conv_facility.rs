@@ -68,14 +68,14 @@ pub struct ConversationReply {
 
 impl ConversationReply {
     /// Internal method for converting sudo_conv_reply to Option<ConversationReply> to expose only safe APIs
-    fn from_conv_reply(scr: &sudo_conv_reply) -> Option<ConversationReply> {
-        if scr.reply == ptr::null_mut() {
+    fn from_conv_reply(scr: sudo_conv_reply) -> Option<ConversationReply> {
+        if scr.reply.is_null() {
             return None;
         }
         unsafe { 
-            return Some( ConversationReply {
+            Some( ConversationReply {
                 reply: CString::from_raw(scr.reply).into_string().expect("error converting reply to String")
-            });
+            })
         }
     }
 }
@@ -89,6 +89,12 @@ pub struct ConversationFacility {
 impl ConversationFacility {
     /// Constructs a new `ConversationFacility` that emits output and gets user input
     /// as part of the Conversations API exposed by sudo
+    /// # Safety
+    ///
+    /// This function *must* be provided with either a `None` or a real pointer
+    /// to a `sudo_conv_t`-style function. Once provided to this function, the
+    /// function pointer should be discarded at never used, as it is unsafe for
+    /// this function to be called concurrently.
     #[must_use]
     pub unsafe fn new(conv: sudo_conv_t) -> Self {
         let conv = Arc::new(Mutex::new(conv));
@@ -141,7 +147,7 @@ impl ConversationFacility {
         let creplies: &[sudo_conv_reply] = unsafe {
             slice::from_raw_parts(reply_ptr, len as usize)
         };
-        let replies = creplies.iter().map(|x| ConversationReply::from_conv_reply(x))
+        let replies = creplies.iter().map(|x| ConversationReply::from_conv_reply(*x))
             .collect::<Vec<Option<ConversationReply>>>();
         Ok(replies)
     }
