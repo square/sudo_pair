@@ -13,18 +13,18 @@ use std::slice;
 #[derive(Copy, Clone, Debug)]
 #[repr(u32)]
 pub enum ConvMsgType {
-    /// Don't echo user input
-    ConvPromptEchoOff  = sys::SUDO_CONV_PROMPT_ECHO_OFF, /* do not echo user input */
+    /// Do not echo user input
+    ConvPromptEchoOff  = sys::SUDO_CONV_PROMPT_ECHO_OFF,
     /// Echo user input
-    ConvPromptEchoOn   = sys::SUDO_CONV_PROMPT_ECHO_ON, /* echo user input */
+    ConvPromptEchoOn   = sys::SUDO_CONV_PROMPT_ECHO_ON,
     /// The prompt is an Error Message
-    ConvErrorMsg       = sys::SUDO_CONV_ERROR_MSG, /* error message */
-    /// The prompt is an Info message
-    ConvInfoMsg        = sys::SUDO_CONV_INFO_MSG, /* informational message */
+    ConvErrorMsg       = sys::SUDO_CONV_ERROR_MSG,
+    /// The prompt is an informational message
+    ConvInfoMsg        = sys::SUDO_CONV_INFO_MSG,
     /// Mask user input
-    ConvPrompMask      = sys::SUDO_CONV_PROMPT_MASK, /* mask user input */
+    ConvPrompMask      = sys::SUDO_CONV_PROMPT_MASK,
     /// Allows for echo if no TTY
-    ConvPromptEchoOk   = sys::SUDO_CONV_PROMPT_ECHO_OK, /* flag: allow echo if no tty */
+    ConvPromptEchoOk   = sys::SUDO_CONV_PROMPT_ECHO_OK,
     // This is only available on plugin version 1.14 which isn't supported yet
     //ConvPreferTTY      = sys::SUDO_CONV_PREFER_TTY, /* flag: use tty if possible */
 }
@@ -35,29 +35,10 @@ pub enum ConvMsgType {
 pub struct ConversationPrompt {
     /// The type of prompt
     pub msg_type: ConvMsgType,
-    /// The timeout for the prompt
+    /// The timeout for the prompt. 0 is no timeout
     pub timeout: i32,
     /// The message to be displayed
     pub msg: String
-}
-
-/// ConversationReply is the reply (if any) from the user to our promt
-#[derive(Clone, Debug)]
-pub struct ConversationReply {
-    /// The reply by the user
-    pub reply: String
-}
-impl ConversationReply {
-    fn from_conv_reply(scr: &sudo_conv_reply) -> Option<ConversationReply> {
-        if scr.reply == ptr::null_mut() {
-            return None;
-        }
-        unsafe { 
-            return Some( ConversationReply {
-                reply: CString::from_raw(scr.reply).into_string().expect("error converting reply to String")
-            });
-        }
-    }
 }
 
 impl ConversationPrompt {
@@ -77,6 +58,28 @@ impl ConversationPrompt {
         })
     } 
 }
+
+/// ConversationReply is the reply (if any) from the user to our promt
+#[derive(Clone, Debug)]
+pub struct ConversationReply {
+    /// The reply by the user
+    pub reply: String
+}
+
+impl ConversationReply {
+    fn from_conv_reply(scr: &sudo_conv_reply) -> Option<ConversationReply> {
+        if scr.reply == ptr::null_mut() {
+            return None;
+        }
+        unsafe { 
+            return Some( ConversationReply {
+                reply: CString::from_raw(scr.reply).into_string().expect("error converting reply to String")
+            });
+        }
+    }
+}
+
+
 
 /// A facility implementing the Conversations API
 #[derive(Clone, Debug)]
@@ -125,29 +128,22 @@ impl ConversationFacility {
         }
         replies.shrink_to_fit();
         let reply_ptr = replies.as_mut_ptr();
-        // TODO: do I need to forget this here?
+        // Make sure replies doesn't get deallocated
         mem::forget(replies);
 
-        // call the conversations API
-        let count = unsafe {
-            // (num_msgs, msgs[], replies[], callback*)
+        // call the conversations API and handle errors
+        let cresult = unsafe {
             (conv)(len, prompt_ptr, reply_ptr, ptr::null_mut())
         };
-
+        if cresult == -1 {
+            return Err(io::Error::new(io::ErrorKind::Other, "Error calling conversation API"));
+        }
+        // Convert the replies into ConversationReply structs and return
         let creplies: &[sudo_conv_reply] = unsafe {
             slice::from_raw_parts(reply_ptr, len as usize)
         };
         let replies = creplies.iter().map(|x| ConversationReply::from_conv_reply(x))
             .collect::<Vec<Option<ConversationReply>>>();
-
-        
-
-        // TODO: change to creating a real return value
-        // unsafe {
-        //     for reply in replies {
-        //         print!("{:?}", CString::from_raw(reply.reply));
-        //     }
-        // }
         Ok(replies)
     }
 }
