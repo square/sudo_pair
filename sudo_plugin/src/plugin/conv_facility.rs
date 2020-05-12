@@ -8,7 +8,7 @@ use std::mem;
 use std::ptr;
 use std::slice;
 
-/// ConvMsgType is the type of conversation promp as specified by 
+/// ConvMsgType is the type of conversation prompt as specified by 
 /// the sudo plugin
 #[derive(Copy, Clone, Debug)]
 #[repr(u32)]
@@ -67,6 +67,7 @@ pub struct ConversationReply {
 }
 
 impl ConversationReply {
+    /// Internal method for converting sudo_conv_reply to Option<ConversationReply> to expose only safe APIs
     fn from_conv_reply(scr: &sudo_conv_reply) -> Option<ConversationReply> {
         if scr.reply == ptr::null_mut() {
             return None;
@@ -78,8 +79,6 @@ impl ConversationReply {
         }
     }
 }
-
-
 
 /// A facility implementing the Conversations API
 #[derive(Clone, Debug)]
