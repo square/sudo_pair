@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for newer sudo_plugin API features can be enabled with
   optional features, that opt in to pregenerated bindings for more
   recent versions of `sudo_plugin.h`.
+- Added constants for log function return values.
 
 ### Removed
 

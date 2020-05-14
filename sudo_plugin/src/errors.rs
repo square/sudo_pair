@@ -24,34 +24,11 @@
 
 use crate::version::Version;
 
-use std::fmt;
-
 use sudo_plugin_sys as sys;
 use libc::c_int;
 use error_chain::*;
 
 pub use error_chain::bail;
-
-/// The list of supported facilities to communicate with the end-user.
-#[derive(Clone, Copy, Debug)]
-pub enum IoFacility {
-    /// A printf-style function that can be used for one-way communication
-    /// with the invoking user.
-    PluginPrintf,
-
-    /// A more complicated facility that enables two-way communication
-    /// with the invoking user.
-    Conversation,
-}
-
-impl fmt::Display for IoFacility {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            IoFacility::PluginPrintf => write!(f, "plugin_printf"),
-            IoFacility::Conversation => write!(f, "conversation"),
-        }
-    }
-}
 
 error_chain! {
     errors {
@@ -109,7 +86,7 @@ impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval for ::std::result::Result<T, E
 
     fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
-            Ok(_)      => sys::SUDO_PLUGIN_OPEN_SUCCESS,
+            Ok(_)      => sys::SUDO_PLUGIN_LOG_OK,
             Err(ref e) => e.as_sudo_io_plugin_log_retval(),
         }
     }
@@ -125,8 +102,8 @@ impl AsSudoPluginRetval for Error {
 
     fn as_sudo_io_plugin_log_retval(&self) -> c_int {
         match *self {
-            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_OPEN_FAILURE,
-            Error(_, _)                       => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
+            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_LOG_REJECT,
+            Error(_, _)                       => sys::SUDO_PLUGIN_LOG_ERROR,
         }
     }
 }
