@@ -68,6 +68,10 @@ pub const SUDO_PLUGIN_OPEN_FAILURE       : c_int =  0;
 pub const SUDO_PLUGIN_OPEN_GENERAL_ERROR : c_int = -1;
 pub const SUDO_PLUGIN_OPEN_USAGE_ERROR   : c_int = -2;
 
+pub const SUDO_PLUGIN_LOG_OK     : c_int = 1;
+pub const SUDO_PLUGIN_LOG_REJECT : c_int = 0;
+pub const SUDO_PLUGIN_LOG_ERROR  : c_int = -1;
+
 pub const IO_PLUGIN_EMPTY : io_plugin = io_plugin {
     type_:            SUDO_IO_PLUGIN,
     version:          SUDO_API_VERSION,

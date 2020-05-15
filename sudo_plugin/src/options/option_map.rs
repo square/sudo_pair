@@ -13,7 +13,7 @@
 // permissions and limitations under the License.
 
 use crate::errors::*;
-use super::traits::*;
+use crate::options::traits::*;
 
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -51,6 +51,7 @@ impl OptionMap {
     /// place a NULL byte as the final array entry. In the absence of
     /// such a NULL byte, there is no other way to detect the end of
     /// the options list.
+    #[must_use]
     pub unsafe fn from_raw(mut ptr: *const *const c_char) -> Self {
         let mut map = HashMap::new();
 
@@ -74,7 +75,6 @@ impl OptionMap {
             // way in rust to split a byte array on a delimiter, and
             // the code above selects `sep` such that it's guaranteed to
             // be within the slice
-            #[cfg_attr(feature="cargo-clippy", allow(clippy::indexing_slicing))]
             let (k, v) = match sep {
                 Some(s) => { ( &bytes[..s], &bytes[s+1..] ) }
                 None    => { ( &bytes[..],  &bytes[..] ) }
@@ -100,6 +100,7 @@ impl OptionMap {
     /// was provided during initialization. Also returns `Err(_)` if the
     /// value was not interpretable as a UTF-8 string or if there was an
     /// error parsing the value to the requested type.
+    #[must_use]
     pub fn get<T: FromSudoOption>(&self, k: &str) -> Result<T> {
         let v = self.get_str(k).chain_err(|| {
             format!("option {} wasn't provided to the plugin", k)
@@ -113,6 +114,7 @@ impl OptionMap {
     /// Gets the value of a key as a string. Returns `None` if no such
     /// key/value-pair was provided during initialization. Also returns
     /// `None` if the value was not interpretable as a UTF-8 string.
+    #[must_use]
     pub fn get_str(&self, k: &str) -> Option<&str> {
         self.get_bytes(k.as_bytes()).and_then(|b| str::from_utf8(b).ok())
     }

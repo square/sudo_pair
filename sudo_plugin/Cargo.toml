@@ -17,7 +17,6 @@ keywords   = [ "sudo", "sudo-plugin" ]
 [dependencies]
 libc            = '0'
 error-chain     = '0'
-slog            = '2'
 
 [dependencies.sudo_plugin-sys]
 version = "1.2"

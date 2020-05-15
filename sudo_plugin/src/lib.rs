@@ -50,12 +50,16 @@
 // and gid
 #![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
 
+pub mod core;
 pub mod errors;
-pub mod macros;
+pub mod options;
 pub mod plugin;
 
+pub mod macros;
+
+mod output;
 mod version;
 
 pub use sudo_plugin_sys as sys;
 
-pub use self::plugin::*;
+pub use plugin::{IoEnv, IoPlugin, IoState};

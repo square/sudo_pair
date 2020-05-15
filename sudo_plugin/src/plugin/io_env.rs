@@ -1,4 +1,4 @@
-// Copyright 2018 Square Inc.
+// Copyright 2020 Square Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,12 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-//! Utilities for wrapping sudo plugins and the values they're
-//! configured with.
+use crate::errors::*;
+use crate::version::Version;
+use crate::options::{OptionMap, CommandInfo, Settings, UserInfo};
+use crate::output::{PrintFacility, Tty};
 
+<<<<<<< HEAD:sudo_plugin/src/plugin/mod.rs
 mod option_map;
 mod command_info;
 mod settings;
@@ -36,33 +39,33 @@ use self::settings::Settings;
 use self::user_info::UserInfo;
 
 use std::convert::TryInto;
+=======
+use std::convert::{TryFrom, TryInto};
+>>>>>>> bd5e7daae1ab0536faf8c99a1bd1c183bfbdd3f0:sudo_plugin/src/plugin/io_env.rs
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
-use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
-use std::path::Path;
 use std::slice;
 
 use libc::{c_char, c_int, c_uint, gid_t};
 
-/// An implementation of a sudo plugin, initialized and parsed from the
-/// values passed to the underlying `open` callback.
+/// An implementation of the sudo io_plugin environment, initialized and
+/// parsed from the values passed to the underlying `open` callback.
 #[allow(missing_debug_implementations)]
-pub struct Plugin {
+pub struct IoEnv {
     /// The name of the plugin. This will be the generally be the same
     /// as the name of the exported C struct.
-    pub plugin_name: String,
+    pub plugin_name: &'static str,
 
     /// The version of the plugin.
-    pub plugin_version: Option<String>,
+    pub plugin_version: &'static str,
 
     /// The plugin API version supported by the invoked `sudo` command.
-    pub version: Version,
+    pub api_version: Version,
 
-    /// The command being executed, in the same form as would be passed
-    /// to the `execve(2)` system call.
-    pub command: Vec<CString>,
+    /// The command being executed under `sudo`, in the same form as
+    /// would be passed to the `execve(2)` system call.
+    pub cmdline: Vec<CString>,
 
     /// A map of user-supplied sudo settings. These settings correspond
     /// to flags the user specified when running sudo. As such, they
@@ -88,29 +91,38 @@ pub struct Plugin {
     /// `plugin_options["disabled"] => "disabled"`).
     pub plugin_options: OptionMap,
 
+    /// A handle to the plugin's printf_facility, configured to write to
+    /// the user's stdout.
     stdout: PrintFacility,
+
+    /// A handle to the plugin's printf_facility, configured to write to
+    /// the user's stdin.
     stderr: PrintFacility,
 
+<<<<<<< HEAD:sudo_plugin/src/plugin/mod.rs
     conversation_f: ConversationFacility,
 
+=======
+    /// A (currently-unused) handle to the sudo_plugin conversation
+    /// facility, which allows two-way communication with the user.
+>>>>>>> bd5e7daae1ab0536faf8c99a1bd1c183bfbdd3f0:sudo_plugin/src/plugin/io_env.rs
     _conversation: crate::sys::sudo_conv_t,
 }
 
-impl Plugin {
-    /// Initializes a `Plugin` from the arguments provided to the
-    /// underlying C `open` callback function. Verifies the API version
-    /// advertised by the underlying `sudo` is supported by this library,
-    /// parses all provided options, and wires up communication
-    /// facilities.
+impl IoEnv {
+    /// Initializes an `IoEnv` from the arguments provided to the
+    /// underlying C `open` callback function.
+    ///
+    /// Verifies that the API version advertised by the underlying
+    /// `sudo` is supported, parses all provided options, and wires up
+    /// communication facilities.
+    ///
+    /// # Errors:
     ///
     /// Returns an error if there was a problem initializing the plugin.
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::new_ret_no_self))]
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::cast_sign_loss))]
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::too_many_arguments))]
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::missing_safety_doc))]
     pub unsafe fn new(
-        plugin_name:    String,
-        plugin_version: Option<String>,
+        plugin_name:    &'static str,
+        plugin_version: &'static str,
         version:        c_uint,
         argc:           c_int,
         argv:           *const *mut c_char,
@@ -119,12 +131,16 @@ impl Plugin {
         command_info:   *const *mut c_char,
         user_env:       *const *mut c_char,
         plugin_options: *const *mut c_char,
-        stdout:         PrintFacility,
-        stderr:         PrintFacility,
+        plugin_printf:  crate::sys::sudo_printf_t,
         conversation:   crate::sys::sudo_conv_t,
         conversation_f: ConversationFacility,
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
+
+        let (stdout, stderr) = PrintFacility::new(
+            Some(plugin_name),
+            plugin_printf
+        );
 
         // parse the argv into the command being run
         let mut argv = slice::from_raw_parts(
@@ -132,7 +148,7 @@ impl Plugin {
             argc as usize
         ).to_vec();
 
-        let command = argv
+        let cmdline = argv
             .iter_mut()
             .map(|ptr| CStr::from_ptr(*ptr).to_owned())
             .collect();
@@ -141,8 +157,9 @@ impl Plugin {
             plugin_name,
             plugin_version,
 
-            version,
-            command,
+            api_version: version,
+
+            cmdline,
 
             settings:       OptionMap::from_raw(settings as _).try_into()?,
             user_info:      OptionMap::from_raw(user_info as _).try_into()?,
@@ -152,7 +169,6 @@ impl Plugin {
 
             stdout,
             stderr,
-
             _conversation: conversation,
             conversation_f
         };
@@ -190,7 +206,7 @@ impl Plugin {
     ///
     pub fn tty(&self) -> Option<Tty> {
         self.user_info.tty.as_ref().and_then(|path|
-            Tty::try_from(path).ok()
+            Tty::try_from(path.as_path()).ok()
         )
     }
 
@@ -208,7 +224,7 @@ impl Plugin {
             sudo.extend_from_slice(&flags.join(&b' ')[..]);
         }
 
-        for entry in &self.command {
+        for entry in &self.cmdline {
             sudo.push(b' ');
             sudo.extend_from_slice(entry.as_bytes());
         }
@@ -262,28 +278,5 @@ impl Plugin {
         let _ = set.insert(self.command_info.runas_egid);
 
         set
-    }
-}
-
-///
-/// A facility implementing `std::io::Write` that allows printing
-/// output to directly to the terminal of the user invoking `sudo`.
-///
-#[derive(Debug)]
-pub struct Tty(File);
-
-impl Tty {
-    fn try_from(path: &Path) -> io::Result<Self> {
-        OpenOptions::new().write(true).open(path).map(Tty)
-    }
-}
-
-impl Write for Tty {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.0.write(buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.0.flush()
     }
 }

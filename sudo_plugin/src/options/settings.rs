@@ -13,13 +13,14 @@
 // permissions and limitations under the License.
 
 use crate::errors::*;
-use super::option_map::*;
-use super::traits::*;
+use crate::options::OptionMap;
+use crate::options::traits::{FromSudoOption, FromSudoOptionList};
 
 use std::convert::TryFrom;
 use std::net::{AddrParseError, IpAddr};
 use std::str;
 
+// TODO: copy all field-level documentation from `man sudo_plugin(8)`
 #[derive(Debug)]
 pub struct Settings {
     pub bsd_auth_type:        Option<String>,
@@ -208,7 +209,6 @@ impl FromSudoOption for NetAddr {
     // rust to split a byte array on a delimiter, and the code below
     // selects the midpoint such that it's guaranteed to be within the
     // slice
-    #[cfg_attr(feature="cargo-clippy", allow(clippy::indexing_slicing))]
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let bytes = s.as_bytes();
         let mid   = bytes.iter()

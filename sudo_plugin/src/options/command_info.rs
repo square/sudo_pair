@@ -13,7 +13,7 @@
 // permissions and limitations under the License.
 
 use crate::errors::*;
-use super::option_map::*;
+use crate::options::OptionMap;
 
 use std::convert::TryFrom;
 use std::os::unix::io::RawFd;
@@ -21,6 +21,7 @@ use std::path::PathBuf;
 
 use libc::{self, gid_t, mode_t, uid_t};
 
+// TODO: copy all field-level documentation from `man sudo_plugin(8)`
 #[derive(Debug)]
 pub struct CommandInfo {
     pub chroot:            Option<String>,
