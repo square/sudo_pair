@@ -15,8 +15,16 @@
 use super::IoEnv;
 use crate::errors::Result;
 
+use std::io::Write;
+
+/// The trait that defines the implementation of a sudo I/O plugin.
 pub trait IoPlugin: Sized {
-    const NAME:    &'static str;
+    /// The name of the plugin. Used when printing the version of the
+    /// plugin and error messages.
+    const NAME: &'static str;
+
+    /// The version of the plugin. Defaults to the the value of the
+    /// `CARGO_PKG_VERSION` environment variable during build.
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     /// The `sudo_plugin` facility sets `iolog_{facility}` hints that I
@@ -26,9 +34,12 @@ pub trait IoPlugin: Sized {
     ///
     /// Setting this to `true` will ignore these hints and always call
     /// user-provided log_{std|tty}{in|out|err} callbacks.
-    const IGNORE_IOLOG_HINTS : bool = false;
+    const IGNORE_IOLOG_HINTS: bool = false;
 
-    fn show_version(env: &'static IoEnv, verbose: bool) {
+    /// Prints the name and version of the plugin. A default
+    /// implementation of this function is provided, but may be
+    /// overridden if desired.
+    fn show_version(env: &'static IoEnv, _verbose: bool) {
         let _ = writeln!(
             env.stdout(),
             "{} I/O plugin version {}",
@@ -37,14 +48,62 @@ pub trait IoPlugin: Sized {
         );
     }
 
+    /// The `open` function is run before the `log_ttyin`, `log_ttyout`,
+    /// `log_stdin`, `log_stdout`, `log_stderr`, `log_suspend`, or
+    /// `change_winsize` methods are called. It is only called if the
+    /// policy plugin's `check_policy` function has returned
+    /// successfully.
     fn open(env: &'static IoEnv) -> Result<Self>;
-    fn close(self, _exit_status: i32, _error: i32) { }
 
-    fn log_ttyin (&mut self, _log: &[u8]) -> Result<()> { Ok(()) }
-    fn log_ttyout(&mut self, _log: &[u8]) -> Result<()> { Ok(()) }
-    fn log_stdin (&mut self, _log: &[u8]) -> Result<()> { Ok(()) }
-    fn log_stdout(&mut self, _log: &[u8]) -> Result<()> { Ok(()) }
-    fn log_stderr(&mut self, _log: &[u8]) -> Result<()> { Ok(()) }
+    /// The `close` method is called when the command being run by
+    /// sudo finishes. A default no-op implementation is provided, but
+    /// be overriden if desired.
+    ///
+    /// As suggested by its signature, once this method exits, the
+    /// plugin will be dropped.
+    fn close(self, _exit_status: i32, _error: i32) {}
+
+    /// The `log_ttyin` method is called whenever data can be read from the user
+    /// but before it is passed to the running command. This allows the plugin
+    /// to reject data if it chooses to (for instance if the input contains
+    /// banned content).
+    fn log_ttyin(&mut self, _log: &[u8]) -> Result<()> {
+        Ok(())
+    }
+
+    /// The `log_ttyout` function is called whenever data can be read from the
+    /// command but before it is written to the user's terminal. This allows the
+    /// plugin to reject data if it chooses to (for instance if the output
+    /// contains banned content).
+    fn log_ttyout(&mut self, _log: &[u8]) -> Result<()> {
+        Ok(())
+    }
+
+    /// The `log_stdin` function is only used if the standard input does not
+    /// correspond to a tty device. It is called whenever data can be read from
+    /// the standard input but before it is passed to the running command.
+    fn log_stdin(&mut self, _log: &[u8]) -> Result<()> {
+        Ok(())
+    }
+
+    /// The `log_stdout` function is only used if the standard output does not
+    /// correspond to a tty device. It is called whenever data can be read from
+    /// the command but before it is written to the standard output. This allows
+    /// the plugin to reject data if it chooses to (for instance if the output
+    /// contains banned content).
+    fn log_stdout(&mut self, _log: &[u8]) -> Result<()> {
+        Ok(())
+    }
+
+    /// The `log_stderr` function is only used if the standard error does not
+    /// correspond to a tty device. It is called whenever data can be read from
+    /// the command but before it is written to the standard error. This allows
+    /// the plugin to reject data if it chooses to (for instance if the output
+    /// contains banned content).
+    fn log_stderr(&mut self, _log: &[u8]) -> Result<()> {
+        Ok(())
+    }
 
     // TODO: support for `change_winsize`
+    // TODO: support for `log_suspend`
 }

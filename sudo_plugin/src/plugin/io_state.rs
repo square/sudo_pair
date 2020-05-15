@@ -14,6 +14,9 @@
 
 use super::{IoEnv, IoPlugin};
 
+/// This trait is implemented invisibly by the `sudo_io_plugin` macro
+/// and is not user-visible.
+#[doc(hidden)]
 pub trait IoState<P: IoPlugin> {
     unsafe fn io_env()    -> &'static mut Option<IoEnv>;
     unsafe fn io_plugin() -> &'static mut Option<P>;

@@ -20,27 +20,77 @@ use std::path::PathBuf;
 
 use libc::{gid_t, pid_t, uid_t};
 
-// TODO: copy all field-level documentation from `man sudo_plugin(8)`
+/// A vector of information about the user running the command.
 #[derive(Debug)]
 pub struct UserInfo {
-    pub cols:   u64,
-    pub cwd:    PathBuf,
-    pub egid:   gid_t,
-    pub euid:   uid_t,
-    pub gid:    gid_t,
-    pub groups: Vec<gid_t>,
-    pub host:   String,
-    pub lines:  u64,
-    pub pgid:   pid_t,
-    pub pid:    pid_t,
-    pub ppid:   pid_t,
-    pub sid:    pid_t,
-    pub tcpgid: pid_t,
-    pub tty:    Option<PathBuf>,
-    pub uid:    uid_t,
-    pub umask:  Option<String>,
-    pub user:   String,
+    /// The number of columns the user's terminal supports. If there is no
+    /// terminal device available, a default value of 80 is used.
+    pub cols: u64,
 
+    /// The user's current working directory.
+    pub cwd: PathBuf,
+
+    /// The effective group-ID of the user invoking sudo.
+    pub egid: gid_t,
+
+    /// The effective user-ID of the user invoking sudo.
+    pub euid: uid_t,
+
+    /// The real group-ID of the user invoking sudo.
+    pub gid: gid_t,
+
+    /// The user's supplementary group list formatted as a string of
+    /// comma-separated group-IDs.
+    pub groups: Vec<gid_t>,
+
+    /// The local machine's hostname as returned by the gethostname(2) system
+    /// call.
+    pub host: String,
+
+    /// The number of lines the user's terminal supports. If there is no
+    /// terminal device available, a default value of 24 is used.
+    pub lines: u64,
+
+    /// The ID of the process group that the running sudo process is a member
+    /// of. Only available starting with API version 1.2.
+    pub pgid: pid_t,
+
+    /// The process ID of the running sudo process. Only available starting
+    /// with API version 1.2.
+    pub pid: pid_t,
+
+    /// The parent process ID of the running sudo process. Only available
+    /// starting with API version 1.2.
+    pub ppid: pid_t,
+
+    /// The session ID of the running sudo process or 0 if sudo is not part of
+    /// a POSIX job control session. Only available starting with API version
+    /// 1.2.
+    pub sid: pid_t,
+
+    /// The ID of the foreground process group associated with the terminal
+    /// device associated with the sudo process or -1 if there is no terminal
+    /// present. Only available starting with API version 1.2.
+    pub tcpgid: pid_t,
+
+    /// The path to the user's terminal device. If the user has no terminal
+    /// device associated with the session, the value will be empty, as in
+    /// “tty=”.
+    pub tty: Option<PathBuf>,
+
+    /// The real user-ID of the user invoking sudo.
+    pub uid: uid_t,
+
+    /// The invoking user's file creation mask. Only available starting with
+    /// API version 1.10.
+    pub umask: Option<String>,
+
+    /// The name of the user invoking sudo.
+    pub user: String,
+
+    /// The raw underlying [`OptionMap`](OptionMap) to retrieve additional
+    /// values that may not have been known at the time of the authorship of
+    /// this file.
     pub raw: OptionMap,
 }
 

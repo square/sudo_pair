@@ -12,6 +12,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+//! Traits and structs directly used for implementation of plugins.
+
 mod io_env;
 mod io_plugin;
 mod io_state;

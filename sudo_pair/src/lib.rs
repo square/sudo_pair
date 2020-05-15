@@ -19,13 +19,10 @@
 
 // TODO: remove all to_string_lossy
 // TODO: error message when /var/run/sudo_pair missing
-// TODO: iolog in `sudoreplay(8)` format
 // TODO: rustfmt
 // TODO: double-check all `as`-casts
-// TODO: docs on docs.rs
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
-// TODO: implement change_winsize
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
@@ -95,7 +92,7 @@ struct SudoPair {
 }
 
 impl IoPlugin for SudoPair {
-    const NAME: &'static str = "SudoPair";
+    const NAME: &'static str = "sudo_pair";
 
     fn open(env: &'static IoEnv) -> sudo_plugin::errors::Result<Self> {
         let mut slog = slog(Self::NAME, Self::VERSION);
