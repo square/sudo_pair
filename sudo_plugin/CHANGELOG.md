@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   to reduce the amount of macro magic necessary.
 - Autodetect what version of the `sudo_plugin` API is supported by the version
   of `sudo_plugin-sys` we're linked against.
+- Now uses a prelude-style import.
 
 ## [1.2.0] - 2020-03-26
 

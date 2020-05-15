@@ -54,6 +54,7 @@ pub mod core;
 pub mod errors;
 pub mod options;
 pub mod plugin;
+pub mod prelude;
 
 pub mod macros;
 
@@ -61,5 +62,3 @@ mod output;
 mod version;
 
 pub use sudo_plugin_sys as sys;
-
-pub use plugin::{IoEnv, IoPlugin, IoState};

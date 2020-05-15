@@ -17,8 +17,8 @@
 //! plugin code. It is not intended for direct end-user use.
 
 use crate::errors::*;
-use crate::{IoEnv, IoPlugin, IoState};
 use crate::output::PrintFacility;
+use crate::plugin::{IoEnv, IoPlugin, IoState};
 use crate::sys;
 
 use std::os::raw;

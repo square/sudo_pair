@@ -70,7 +70,8 @@ use libc::{gid_t, mode_t, uid_t};
 
 use failure::ResultExt;
 
-use sudo_plugin::{sudo_io_plugin, IoEnv, IoPlugin, options::OptionMap};
+use sudo_plugin::prelude::*;
+use sudo_plugin::options::OptionMap;
 
 const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
 const DEFAULT_USER_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.user";
