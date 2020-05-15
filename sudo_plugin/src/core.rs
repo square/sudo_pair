@@ -112,21 +112,16 @@ pub unsafe extern "C" fn close<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 pub unsafe extern "C" fn show_version<P: 'static + IoPlugin, S: IoState<P>>(
-    _verbose: raw::c_int,
+    verbose: raw::c_int,
 ) -> raw::c_int {
-    let ret = S::io_env().as_ref().and_then(|env| {
-        writeln!(
-            env.stdout(),
-            "{} I/O plugin version {}",
-            P::NAME,
-            P::VERSION,
-        ).ok()
-    });
+    let env = match S::io_env().as_ref() {
+        Some(env) => env,
+        None      => return sys::SUDO_PLUGIN_OPEN_FAILURE,
+    };
 
-    match ret {
-        Some(_) => 1,
-        None    => 0,
-    }
+    P::show_version(env, verbose != 0);
+
+    sys::SUDO_PLUGIN_OPEN_SUCCESS
 }
 
 pub unsafe extern "C" fn log_ttyin<P: 'static + IoPlugin, S: IoState<P>>(

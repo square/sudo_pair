@@ -28,6 +28,15 @@ pub trait IoPlugin: Sized {
     /// user-provided log_{std|tty}{in|out|err} callbacks.
     const IGNORE_IOLOG_HINTS : bool = false;
 
+    fn show_version(env: &'static IoEnv, verbose: bool) {
+        let _ = writeln!(
+            env.stdout(),
+            "{} I/O plugin version {}",
+            Self::NAME,
+            Self::VERSION,
+        );
+    }
+
     fn open(env: &'static IoEnv) -> Result<Self>;
     fn close(self, _exit_status: i32, _error: i32) { }
 
