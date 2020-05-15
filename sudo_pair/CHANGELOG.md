@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Structured logging to syslog and journald through the `slog` crate. Enabled
   through an optional feature.
 
+
+## Changed
+- Rewritten to work on the v2 sudo_plugin API.
+
 ## [1.0.0] - 2020-03-26
 
 ### Fixed

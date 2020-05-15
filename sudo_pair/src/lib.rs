@@ -19,13 +19,10 @@
 
 // TODO: remove all to_string_lossy
 // TODO: error message when /var/run/sudo_pair missing
-// TODO: iolog in `sudoreplay(8)` format
 // TODO: rustfmt
 // TODO: double-check all `as`-casts
-// TODO: docs on docs.rs
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
-// TODO: implement change_winsize
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
@@ -53,13 +50,21 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
+#![warn(clippy::cargo)]
+#![warn(clippy::complexity)]
+#![warn(clippy::correctness)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![warn(clippy::style)]
+
+// this is triggered by dependencies
+#![allow(clippy::multiple_crate_versions)]
 
 mod errors;
 mod template;
 mod socket;
 
-use crate::errors::*;
+use crate::errors::{ErrorKind, Result};
 use crate::template::Spec;
 use crate::socket::Socket;
 
@@ -73,7 +78,8 @@ use libc::{gid_t, mode_t, uid_t};
 
 use failure::ResultExt;
 
-use sudo_plugin::*;
+use sudo_plugin::prelude::*;
+use sudo_plugin::options::OptionMap;
 
 const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
 const DEFAULT_USER_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.user";
@@ -84,47 +90,38 @@ const DEFAULT_GIDS_ENFORCED    : [gid_t; 1] = [0];
 const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p %u'\n";
 const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
-sudo_io_plugin! {
-     sudo_pair: SudoPair {
-        close:      close,
-        log_ttyout: log_ttyout,
-        log_stdin:  log_disabled,
-        log_stdout: log_stdout,
-        log_stderr: log_stderr,
-     }
-}
+sudo_io_plugin!{ sudo_pair : SudoPair }
 
 struct SudoPair {
-    plugin:  &'static Plugin,
+    env:     &'static IoEnv,
     options: PluginOptions,
     socket:  Option<Socket>,
 
     slog: slog::Logger,
 }
 
-impl SudoPair {
-    fn open(plugin: &'static Plugin) -> Result<Self> {
-        let mut slog = slog(
-            &plugin.plugin_name,
-            &plugin.plugin_version.as_deref().unwrap_or("<unknown>"),
-        );
+impl IoPlugin for SudoPair {
+    const NAME: &'static str = "sudo_pair";
+
+    fn open(env: &'static IoEnv) -> sudo_plugin::errors::Result<Self> {
+        let mut slog = slog(Self::NAME, Self::VERSION);
 
         slog::debug!(slog, "plugin initializing");
 
-        let args : Vec<_> = plugin.command.iter()
+        let args : Vec<_> = env.cmdline.iter()
             .skip(1)
             .map (|arg| arg.to_string_lossy())
             .collect();
 
         slog = slog::Logger::new(&slog, slog::o!(
-            "uid"           => &plugin.user_info.uid,
-            "runas_euid"    => &plugin.command_info.runas_euid,
-            "runas_egid"    => &plugin.command_info.runas_egid,
-            "command"       => plugin.command_info.command.to_string_lossy().into_owned(),
+            "uid"           => &env.user_info.uid,
+            "runas_euid"    => &env.command_info.runas_euid,
+            "runas_egid"    => &env.command_info.runas_egid,
+            "command"       => env.command_info.command.to_string_lossy().into_owned(),
             "args"          => format!("{:?}", args),
         ));
 
-        let options = PluginOptions::from(&plugin.plugin_options);
+        let options = PluginOptions::from(&env.plugin_options);
 
         slog::debug!(slog, "initialized with plugin options:";
              "plugin_options" => &options
@@ -132,7 +129,7 @@ impl SudoPair {
 
         // TODO: convert all outgoing errors to be unauthorized errors
         let mut pair = Self {
-            plugin,
+            env,
             options,
             socket:  None,
 
@@ -149,8 +146,8 @@ impl SudoPair {
 
         if pair.is_sudoing_to_user_and_group() {
             slog::error!(pair.slog, "both -u and -g were provided to sudo"; slog::o!(
-                "user"  => &pair.plugin.settings.runas_user,
-                "group" => &pair.plugin.settings.runas_group,
+                "user"  => &pair.env.settings.runas_user,
+                "group" => &pair.env.settings.runas_group,
             ));
 
             return Err(ErrorKind::SudoToUserAndGroup.into());
@@ -192,39 +189,38 @@ impl SudoPair {
         Ok(pair)
     }
 
-    fn close(&mut self, _: i64, _: i64) {
-        slog::trace!(self.slog, "pair session ending");
-
+    fn close(mut self, _: i32, _: i32) {
         // if we have a socket, close it
-        let _ = self.socket.as_mut().map(Socket::close);
-
-        slog::info!(self.slog, "pair session ended");
+        if let Some(mut socket) = self.socket.take() {
+            slog::trace!(self.slog, "pair session ending");
+            let _ = socket.close();
+            slog::info!(self.slog, "pair session ended");
+        }
     }
 
-    fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
-        if !self.plugin.command_info.iolog_ttyout {
-            return Ok(())
+    fn log_ttyout(&mut self, log: &[u8]) -> sudo_plugin::errors::Result<()> {
+        self.log_output(log).map_err(|e| e.into())
+    }
+
+    fn log_stdout(&mut self, log: &[u8]) -> sudo_plugin::errors::Result<()> {
+       self.log_output(log).map_err(|e| e.into())
+    }
+
+    fn log_stderr(&mut self, log: &[u8]) -> sudo_plugin::errors::Result<()> {
+        self.log_output(log).map_err(|e| e.into())
+    }
+
+    fn log_stdin(&mut self, _: &[u8]) -> sudo_plugin::errors::Result<()> {
+        // if we're exempt, don't disable stdin
+        if self.is_exempt() {
+            return Ok(());
         }
 
-        self.log_output(log)
+        Err(ErrorKind::StdinRedirected.into())
     }
+}
 
-    fn log_stdout(&mut self, log: &[u8]) -> Result<()> {
-        if !self.plugin.command_info.iolog_stdout {
-            return Ok(())
-        }
-
-        self.log_output(log)
-    }
-
-    fn log_stderr(&mut self, log: &[u8]) -> Result<()> {
-        if !self.plugin.command_info.iolog_stderr {
-            return Ok(())
-        }
-
-        self.log_output(log)
-    }
-
+impl SudoPair {
     fn log_output(&mut self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
         self.socket.as_mut().map_or(Ok(()), |socket| {
@@ -234,15 +230,6 @@ impl SudoPair {
         slog::trace!(self.slog, "{{{} bytes sent}}", log.len());
 
         Ok(())
-    }
-
-    fn log_disabled(&mut self, _: &[u8]) -> Result<()> {
-        // if we're exempt, don't disable stdin/stdout/stderr
-        if self.is_exempt() {
-            return Ok(());
-        }
-
-        Err(ErrorKind::StdinRedirected.into())
     }
 
     fn local_pair_prompt(&self, template_spec: &Spec) {
@@ -289,9 +276,9 @@ impl SudoPair {
         // improbable. For now, I'm ignoring the situation but hopefully
         // there's enough information here for someone (probably me) to
         // pick up where I left off.
-        let _ = self.plugin.tty().as_mut()
+        let _ = self.env.tty().as_mut()
             .and_then(|tty| tty.write_all(&prompt).ok() )
-            .ok_or_else(|| self.plugin.stderr().write_all(&prompt));
+            .ok_or_else(|| self.env.stderr().write_all(&prompt));
 
         slog::trace!(self.slog, "local prompt rendered");
     }
@@ -403,7 +390,7 @@ impl SudoPair {
         // root is always exempt
         if self.is_sudoing_from_root() {
             slog::debug!(self.slog, "sudo initiated by root";
-                "user_info.uid" => self.plugin.user_info.uid,
+                "user_info.uid" => self.env.user_info.uid,
             );
 
             return true;
@@ -414,8 +401,8 @@ impl SudoPair {
         // they can already do everything as themselves anyway
         if self.is_sudoing_to_themselves() {
             slog::debug!(self.slog, "sudo to current user";
-                "user_info.uid"          => self.plugin.user_info.uid,
-                "command_info.runas_uid" => self.plugin.command_info.runas_uid,
+                "user_info.uid"          => self.env.user_info.uid,
+                "command_info.runas_uid" => self.env.command_info.runas_uid,
             );
 
             return true;
@@ -424,7 +411,7 @@ impl SudoPair {
         // exempt if the approval command is the command being invoked
         if self.is_sudoing_approval_command() {
             slog::debug!(self.slog, "sudo running approval command";
-                "command_info.command"       => self.plugin.command_info.command.to_string_lossy().into_owned(),
+                "command_info.command"       => self.env.command_info.command.to_string_lossy().into_owned(),
                 "plugin_options.binary_path" => self.options.binary_path.to_string_lossy().into_owned(),
             );
 
@@ -468,7 +455,7 @@ impl SudoPair {
         //
         // note that the `euid` will always be the owner of the `sudo`
         // binary
-        self.plugin.user_info.uid == self.plugin.user_info.euid
+        self.env.user_info.uid == self.env.user_info.euid
     }
 
     fn is_sudoing_to_themselves(&self) -> bool {
@@ -476,8 +463,8 @@ impl SudoPair {
         // just becoming themselves... right?
         if !self.is_sudoing_to_user() && !self.is_sudoing_to_group() {
             debug_assert_eq!(
-                self.plugin.runas_gids(),
-                self.plugin.user_info.groups.iter().cloned().collect()
+                self.env.runas_gids(),
+                self.env.user_info.groups.iter().cloned().collect()
             );
 
             return true;
@@ -487,7 +474,7 @@ impl SudoPair {
     }
 
     fn is_sudoing_approval_command(&self) -> bool {
-        self.plugin.command_info.command == self.options.binary_path
+        self.env.command_info.command == self.options.binary_path
     }
 
     ///
@@ -496,9 +483,9 @@ impl SudoPair {
     ///
     fn is_exempted_from_logging(&self) -> bool {
         if
-            !self.plugin.command_info.iolog_ttyout &&
-            !self.plugin.command_info.iolog_stdout &&
-            !self.plugin.command_info.iolog_stderr
+            !self.env.command_info.iolog_ttyout &&
+            !self.env.command_info.iolog_stdout &&
+            !self.env.command_info.iolog_stderr
         {
             return true;
         }
@@ -526,13 +513,13 @@ impl SudoPair {
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
         !self.options.gids_exempted.is_disjoint(
-            &self.plugin.user_info.groups.iter().cloned().collect()
+            &self.env.user_info.groups.iter().cloned().collect()
         )
     }
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
         !self.options.gids_enforced.is_disjoint(
-            &self.plugin.runas_gids()
+            &self.env.runas_gids()
         )
     }
 
@@ -540,16 +527,16 @@ impl SudoPair {
         // `plugin.settings.runas_user` tells us the value of `-u`, but
         // by checking the change in uid, we can exclude cases where
         // they're sudoing to themselves
-        self.plugin.user_info.uid != self.plugin.command_info.runas_euid
+        self.env.user_info.uid != self.env.command_info.runas_euid
     }
 
     fn is_sudoing_to_group(&self) -> bool {
-        self.plugin.user_info.gid != self.plugin.command_info.runas_egid
+        self.env.user_info.gid != self.env.command_info.runas_egid
     }
 
     // returns true if `-g` was specified
     fn is_sudoing_to_explicit_group(&self) -> bool {
-        self.plugin.settings.runas_group.is_some()
+        self.env.settings.runas_group.is_some()
     }
 
     fn socket_path(&self) -> PathBuf {
@@ -563,8 +550,8 @@ impl SudoPair {
         self.options.socket_dir.join(
             format!(
                 "{}.{}.sock",
-                self.plugin.user_info.uid,
-                self.plugin.user_info.pid,
+                self.env.user_info.uid,
+                self.env.user_info.pid,
             )
         )
     }
@@ -575,7 +562,7 @@ impl SudoPair {
         // silently self-approve by manually connecting to the socket
         // without needing to invoke sudo
         if self.is_sudoing_to_user() {
-            self.plugin.command_info.runas_euid
+            self.env.command_info.runas_euid
         } else {
             // don't change the owner; chown accepts a uid of -1
             // (unsigned) to indicate that the owner should not be
@@ -588,7 +575,7 @@ impl SudoPair {
         // this should only be changed if the user is sudoing to a group
         // explicitly, not only if they're gaining a new primary `gid`
         if self.is_sudoing_to_explicit_group() {
-            self.plugin.command_info.runas_egid
+            self.env.command_info.runas_egid
         } else {
             // don't change the owner; chown accepts a uid of -1
             // (unsigned) to indicate that the owner should not be
@@ -636,31 +623,31 @@ impl SudoPair {
 
         // the full _C_ommand `sudo` was invoked as (recreated as
         // best-effort for now)
-        spec.replace(b'C', self.plugin.invocation());
+        spec.replace(b'C', self.env.invocation());
 
         // the cw_d_ of the command being run under `sudo`
-        spec.replace(b'd', self.plugin.cwd().as_os_str().as_bytes());
+        spec.replace(b'd', self.env.cwd().as_os_str().as_bytes());
 
         // the _h_ostname of the machine `sudo` is being executed on
-        spec.replace(b'h', self.plugin.user_info.host.as_bytes());
+        spec.replace(b'h', self.env.user_info.host.as_bytes());
 
         // the _H_eight of the invoking user's terminal, in rows
-        spec.replace(b'H', self.plugin.user_info.lines.to_string());
+        spec.replace(b'H', self.env.user_info.lines.to_string());
 
         // the real _g_id of the user invoking `sudo`
-        spec.replace(b'g', self.plugin.user_info.gid.to_string());
+        spec.replace(b'g', self.env.user_info.gid.to_string());
 
         // the _p_id of this `sudo` process
-        spec.replace(b'p', self.plugin.user_info.pid.to_string());
+        spec.replace(b'p', self.env.user_info.pid.to_string());
 
         // the real _u_id of the user invoking `sudo`
-        spec.replace(b'u', self.plugin.user_info.uid.to_string());
+        spec.replace(b'u', self.env.user_info.uid.to_string());
 
         // the _U_sername of the user running `sudo`
-        spec.replace(b'U', self.plugin.user_info.user.as_bytes());
+        spec.replace(b'U', self.env.user_info.user.as_bytes());
 
         // the _W_idth of the invoking user's terminal, in columns
-        spec.replace(b'W', self.plugin.user_info.cols.to_string());
+        spec.replace(b'W', self.env.user_info.cols.to_string());
 
         spec
     }

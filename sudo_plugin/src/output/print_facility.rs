@@ -1,11 +1,24 @@
-use crate::errors::*;
+// Copyright 2020 Square Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied. See the License for the specific language governing
+// permissions and limitations under the License.
+
+use crate::errors::Error;
 use crate::sys;
 
 use sudo_plugin_sys::sudo_printf_t;
 
 use std::ffi::CString;
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u32)]
@@ -22,7 +35,7 @@ enum Level {
 pub struct PrintFacility {
     /// A function pointer to an underlying printf facility provided
     /// by the sudo_plugin API.
-    facility: Arc<Mutex<sudo_printf_t>>,
+    facility: sudo_printf_t,
 
     /// The [`Level`] to send messages at. The sudo_plugin API only
     /// supports distinguishing between informational messages and error
@@ -49,8 +62,6 @@ impl PrintFacility {
     /// this function to be called concurrently.
     #[must_use]
     pub unsafe fn new(name: Option<&str>, printf: sudo_printf_t) -> (Self, Self) {
-        let printf = Arc::new(Mutex::new(printf));
-
         let tag: Vec<u8> = name
             .map(|name| format!("{}: ", name).into())
             .unwrap_or_default();
@@ -90,11 +101,7 @@ impl PrintFacility {
 
 impl Write for PrintFacility {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let guard = self.facility.lock().map_err(|_err|
-            io::Error::new(io::ErrorKind::Other, "couldn't aquire printf mutex")
-        )?;
-
-        let printf = guard.ok_or_else(||
+        let printf = self.facility.ok_or_else(||
             io::Error::new(io::ErrorKind::NotConnected, "no printf provided")
         )?;
 
