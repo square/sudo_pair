@@ -17,7 +17,7 @@ use crate::errors::Result;
 
 pub trait IoPlugin: Sized {
     const NAME:    &'static str;
-    const VERSION: &'static str;
+    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     /// The `sudo_plugin` facility sets `iolog_{facility}` hints that I
     /// believe come from whether or not `LOG_INPUT` or `LOG_OUTPUT` are

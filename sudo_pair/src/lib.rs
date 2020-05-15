@@ -95,8 +95,7 @@ struct SudoPair {
 }
 
 impl IoPlugin for SudoPair {
-    const NAME:     &'static str = "sudo_pair";
-    const VERSION : &'static str = env!("CARGO_PKG_VERSION");
+    const NAME: &'static str = "SudoPair";
 
     fn open(env: &'static IoEnv) -> sudo_plugin::errors::Result<Self> {
         let mut slog = slog(Self::NAME, Self::VERSION);

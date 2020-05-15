@@ -33,7 +33,6 @@
 ///
 /// impl IoPlugin for Example {
 ///     const NAME:    &'static str = "example";
-///     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 ///
 ///     fn open(env: &'static sudo_plugin::IoEnv) -> Result<Self> {
 ///         writeln!(env.stdout(), "example sudo plugin initialized");
