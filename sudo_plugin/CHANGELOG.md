@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Moved much of the work done in the `sudo_io_plugin!` macro to non-macro code.
 - Almost complete rewrite of the internals to be more Rust-like, and use traits
   to reduce the amount of macro magic necessary.
+- Autodetect what version of the `sudo_plugin` API is supported by the version
+  of `sudo_plugin-sys` we're linked against.
 
 ## [1.2.0] - 2020-03-26
 
