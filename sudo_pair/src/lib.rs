@@ -50,13 +50,21 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
+#![warn(clippy::cargo)]
+#![warn(clippy::complexity)]
+#![warn(clippy::correctness)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![warn(clippy::style)]
+
+// this is triggered by dependencies
+#![allow(clippy::multiple_crate_versions)]
 
 mod errors;
 mod template;
 mod socket;
 
-use crate::errors::*;
+use crate::errors::{ErrorKind, Result};
 use crate::template::Spec;
 use crate::socket::Socket;
 

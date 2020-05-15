@@ -47,14 +47,23 @@
 // this entire crate is generated code
 #![allow(missing_docs)]
 #![allow(non_camel_case_types)]
+#![allow(rustdoc)]
 #![allow(trivial_casts)]
 #![allow(trivial_numeric_casts)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
+#![warn(clippy::cargo)]
+#![warn(clippy::complexity)]
+#![warn(clippy::correctness)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![warn(clippy::style)]
+
+// this is triggered by dependencies
+#![allow(clippy::multiple_crate_versions)]
 
 // this entire crate is generated code
-#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
-#![cfg_attr(feature="cargo-clippy", allow(clippy::type_complexity))]
+#![allow(clippy::similar_names)]
+#![allow(clippy::type_complexity)]
 
 use std::os::raw::{c_int, c_uint};
 

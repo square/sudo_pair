@@ -16,7 +16,11 @@
 //! convert between C and Rust style and trampoline into the acutal
 //! plugin code. It is not intended for direct end-user use.
 
-use crate::errors::*;
+// This is entirely called from `C` code. Rust `#[must_use]` attributes
+// aren't going to affect anything.
+#![allow(clippy::must_use_candidate)]
+
+use crate::errors::AsSudoPluginRetval;
 use crate::output::PrintFacility;
 use crate::plugin::{IoEnv, IoPlugin, IoState};
 use crate::sys;
@@ -94,7 +98,6 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     let io_plugin = match P::open(io_env) {
         Ok(v)  => v,
         Err(e) => {
-            let e = e.into();
             let _ = stderr.write_error(&e);
             return e.as_sudo_io_plugin_open_retval();
         },

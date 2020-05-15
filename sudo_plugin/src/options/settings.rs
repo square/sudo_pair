@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::*;
+use crate::errors::{Error, Result};
 use crate::options::OptionMap;
 use crate::options::traits::{FromSudoOption, FromSudoOptionList};
 
@@ -170,6 +170,7 @@ impl Settings {
     // invocation without having to reconstruct it by hand
     //
     // TODO: maybe if /proc/$$/cmd exists I can prefer to use it
+    #[must_use]
     pub fn flags(&self) -> Vec<Vec<u8>> {
         let mut flags: Vec<Vec<u8>> = vec![];
 

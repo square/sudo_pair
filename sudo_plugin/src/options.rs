@@ -22,6 +22,8 @@
 //! structs with  values of the correct type type (e.g., `user_info.uid`
 //! is a `uid_t`).
 
+// The layouts of the structs below this module aren't under my control.
+#![allow(clippy::struct_excessive_bools)]
 
 #[doc(hidden)] pub mod command_info;
 #[doc(hidden)] pub mod option_map;

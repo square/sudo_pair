@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::*;
+use crate::errors::Result;
 use crate::version::Version;
 use crate::options::{OptionMap, CommandInfo, Settings, UserInfo};
 use crate::output::{PrintFacility, Tty};
@@ -25,8 +25,8 @@ use std::slice;
 
 use libc::{c_char, c_int, c_uint, gid_t};
 
-/// An implementation of the sudo io_plugin environment, initialized and
-/// parsed from the values passed to the underlying `open` callback.
+/// An implementation of the sudo [`io_plugin`](crate::sys::io_plugin) environment, initialized
+/// and parsed from the values passed to the underlying `open` callback.
 #[allow(missing_debug_implementations)]
 pub struct IoEnv {
     /// The name of the plugin. This will be the generally be the same
@@ -80,6 +80,9 @@ pub struct IoEnv {
     _conversation: crate::sys::sudo_conv_t,
 }
 
+// I don't get to control how many arguments these methods accept, since
+// it's dictated by the C plugin.
+#[allow(clippy::too_many_arguments)]
 impl IoEnv {
     /// Initializes an `IoEnv` from the arguments provided to the
     /// underlying C `open` callback function.
@@ -87,10 +90,16 @@ impl IoEnv {
     /// Verifies that the API version advertised by the underlying
     /// `sudo` is supported, parses all provided options, and wires up
     /// communication facilities.
-    ///
-    /// # Errors:
+    //
+    /// # Errors
     ///
     /// Returns an error if there was a problem initializing the plugin.
+    ///
+    /// # Safety
+    ///
+    /// This function is inherently unsafe since it's provided with
+    /// raw pointers. As long as sudo obeys its contracts for how these
+    /// are interpreted (see [`OptionMap`](OptionMap) for details).
     pub unsafe fn new(
         plugin_name:    &'static str,
         plugin_version: &'static str,
@@ -112,7 +121,8 @@ impl IoEnv {
             plugin_printf
         );
 
-        // parse the argv into the command being run
+        // god help us all if `argc` is negative
+        #[allow(clippy::cast_sign_loss)]
         let mut argv = slice::from_raw_parts(
             argv,
             argc as usize
@@ -149,6 +159,7 @@ impl IoEnv {
     /// Returns a facility implementing `std::io::Write` that emits to
     /// the invoking user's STDOUT.
     ///
+    #[must_use]
     pub fn stdout(&self) -> PrintFacility {
         self.stdout.clone()
     }
@@ -157,6 +168,7 @@ impl IoEnv {
     /// Returns a facility implementing `std::io::Write` that emits to
     /// the invoking user's STDERR.
     ///
+    #[must_use]
     pub fn stderr(&self) -> PrintFacility {
         self.stderr.clone()
     }
@@ -165,6 +177,7 @@ impl IoEnv {
     /// Returns a facility implementing `std::io::Write` that emits to
     /// the user's TTY, if sudo detected one.
     ///
+    #[must_use]
     pub fn tty(&self) -> Option<Tty> {
         self.user_info.tty.as_ref().and_then(|path|
             Tty::try_from(path.as_path()).ok()
@@ -176,6 +189,7 @@ impl IoEnv {
     /// shell in order to launch this invocation of sudo.
     ///
     // TODO: I don't really like this name
+    #[must_use]
     pub fn invocation(&self) -> Vec<u8> {
         let mut sudo    = self.settings.progname.as_bytes().to_vec();
         let     flags   = self.settings.flags();
@@ -199,6 +213,7 @@ impl IoEnv {
     /// overridden by the policy plugin setting its value on
     /// `command_info`.
     ///
+    #[must_use]
     pub fn cwd(&self) -> &PathBuf {
         self.command_info.cwd.as_ref().unwrap_or(
             &self.user_info.cwd
@@ -214,6 +229,7 @@ impl IoEnv {
     ///
     /// This set will always contain `runas_egid`.
     ///
+    #[must_use]
     pub fn runas_gids(&self) -> HashSet<gid_t> {
         // sanity-check that if preserve_groups is unset we have
         // `runas_groups`, and if it is set that we don't

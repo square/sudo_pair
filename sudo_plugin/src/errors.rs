@@ -26,7 +26,7 @@ use crate::version::Version;
 
 use sudo_plugin_sys as sys;
 use libc::c_int;
-use error_chain::*;
+use error_chain::error_chain;
 
 pub use error_chain::bail;
 
