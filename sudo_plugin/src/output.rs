@@ -14,6 +14,8 @@
 
 pub(crate) mod print_facility;
 pub(crate) mod tty;
+pub(crate) mod conv_facility;
 
 pub(crate) use print_facility::PrintFacility;
 pub(crate) use tty::Tty;
+pub(crate) use conv_facility::*;

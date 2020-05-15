@@ -14,7 +14,7 @@
 
 use crate::errors::*;
 use crate::{IoEnv, IoPlugin, IoState};
-use crate::output::PrintFacility;
+use crate::output::{PrintFacility, ConversationFacility};
 use crate::sys;
 
 use std::io::Write;
@@ -37,6 +37,8 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     let static_io_plugin = S::io_plugin();
 
     let (_, mut stderr) = PrintFacility::new(Some(P::NAME), plugin_printf);
+    let conv_f = ConversationFacility::new(conversation);
+
 
     let io_env = IoEnv::new(
         P::NAME,
@@ -50,6 +52,7 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
         plugin_options_ptr,
         plugin_printf,
         conversation,
+        conv_f,
     );
 
     let io_env = match io_env {

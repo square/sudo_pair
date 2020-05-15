@@ -16,32 +16,9 @@ use crate::errors::*;
 use crate::version::Version;
 use crate::options::{OptionMap, CommandInfo, Settings, UserInfo};
 use crate::output::{PrintFacility, Tty};
+use crate::output::ConversationFacility;
 
-<<<<<<< HEAD:sudo_plugin/src/plugin/mod.rs
-mod option_map;
-mod command_info;
-mod settings;
-mod user_info;
-mod print_facility;
-/// conv_facility exposes the conversation API
-pub mod conv_facility;
-mod traits;
-
-use super::errors::*;
-use super::version::Version;
-
-pub use self::option_map::OptionMap;
-pub use self::print_facility::PrintFacility;
-pub use self::conv_facility::ConversationFacility;
-
-use self::command_info::CommandInfo;
-use self::settings::Settings;
-use self::user_info::UserInfo;
-
-use std::convert::TryInto;
-=======
 use std::convert::{TryFrom, TryInto};
->>>>>>> bd5e7daae1ab0536faf8c99a1bd1c183bfbdd3f0:sudo_plugin/src/plugin/io_env.rs
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::ffi::{CString, CStr};
@@ -99,13 +76,8 @@ pub struct IoEnv {
     /// the user's stdin.
     stderr: PrintFacility,
 
-<<<<<<< HEAD:sudo_plugin/src/plugin/mod.rs
     conversation_f: ConversationFacility,
 
-=======
-    /// A (currently-unused) handle to the sudo_plugin conversation
-    /// facility, which allows two-way communication with the user.
->>>>>>> bd5e7daae1ab0536faf8c99a1bd1c183bfbdd3f0:sudo_plugin/src/plugin/io_env.rs
     _conversation: crate::sys::sudo_conv_t,
 }
 

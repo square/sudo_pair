@@ -78,7 +78,6 @@ macro_rules! sudo_io_plugin {
                 unsafe fn io_env()    -> &'static mut Option<$crate::IoEnv> { &mut SUDO_IO_ENV }
                 unsafe fn io_plugin() -> &'static mut Option<$ty>           { &mut SUDO_IO_PLUGIN }
             }
-<<<<<<< HEAD
         };
 
         unsafe extern "C" fn open(
@@ -156,8 +155,6 @@ macro_rules! sudo_io_plugin {
         ) {
             // force the instance to be dropped
             let _ = INSTANCE.take();
-=======
->>>>>>> bd5e7daae1ab0536faf8c99a1bd1c183bfbdd3f0
         }
 
         #[allow(non_upper_case_globals)]
