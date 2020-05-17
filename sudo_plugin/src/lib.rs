@@ -54,10 +54,10 @@ pub mod core;
 pub mod errors;
 pub mod options;
 pub mod plugin;
+pub mod output;
 
 pub mod macros;
 
-mod output;
 mod version;
 
 pub use sudo_plugin_sys as sys;
