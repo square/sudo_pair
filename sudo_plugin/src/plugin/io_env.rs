@@ -77,6 +77,9 @@ pub struct IoEnv {
     stderr: PrintFacility,
 
     conversation_f: ConversationFacility,
+    /// A handle to the sudo_plugin conversation
+    /// facility, which allows two-way communication with the user.
+
 
     _conversation: crate::sys::sudo_conv_t,
 }
@@ -177,9 +180,9 @@ impl IoEnv {
     }
 
     ///
-    /// Returns a facility implementing `std::io::Write` that emits to
-    /// the invoking user's STDERR.
+    /// Returns a facility implementing an interface for the sudo conversation API
     ///
+    #[must_use]
     pub fn conversation(&self) -> ConversationFacility {
         self.conversation_f.clone()
     }

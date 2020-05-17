@@ -1,3 +1,5 @@
+//! A module that implements the conversations API for a sudo plugin
+
 use crate::sys;
 
 use std::sync::{Arc, Mutex};
@@ -8,28 +10,28 @@ use std::mem;
 use std::ptr;
 use std::slice;
 
-/// ConvMsgType is the type of conversation prompt as specified by 
+/// `ConvMsgType` is the type of conversation prompt as specified by 
 /// the sudo plugin
 #[derive(Copy, Clone, Debug)]
 #[repr(u32)]
 pub enum ConvMsgType {
     /// Do not echo user input
-    ConvPromptEchoOff  = sys::SUDO_CONV_PROMPT_ECHO_OFF,
+    PromptEchoOff  = sys::SUDO_CONV_PROMPT_ECHO_OFF,
     /// Echo user input
-    ConvPromptEchoOn   = sys::SUDO_CONV_PROMPT_ECHO_ON,
+    PromptEchoOn   = sys::SUDO_CONV_PROMPT_ECHO_ON,
     /// The prompt is an Error Message
-    ConvErrorMsg       = sys::SUDO_CONV_ERROR_MSG,
+    ErrorMsg       = sys::SUDO_CONV_ERROR_MSG,
     /// The prompt is an informational message
-    ConvInfoMsg        = sys::SUDO_CONV_INFO_MSG,
+    InfoMsg        = sys::SUDO_CONV_INFO_MSG,
     /// Mask user input
-    ConvPrompMask      = sys::SUDO_CONV_PROMPT_MASK,
+    PrompMask      = sys::SUDO_CONV_PROMPT_MASK,
     /// Allows for echo if no TTY
-    ConvPromptEchoOk   = sys::SUDO_CONV_PROMPT_ECHO_OK,
+    PromptEchoOk   = sys::SUDO_CONV_PROMPT_ECHO_OK,
     // This is only available on plugin version 1.14 which isn't supported yet
     //ConvPreferTTY      = sys::SUDO_CONV_PREFER_TTY, /* flag: use tty if possible */
 }
 
-/// ConversationPrompt is the struct that holds the actual prompt displayed
+/// `ConversationPrompt` is the struct that holds the actual prompt displayed
 /// to the user. 
 #[derive(Clone, Debug)]
 pub struct ConversationPrompt {
@@ -42,8 +44,8 @@ pub struct ConversationPrompt {
 }
 
 impl ConversationPrompt {
-    /// This is an internal method for converting a ConversationPrompt to the
-    /// sudo_conv_message type for FFI
+    /// This is an internal method for converting a `ConversationPrompt` to the
+    /// `sudo_conv_message` type for FFI
     fn convert_to_conv_message(&self) -> io::Result<sudo_conv_message> {
         // TODO: can I get rid of this clone?
         let message = CString::new(self.msg.clone()).map_err(|err|
@@ -59,7 +61,7 @@ impl ConversationPrompt {
     } 
 }
 
-/// ConversationReply is the reply (if any) from the user to our promt
+/// `ConversationReply` is the reply (if any) from the user to our promt
 #[derive(Clone, Debug)]
 pub struct ConversationReply {
     /// The reply by the user
@@ -67,7 +69,7 @@ pub struct ConversationReply {
 }
 
 impl ConversationReply {
-    /// Internal method for converting sudo_conv_reply to Option<ConversationReply> to expose only safe APIs
+    /// Internal method for converting `sudo_conv_reply` to `Option<ConversationReply>` to expose only safe APIs
     fn from_conv_reply(scr: sudo_conv_reply) -> Option<ConversationReply> {
         if scr.reply.is_null() {
             return None;
@@ -101,8 +103,12 @@ impl ConversationFacility {
         Self { facility: conv }
     }
 
-    /// Take in a slice of ConversationPrompts and call the communicate() API exposed by
-    /// the sudo plugin. Will return a slice of ConversationReply
+    /// Take in a slice of `ConversationPrompts` and call the communicate() API exposed by
+    /// the sudo plugin. Will return a slice of `ConversationReply`
+    /// 
+    /// # Errors
+    ///
+    /// If this method returns an error, the command will be terminated.
     pub fn communicate(&mut self, prompts: &[ConversationPrompt]) -> io::Result<Vec<Option<ConversationReply>>> {
         let guard = self.facility.lock().map_err(|_err|
             io::Error::new(io::ErrorKind::Other, "couldn't aquire conversation mutex")
@@ -114,11 +120,15 @@ impl ConversationFacility {
         )?;
 
         // convert ConversationPrompt to sudo_conv_message and store it in an array
+        // ignore redundant closure in map because it's not ()
+        #[allow(clippy::redundant_closure_for_method_calls)] 
         let mut sudo_conv_prompts: Vec<sudo_conv_message> = prompts.iter()
             .map(|x| x.convert_to_conv_message())
             .collect::<io::Result<Vec<sudo_conv_message>>>()?;
         sudo_conv_prompts.shrink_to_fit();
         let prompt_ptr = sudo_conv_prompts.as_mut_ptr();
+        // allow a lossless cast because it has to be i32 for FFI
+        #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)] 
         let len = sudo_conv_prompts.len() as i32;
         
         // make sure that sudo_conv_prompts doesn't get dealloced by rust
@@ -144,6 +154,7 @@ impl ConversationFacility {
             return Err(io::Error::new(io::ErrorKind::Other, "Error calling conversation API"));
         }
         // Convert the replies into ConversationReply structs and return
+        #[allow(clippy::cast_sign_loss)] 
         let creplies: &[sudo_conv_reply] = unsafe {
             slice::from_raw_parts(reply_ptr, len as usize)
         };

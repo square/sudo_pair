@@ -22,7 +22,7 @@
 
 use crate::errors::AsSudoPluginRetval;
 use crate::output::{PrintFacility, ConversationFacility};
-use crate::{IoEnv, IoPlugin, IoState};
+use crate::plugin::{IoEnv, IoPlugin, IoState};
 use crate::sys;
 
 use std::os::raw;

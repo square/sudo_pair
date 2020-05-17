@@ -12,6 +12,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+//! A module that includes input and output modules for
+//! a sudo plugin
+
 pub(crate) mod print_facility;
 pub(crate) mod tty;
 pub mod conv_facility;

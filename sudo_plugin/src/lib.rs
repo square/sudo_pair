@@ -62,6 +62,7 @@ pub mod core;
 pub mod errors;
 pub mod options;
 pub mod plugin;
+pub mod prelude;
 pub mod output;
 
 pub mod macros;
