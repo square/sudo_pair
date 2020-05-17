@@ -21,21 +21,19 @@
 ///
 /// ```rust
 /// # mod necessary_for_super_type_lookup_to_work {
-/// use sudo_plugin::*;
-/// use sudo_plugin::errors::*;
+/// use sudo_plugin::prelude::*;
 /// use std::io::Write;
 ///
 /// sudo_io_plugin! { example : Example }
 ///
 /// struct Example {
-///     env: &'static sudo_plugin::IoEnv
+///     env: &'static IoEnv
 /// }
 ///
 /// impl IoPlugin for Example {
 ///     const NAME:    &'static str = "example";
-///     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 ///
-///     fn open(env: &'static sudo_plugin::IoEnv) -> Result<Self> {
+///     fn open(env: &'static IoEnv) -> Result<Self> {
 ///         writeln!(env.stdout(), "example sudo plugin initialized");
 ///
 ///         Ok(Example { env })
@@ -69,14 +67,14 @@ macro_rules! sudo_io_plugin {
             use super::*;
 
             // TODO: end use of static mut
-            static mut SUDO_IO_ENV:    Option<$crate::IoEnv> = None;
-            static mut SUDO_IO_PLUGIN: Option<$ty>           = None;
+            static mut SUDO_IO_ENV:    Option<$crate::plugin::IoEnv> = None;
+            static mut SUDO_IO_PLUGIN: Option<$ty>                   = None;
 
             pub struct State { }
 
-            impl $crate::IoState<$ty> for State {
-                unsafe fn io_env()    -> &'static mut Option<$crate::IoEnv> { &mut SUDO_IO_ENV }
-                unsafe fn io_plugin() -> &'static mut Option<$ty>           { &mut SUDO_IO_PLUGIN }
+            impl $crate::plugin::IoState<$ty> for State {
+                unsafe fn io_env()    -> &'static mut Option<$crate::plugin::IoEnv> { &mut SUDO_IO_ENV }
+                unsafe fn io_plugin() -> &'static mut Option<$ty>                   { &mut SUDO_IO_PLUGIN }
             }
         };
 
@@ -174,7 +172,7 @@ macro_rules! sudo_io_plugin {
             log_stdout: Some($crate::core::log_stdout::<$ty, $name::State>),
             log_stderr: Some($crate::core::log_stderr::<$ty, $name::State>),
 
-            .. ::sudo_plugin::sys::IO_PLUGIN_EMPTY
+            .. $crate::sys::IO_PLUGIN_EMPTY
         };
     }
 }

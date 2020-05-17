@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::*;
+use crate::errors::{Result, ErrorKind, bail};
 use crate::sys::SUDO_API_VERSION;
 
 use std::fmt;
@@ -32,6 +32,9 @@ impl Version {
     }
 
     pub const fn from_ffi(version: c_uint) -> Self {
+        // this cast is guaranteed not to truncate thanks to the shifts
+        // and masks
+        #[allow(clippy::cast_possible_truncation)]
         Self::new(
             (version >> 16)     as _,
             (version &  0xffff) as _,

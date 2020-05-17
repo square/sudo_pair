@@ -1,26 +1,26 @@
 [package]
-name    = "sudo_plugin"
-version = "1.2.0"
-license = "Apache-2.0"
-edition = "2018"
+name    = 'sudo_plugin'
+version = '1.2.0'
+license = 'Apache-2.0'
+edition = '2018'
 
-authors     = ["Stephen Touset <stephen@squareup.com>"]
-description = "Macros to easily write custom sudo plugins"
+authors     = ['Stephen Touset <stephen@squareup.com>']
+description = 'Macros to easily write custom sudo plugins'
 
-homepage   = "https://github.com/square/sudo_pair"
-repository = "https://github.com/square/sudo_pair.git"
-readme     = "../README.md"
+homepage   = 'https://github.com/square/sudo_pair'
+repository = 'https://github.com/square/sudo_pair.git'
+readme     = '../README.md'
 
-categories = [ "external-ffi-bindings" ]
-keywords   = [ "sudo", "sudo-plugin" ]
+categories = [ 'external-ffi-bindings' ]
+keywords   = [ 'sudo', 'sudo-plugin' ]
 
 [dependencies]
-libc            = '0'
-error-chain     = '0'
+libc            = '0.2.70'
+error-chain     = '0.12.2'
 
 [dependencies.sudo_plugin-sys]
-version = "1.2"
-path    = "../sudo_plugin-sys"
+version = '1.2'
+path    = '../sudo_plugin-sys'
 
 [badges]
-travis-ci = { repository = "square/sudo_pair" }
+travis-ci = { repository = 'square/sudo_pair' }

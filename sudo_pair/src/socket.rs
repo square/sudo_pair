@@ -15,7 +15,7 @@
 // these warnings are unavoidable with names like `uid` and `gid`, and
 // such names are natural to use for this problem domain so should not
 // be avoided
-#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
+#![allow(clippy::similar_names)]
 
 use std::ffi::CString;
 use std::fs;

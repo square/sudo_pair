@@ -12,15 +12,23 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::*;
-use crate::{IoEnv, IoPlugin, IoState};
+//! This module implements the actual `sudo_plugin(8)` callbacks that
+//! convert between C and Rust style and trampoline into the acutal
+//! plugin code. It is not intended for direct end-user use.
+
+// This is entirely called from `C` code. Rust `#[must_use]` attributes
+// aren't going to affect anything.
+#![allow(clippy::must_use_candidate)]
+
+use crate::errors::AsSudoPluginRetval;
 use crate::output::{PrintFacility, ConversationFacility};
+use crate::{IoEnv, IoPlugin, IoState};
 use crate::sys;
 
-use std::io::Write;
 use std::os::raw;
 use std::path::PathBuf;
 
+#[doc(hidden)]
 pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     version: raw::c_uint,
     conversation:       sys::sudo_conv_t,
@@ -36,7 +44,9 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     let static_io_env    = S::io_env();
     let static_io_plugin = S::io_plugin();
 
-    let (_, mut stderr) = PrintFacility::new(Some(P::NAME), plugin_printf);
+    let (_, mut stderr) = PrintFacility::new(
+        Some(P::NAME), plugin_printf
+    );
     let conv_f = ConversationFacility::new(conversation);
 
 
@@ -63,6 +73,12 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
         }
     };
 
+    // Long story short, the `IoEnv` needs to be moved into static
+    // memory before we initialize the user-provided `IoPlugin`. But
+    // doing so puts it into an `Option` so we have to get a reference
+    // out of the option. I hate using `unwrap` but in this case we know
+    // it exists since we literally just assigned to it.
+    //
     // TODO: can we avoid this dance?
     let _      = static_io_env.replace(io_env);
     let io_env = static_io_env.as_ref().unwrap();
@@ -85,7 +101,6 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     let io_plugin = match P::open(io_env) {
         Ok(v)  => v,
         Err(e) => {
-            let e = e.into();
             let _ = stderr.write_error(&e);
             return e.as_sudo_io_plugin_open_retval();
         },
@@ -96,6 +111,7 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     sys::SUDO_PLUGIN_OPEN_SUCCESS
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn close<P: 'static + IoPlugin, S: IoState<P>>(
     exit_status: raw::c_int,
     error:       raw::c_int,
@@ -114,24 +130,21 @@ pub unsafe extern "C" fn close<P: 'static + IoPlugin, S: IoState<P>>(
     drop(S::io_env().take());
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn show_version<P: 'static + IoPlugin, S: IoState<P>>(
-    _verbose: raw::c_int,
+    verbose: raw::c_int,
 ) -> raw::c_int {
-    let ret = S::io_env().as_ref().and_then(|env| {
-        writeln!(
-            env.stdout(),
-            "{} I/O plugin version {}",
-            P::NAME,
-            P::VERSION,
-        ).ok()
-    });
+    let env = match S::io_env().as_ref() {
+        Some(env) => env,
+        None      => return sys::SUDO_PLUGIN_OPEN_FAILURE,
+    };
 
-    match ret {
-        Some(_) => 1,
-        None    => 0,
-    }
+    P::show_version(env, verbose != 0);
+
+    sys::SUDO_PLUGIN_OPEN_SUCCESS
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn log_ttyin<P: 'static + IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
@@ -161,6 +174,7 @@ pub unsafe extern "C" fn log_ttyin<P: 'static + IoPlugin, S: IoState<P>>(
     }).as_sudo_io_plugin_log_retval()
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn log_ttyout<P: 'static + IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
@@ -190,6 +204,7 @@ pub unsafe extern "C" fn log_ttyout<P: 'static + IoPlugin, S: IoState<P>>(
     }).as_sudo_io_plugin_log_retval()
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn log_stdin<P: 'static + IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
@@ -219,6 +234,7 @@ pub unsafe extern "C" fn log_stdin<P: 'static + IoPlugin, S: IoState<P>>(
     }).as_sudo_io_plugin_log_retval()
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn log_stdout<P: 'static + IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
@@ -248,6 +264,7 @@ pub unsafe extern "C" fn log_stdout<P: 'static + IoPlugin, S: IoState<P>>(
     }).as_sudo_io_plugin_log_retval()
 }
 
+#[doc(hidden)]
 pub unsafe extern "C" fn log_stderr<P: 'static + IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,

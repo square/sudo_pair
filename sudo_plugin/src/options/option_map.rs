@@ -12,8 +12,8 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::*;
-use crate::options::traits::*;
+use crate::errors::{Result, ResultExt};
+use crate::options::traits::FromSudoOption;
 
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -100,7 +100,11 @@ impl OptionMap {
     /// was provided during initialization. Also returns `Err(_)` if the
     /// value was not interpretable as a UTF-8 string or if there was an
     /// error parsing the value to the requested type.
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the option could not be successfully parsed
+    /// into type `T`.
     pub fn get<T: FromSudoOption>(&self, k: &str) -> Result<T> {
         let v = self.get_str(k).chain_err(|| {
             format!("option {} wasn't provided to the plugin", k)
@@ -130,6 +134,7 @@ impl OptionMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::options::traits::FromSudoOptionList;
 
     use std::collections::HashSet;
     use std::path::PathBuf;

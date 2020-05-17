@@ -44,11 +44,19 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
+#![warn(clippy::cargo)]
+#![warn(clippy::complexity)]
+#![warn(clippy::correctness)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![warn(clippy::style)]
+
+// this is triggered by dependencies
+#![allow(clippy::multiple_crate_versions)]
 
 // this warns on names that are out of our control like argv, argc, uid,
 // and gid
-#![cfg_attr(feature="cargo-clippy", allow(clippy::similar_names))]
+#![allow(clippy::similar_names)]
 
 pub mod core;
 pub mod errors;
@@ -61,5 +69,3 @@ pub mod macros;
 mod version;
 
 pub use sudo_plugin_sys as sys;
-
-pub use plugin::{IoEnv, IoPlugin, IoState};

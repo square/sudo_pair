@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::*;
+use crate::errors::Error;
 use crate::sys;
 
 use sudo_plugin_sys::sudo_printf_t;

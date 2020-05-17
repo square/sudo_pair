@@ -19,13 +19,10 @@
 
 // TODO: remove all to_string_lossy
 // TODO: error message when /var/run/sudo_pair missing
-// TODO: iolog in `sudoreplay(8)` format
 // TODO: rustfmt
 // TODO: double-check all `as`-casts
-// TODO: docs on docs.rs
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
-// TODO: implement change_winsize
 
 #![warn(bad_style)]
 #![warn(future_incompatible)]
@@ -53,13 +50,21 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
-#![cfg_attr(feature="cargo-clippy", warn(clippy::all))]
+#![warn(clippy::cargo)]
+#![warn(clippy::complexity)]
+#![warn(clippy::correctness)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![warn(clippy::style)]
+
+// this is triggered by dependencies
+#![allow(clippy::multiple_crate_versions)]
 
 mod errors;
 mod template;
 mod socket;
 
-use crate::errors::*;
+use crate::errors::{ErrorKind, Result};
 use crate::template::Spec;
 use crate::socket::Socket;
 
@@ -73,7 +78,8 @@ use libc::{gid_t, mode_t, uid_t};
 
 use failure::ResultExt;
 
-use sudo_plugin::{sudo_io_plugin, IoEnv, IoPlugin, options::OptionMap};
+use sudo_plugin::prelude::*;
+use sudo_plugin::options::OptionMap;
 
 const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
 const DEFAULT_USER_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.user";
@@ -95,8 +101,7 @@ struct SudoPair {
 }
 
 impl IoPlugin for SudoPair {
-    const NAME:     &'static str = "sudo_pair";
-    const VERSION : &'static str = env!("CARGO_PKG_VERSION");
+    const NAME: &'static str = "sudo_pair";
 
     fn open(env: &'static IoEnv) -> sudo_plugin::errors::Result<Self> {
         let mut slog = slog(Self::NAME, Self::VERSION);
