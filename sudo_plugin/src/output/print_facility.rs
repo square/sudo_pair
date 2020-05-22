@@ -13,19 +13,12 @@
 // permissions and limitations under the License.
 
 use crate::errors::Error;
-use crate::sys;
+use crate::output::Level;
 
 use sudo_plugin_sys::sudo_printf_t;
 
 use std::ffi::CString;
 use std::io::{self, Write};
-
-#[derive(Clone, Copy, Debug)]
-#[repr(u32)]
-enum Level {
-    Info  = sys::SUDO_CONV_INFO_MSG,
-    Error = sys::SUDO_CONV_ERROR_MSG,
-}
 
 /// A facility implementing `std::io::Write` that allows printing
 /// output to the user invoking `sudo`. Technically, the user may
