@@ -12,8 +12,12 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+// TODO: once associated type defaults are stabilized, provide defaults
+// `OpenError` and `LogError` and return `Disable` for default methods
+// to avoid any performance penalties.
+
 use super::IoEnv;
-use crate::errors::Result;
+use crate::errors::SudoError;
 
 use std::io::Write;
 
@@ -21,6 +25,10 @@ use std::io::Write;
 
 /// The trait that defines the implementation of a sudo I/O plugin.
 pub trait IoPlugin: Sized {
+    /// The type for errors returned by this `IoPlugin`. Errors must
+    /// implement the
+    type Error: SudoError;
+
     /// The name of the plugin. Used when printing the version of the
     /// plugin and error messages.
     const NAME: &'static str;
@@ -59,8 +67,11 @@ pub trait IoPlugin: Sized {
     ///
     /// # Errors
     ///
-    /// If this method returns an error, the command will be terminated.
-    fn open(env: &'static IoEnv) -> Result<Self>;
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// an [`OpenStatus`](crate::errors::OpenStatus) before being
+    /// returned to `sudo`.
+    fn open(env: &'static IoEnv) -> Result<Self, Self::Error>;
 
     /// The `close` method is called when the command being run by
     /// sudo finishes. A default no-op implementation is provided, but
@@ -68,11 +79,6 @@ pub trait IoPlugin: Sized {
     ///
     /// As suggested by its signature, once this method exits, the
     /// plugin will be dropped.
-    ///
-    /// # Errors
-    ///
-    /// If this method returns an `Err(ErrorKind::Unauthorized)`, the command
-    /// will be terminated. Other errors are ignored by `sudo`.
     #[inline]
     fn close(self, _exit_status: i32, _error: i32) {}
 
@@ -83,10 +89,12 @@ pub trait IoPlugin: Sized {
     ///
     /// # Errors
     ///
-    /// If this method returns an `Err(ErrorKind::Unauthorized)`, the command
-    /// will be terminated. Other errors are ignored by `sudo`.
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// a [`LogStatus`](crate::errors::LogStatus) before being
+    /// returned to `sudo`.
     #[inline]
-    fn log_ttyin(&mut self, _log: &[u8]) -> Result<()> {
+    fn log_ttyin(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -97,10 +105,12 @@ pub trait IoPlugin: Sized {
     ///
     /// # Errors
     ///
-    /// If this method returns an `Err(ErrorKind::Unauthorized)`, the command
-    /// will be terminated. Other errors are ignored by `sudo`.
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// a [`LogStatus`](crate::errors::LogStatus) before being
+    /// returned to `sudo`.
     #[inline]
-    fn log_ttyout(&mut self, _log: &[u8]) -> Result<()> {
+    fn log_ttyout(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -110,10 +120,12 @@ pub trait IoPlugin: Sized {
     ///
     /// # Errors
     ///
-    /// If this method returns an `Err(ErrorKind::Unauthorized)`, the command
-    /// will be terminated. Other errors are ignored by `sudo`.
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// a [`LogStatus`](crate::errors::LogStatus) before being
+    /// returned to `sudo`.
     #[inline]
-    fn log_stdin(&mut self, _log: &[u8]) -> Result<()> {
+    fn log_stdin(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -125,10 +137,12 @@ pub trait IoPlugin: Sized {
     ///
     /// # Errors
     ///
-    /// If this method returns an `Err(ErrorKind::Unauthorized)`, the command
-    /// will be terminated. Other errors are ignored by `sudo`.
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// a [`LogStatus`](crate::errors::LogStatus) before being
+    /// returned to `sudo`.
     #[inline]
-    fn log_stdout(&mut self, _log: &[u8]) -> Result<()> {
+    fn log_stdout(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -140,10 +154,12 @@ pub trait IoPlugin: Sized {
     ///
     /// # Errors
     ///
-    /// If this method returns an `Err(ErrorKind::Unauthorized)`, the command
-    /// will be terminated. Other errors are ignored by `sudo`.
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// a [`LogStatus`](crate::errors::LogStatus) before being
+    /// returned to `sudo`.
     #[inline]
-    fn log_stderr(&mut self, _log: &[u8]) -> Result<()> {
+    fn log_stderr(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 

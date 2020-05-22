@@ -64,7 +64,7 @@ mod errors;
 mod template;
 mod socket;
 
-use crate::errors::{ErrorKind, Result};
+use crate::errors::{Error, ErrorKind, Result};
 use crate::template::Spec;
 use crate::socket::Socket;
 
@@ -101,9 +101,11 @@ struct SudoPair {
 }
 
 impl IoPlugin for SudoPair {
+    type Error  = Error;
+
     const NAME: &'static str = "sudo_pair";
 
-    fn open(env: &'static IoEnv) -> sudo_plugin::errors::Result<Self> {
+    fn open(env: &'static IoEnv) -> Result<Self> {
         let mut slog = slog(Self::NAME, Self::VERSION);
 
         slog::debug!(slog, "plugin initializing");
@@ -198,19 +200,19 @@ impl IoPlugin for SudoPair {
         }
     }
 
-    fn log_ttyout(&mut self, log: &[u8]) -> sudo_plugin::errors::Result<()> {
-        self.log_output(log).map_err(|e| e.into())
+    fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
+        self.log_output(log)
     }
 
-    fn log_stdout(&mut self, log: &[u8]) -> sudo_plugin::errors::Result<()> {
-       self.log_output(log).map_err(|e| e.into())
+    fn log_stdout(&mut self, log: &[u8]) -> Result<()> {
+       self.log_output(log)
     }
 
-    fn log_stderr(&mut self, log: &[u8]) -> sudo_plugin::errors::Result<()> {
-        self.log_output(log).map_err(|e| e.into())
+    fn log_stderr(&mut self, log: &[u8]) -> Result<()> {
+        self.log_output(log)
     }
 
-    fn log_stdin(&mut self, _: &[u8]) -> sudo_plugin::errors::Result<()> {
+    fn log_stdin(&mut self, _: &[u8]) -> Result<()> {
         // if we're exempt, don't disable stdin
         if self.is_exempt() {
             return Ok(());

@@ -14,40 +14,42 @@
 
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::result::Result as StdResult;
+use std::error::Error as StdError;
 
-use failure::{Context, Fail};
+use failure::Context;
 
-use sudo_plugin::errors::{
-    Error     as SudoPluginError,
-    ErrorKind as SudoPluginErrorKind,
-};
+use sudo_plugin::errors::{Error as PluginError, OpenStatus, LogStatus};
 
 pub(crate) type Result<T> = StdResult<T, Error>;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub(crate) enum ErrorKind {
     CommunicationError,
     SessionDeclined,
     SessionTerminated,
     StdinRedirected,
     SudoToUserAndGroup,
+
+    PluginError(PluginError),
 }
 
 impl ErrorKind {
-    fn as_str(self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match self {
             ErrorKind::CommunicationError => "couldn't establish communications with the pair",
             ErrorKind::SessionDeclined    => "pair declined the session",
             ErrorKind::SessionTerminated  => "pair ended the session",
             ErrorKind::StdinRedirected    => "redirection of stdin to paired sessions is prohibited",
             ErrorKind::SudoToUserAndGroup => "the -u and -g options may not both be specified",
+
+            ErrorKind::PluginError(_)     => "the plugin failed to initialize",
         }
     }
 }
 
 impl Display for ErrorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        self.as_str().fmt(f)
+        self.clone().as_str().fmt(f)
     }
 }
 
@@ -62,8 +64,6 @@ impl Display for Error {
     }
 }
 
-impl Fail for Error {}
-
 impl From<ErrorKind> for Error {
     fn from(kind: ErrorKind) -> Self {
         Self::from(Context::new(kind))
@@ -76,26 +76,22 @@ impl From<Context<ErrorKind>> for Error {
     }
 }
 
-///
-/// Implements conversion from `Error` to `sudo_plugin::errors::Error`.
-/// Since this plugin is security-sensitive, all errors should be
-/// converted to an Unauthorized error.
-///
-impl From<Error> for SudoPluginError {
-    fn from(error: Error) -> Self {
-        Self::with_chain(
-            error.compat(),
-            SudoPluginErrorKind::Unauthorized
-        )
+impl From<Error> for OpenStatus {
+    fn from(_: Error) -> Self {
+        OpenStatus::Deny
     }
 }
 
-///
-/// Also allow converting directly from an `ErrorKind`, which will be
-/// implicitly wrapped in a new `Error`.
-///
-impl From<ErrorKind> for SudoPluginError {
-    fn from(kind: ErrorKind) -> Self {
-        Self::from(Error::from(kind))
+impl From<Error> for LogStatus {
+    fn from(_: Error) -> Self {
+        LogStatus::Deny
     }
 }
+
+impl From<PluginError> for Error {
+    fn from(err: PluginError) -> Self {
+        ErrorKind::PluginError(err).into()
+    }
+}
+
+impl StdError for Error { }

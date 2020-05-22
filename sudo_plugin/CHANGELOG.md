@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Autodetect what version of the `sudo_plugin` API is supported by the version
   of `sudo_plugin-sys` we're linked against.
 - Now uses a prelude-style import.
+- Replaced error-chain with thiserror.
+- Completely reworked error handling. Plugin implementations may now provide
+  coercions from sudo_plugin internal errors to appropriate return codes. The
+  provided `Error` type defaults to aborting the session on error.
 
 ## [1.2.0] - 2020-03-26
 

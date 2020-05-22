@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::{Result, ResultExt};
+use crate::errors::{Result, Error};
 use crate::options::traits::FromSudoOption;
 
 use std::collections::HashMap;
@@ -106,13 +106,10 @@ impl OptionMap {
     /// Returns an error if the option could not be successfully parsed
     /// into type `T`.
     pub fn get<T: FromSudoOption>(&self, k: &str) -> Result<T> {
-        let v = self.get_str(k).chain_err(|| {
-            format!("option {} wasn't provided to the plugin", k)
-        })?;
+        let v = self.get_str(k).ok_or(Error::OptionMissing { key: k.into() })?;
 
         FromSudoOption::from_sudo_option(v)
-            .ok()
-            .chain_err(|| format!("option {} couldn't be parsed", k))
+            .map_err(|_| Error::OptionInvalid { key: k.into(), value: v.into() })
     }
 
     /// Gets the value of a key as a string. Returns `None` if no such
