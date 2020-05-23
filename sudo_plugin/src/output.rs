@@ -22,3 +22,12 @@ pub mod conv_facility;
 pub(crate) use print_facility::PrintFacility;
 pub(crate) use tty::Tty;
 pub(crate) use conv_facility::*;
+
+use crate::sys;
+
+#[derive(Clone, Copy, Debug)]
+#[repr(u32)]
+enum Level {
+    Info  = sys::SUDO_CONV_INFO_MSG,
+    Error = sys::SUDO_CONV_ERROR_MSG,
+}
