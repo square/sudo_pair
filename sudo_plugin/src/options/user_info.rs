@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::{Error, Result};
+use crate::errors::{Result, Error};
 use crate::options::OptionMap;
 
 use std::convert::TryFrom;

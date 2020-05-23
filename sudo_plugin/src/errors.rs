@@ -24,86 +24,142 @@
 
 use crate::version::Version;
 
-use sudo_plugin_sys as sys;
-use libc::c_int;
-use error_chain::error_chain;
+use std::result::Result as StdResult;
+use std::error::Error as StdError;
+use thiserror::Error;
 
-pub use error_chain::bail;
-
-error_chain! {
-    errors {
-        /// An error which can be returned when the requsested plugin API
-        /// version is incompatible with the version implemented by this
-        /// library.
-        UnsupportedApiVersion(cur: Version) {
-            description("sudo doesn't support the minimum plugin API version required by this plugin"),
-            display("sudo called this plugin with an API version of {}, but a minimum of {} is required", cur, Version::minimum()),
-        }
-
-        /// An error which can be returned when there's a general error
-        /// when initiailizing the plugin.
-        Uninitialized {
-            description("the plugin failed to initialize"),
-            display("the plugin failed to initialize"),
-        }
-
-        /// An error which can be returned if the user is not authorized
-        /// to invoke sudo with the provided command and/or options.
-        Unauthorized {
-            description("command unauthorized"),
-            display("command unauthorized"),
-        }
-    }
-}
-
-/// A trait that is implemented by all Error types in this library, which
-/// allows any error to be converted to its corresponding integer error
-/// code as understood by the sudo plugin API.
+/// Return codes understood by the `io_plugin.open` callback.
 ///
-/// The sudo plugin API understands the following error codes:
+/// The interpretations of these values are badly-documented within the
+/// [`sudo_plugin(8)` manpage][manpage] so the code was used to
+/// understand their actual effects.
 ///
-/// *  1: Success
-/// *  0: Failure
-/// * -1: General error
-/// * -2: Usage error
-pub trait AsSudoPluginRetval {
-    /// Converts the error to its corresponding integer error code for
-    /// the I/O plugin `open` function.
-    fn as_sudo_io_plugin_open_retval(&self) -> c_int;
+/// [manpage]: https://www.sudo.ws/man/1.8.30/sudo_plugin.man.html
+/// [code]: https://github.com/sudo-project/sudo/blob/446ae3f507271c8a08f054c9291cb8804afe81d9/src/sudo.c#L1404
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(i32)]
+pub enum OpenStatus {
+    /// The plugin was `open`ed successfully and may be used as normal.
+    Ok = 1,
 
-    /// Converts the error to its corresponding integer error code for
-    /// the I/O plugin `log_*` suite of functions.
-    fn as_sudo_io_plugin_log_retval(&self) -> c_int;
+    /// The plugin should be unloaded for the duration of this `sudo`
+    /// session. The `sudo` session may continue, but will not use any
+    /// of the features of this plugin.
+    Disable = 0,
+
+    /// The `sudo` command is unauthorized and must be immediately
+    /// terminated.
+    Deny = -1,
+
+    /// The `sudo` command was invoked incorrectly and will be
+    /// terminated. Basic usage information will be presented to the
+    /// user. The plugin may choose to emit its own usage information
+    /// describing the problem.
+    Usage = -2,
 }
 
-impl<T, E: AsSudoPluginRetval> AsSudoPluginRetval for ::std::result::Result<T, E> {
-    fn as_sudo_io_plugin_open_retval(&self) -> c_int {
-        match *self {
-            Ok(_)      => sys::SUDO_PLUGIN_OPEN_SUCCESS,
-            Err(ref e) => e.as_sudo_io_plugin_open_retval(),
-        }
-    }
+/// Return codes understood by the `io_plugin.log_*` family of callbacks.
+///
+/// The interpretations of these values are badly-documented within the
+/// [`sudo_plugin(8)` manpage][manpage] so the code was used to
+/// understand their actual effects.
+///
+/// [manpage]: https://www.sudo.ws/man/1.8.30/sudo_plugin.man.html
+/// [code]: https://github.com/sudo-project/sudo/blob/446ae3f507271c8a08f054c9291cb8804afe81d9/src/sudo.c#L1404
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(i32)]
+pub enum LogStatus {
+    /// The plugin logged the information successfully.
+    Ok = 1,
 
-    fn as_sudo_io_plugin_log_retval(&self) -> c_int {
-        match *self {
-            Ok(_)      => sys::SUDO_PLUGIN_LOG_OK,
-            Err(ref e) => e.as_sudo_io_plugin_log_retval(),
+    /// The plugin has determined that the `sudo` session should be
+    /// terminated immediately.
+    Deny = 0,
+
+    /// The plugin no longer needs this callback. This callback will no
+    /// longer be invoked by `sudo`, but the rest of the plugin's
+    /// callbacks will function as normal.
+    Disable = -1,
+}
+
+/// Errors that can be produced by plugin internals.
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
+pub enum Error {
+    /// The plugin was called using the conventions of an unsupported
+    /// API version.
+    #[error("sudo called plugin with an API version of {provided}, but a minimum of {required} is required")]
+    UnsupportedApiVersion {
+        /// The minimum API version supported
+        required: Version,
+
+        /// The API version provided by `sudo`.
+        provided: Version,
+    },
+
+    /// A required option is missing.
+    #[error("sudo called plugin without providing a value for {key}")]
+    OptionMissing {
+        /// The name of the option.
+        key: String,
+    },
+
+    /// A required option could not be parsed into the expected type.
+    #[error("sudo called plugin with an unparseable value for {key}: {value}")]
+    OptionInvalid {
+        /// The name of the option.
+        key:   String,
+
+        /// The value provided.
+        value: String,
+    },
+
+    /// A generic error identified only by a provided string. This may
+    /// be used by plugin implementors who don't wish to provide their
+    /// own custom error types, and instead are happy to simply use
+    /// stringly-typed error messages.
+    #[error("plugin exited: {0}")]
+    Other(String),
+}
+
+pub(crate) type Result<T> = StdResult<T, Error>;
+
+/// The type for errors that can be returned from plugin callbacks.
+/// Plugin authors are expected to provide an implementation of coercion
+/// `From<sudo_plugin::errors::Error>` for their own custom error types
+/// as well coercions `Into<OpenStatus>` and `Into<LogStatus>` to
+/// specify how those errors should be treated by `sudo`.
+pub trait SudoError: StdError + From<Error> + Into<OpenStatus> + Into<LogStatus> { }
+
+impl<T: StdError + From<Error> + Into<OpenStatus> + Into<LogStatus>> SudoError for T {}
+
+impl From<Error> for OpenStatus {
+    fn from(_: Error) -> Self {
+        // by default, abort `sudo` on all errors
+        OpenStatus::Deny
+    }
+}
+
+impl From<Error> for LogStatus {
+    fn from(_: Error) -> Self {
+        // by default, abort `sudo` on all errors
+        LogStatus::Deny
+    }
+}
+
+impl<T, E: SudoError> From<StdResult<T, E>> for OpenStatus {
+    fn from(result: StdResult<T, E>) -> Self {
+        match result {
+            Ok(_)  => OpenStatus::Ok,
+            Err(e) => e.into(),
         }
     }
 }
 
-impl AsSudoPluginRetval for Error {
-    fn as_sudo_io_plugin_open_retval(&self) -> c_int {
-        match *self {
-            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_OPEN_GENERAL_ERROR,
-            Error(_, _)                       => sys::SUDO_PLUGIN_OPEN_FAILURE,
-        }
-    }
-
-    fn as_sudo_io_plugin_log_retval(&self) -> c_int {
-        match *self {
-            Error(ErrorKind::Unauthorized, _) => sys::SUDO_PLUGIN_LOG_REJECT,
-            Error(_, _)                       => sys::SUDO_PLUGIN_LOG_ERROR,
+impl<T, E: SudoError> From<StdResult<T, E>> for LogStatus {
+    fn from(result: StdResult<T, E>) -> Self {
+        match result {
+            Ok(_)  => LogStatus::Ok,
+            Err(e) => e.into(),
         }
     }
 }
