@@ -16,6 +16,7 @@ use crate::errors::Result;
 use crate::version::Version;
 use crate::options::{OptionMap, CommandInfo, Settings, UserInfo};
 use crate::output::{PrintFacility, Tty};
+use crate::output::ConversationFacility;
 
 use std::convert::{TryFrom, TryInto};
 use std::collections::HashSet;
@@ -75,8 +76,11 @@ pub struct IoEnv {
     /// the user's stdin.
     stderr: PrintFacility,
 
-    /// A (currently-unused) handle to the sudo_plugin conversation
+    conversation_f: ConversationFacility,
+    /// A handle to the sudo_plugin conversation
     /// facility, which allows two-way communication with the user.
+
+
     _conversation: crate::sys::sudo_conv_t,
 }
 
@@ -113,6 +117,7 @@ impl IoEnv {
         plugin_options: *const *mut c_char,
         plugin_printf:  crate::sys::sudo_printf_t,
         conversation:   crate::sys::sudo_conv_t,
+        conversation_f: ConversationFacility,
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
 
@@ -150,6 +155,7 @@ impl IoEnv {
             stdout,
             stderr,
             _conversation: conversation,
+            conversation_f
         };
 
         Ok(plugin)
@@ -171,6 +177,14 @@ impl IoEnv {
     #[must_use]
     pub fn stderr(&self) -> PrintFacility {
         self.stderr.clone()
+    }
+
+    ///
+    /// Returns a facility implementing an interface for the sudo conversation API
+    ///
+    #[must_use]
+    pub fn conversation(&self) -> ConversationFacility {
+        self.conversation_f.clone()
     }
 
     ///

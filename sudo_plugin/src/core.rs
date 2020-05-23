@@ -21,7 +21,7 @@
 #![allow(clippy::must_use_candidate)]
 
 use crate::errors::{OpenStatus, LogStatus};
-use crate::output::PrintFacility;
+use crate::output::{PrintFacility, ConversationFacility};
 use crate::plugin::{IoEnv, IoPlugin, IoState};
 use crate::sys;
 
@@ -49,6 +49,8 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     let (_, mut stderr) = PrintFacility::new(
         Some(P::NAME), plugin_printf
     );
+    let conv_f = ConversationFacility::new(conversation);
+
 
     let io_env = IoEnv::new(
         P::NAME,
@@ -62,6 +64,7 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
         plugin_options_ptr,
         plugin_printf,
         conversation,
+        conv_f,
     );
 
     let io_env = match io_env {
