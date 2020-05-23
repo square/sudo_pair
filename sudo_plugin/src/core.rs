@@ -20,7 +20,7 @@
 // aren't going to affect anything.
 #![allow(clippy::must_use_candidate)]
 
-use crate::errors::AsSudoPluginRetval;
+use crate::errors::{OpenStatus, LogStatus};
 use crate::output::PrintFacility;
 use crate::plugin::{IoEnv, IoPlugin, IoState};
 use crate::sys;
@@ -44,6 +44,8 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
     let static_io_env    = S::io_env();
     let static_io_plugin = S::io_plugin();
 
+    // create our own PrintFacility to log to in case IoEnv
+    // initialization fails
     let (_, mut stderr) = PrintFacility::new(
         Some(P::NAME), plugin_printf
     );
@@ -66,7 +68,9 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
         Ok(v)   => v,
         Err(e)  => {
             let _ = stderr.write_error(&e);
-            return e.as_sudo_io_plugin_open_retval();
+            let e : P::Error = e.into();
+            let v            = Into::<OpenStatus>::into(e);
+            return v as _;
         }
     };
 
@@ -99,7 +103,8 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
         Ok(v)  => v,
         Err(e) => {
             let _ = stderr.write_error(&e);
-            return e.as_sudo_io_plugin_open_retval();
+            let v = Into::<OpenStatus>::into(e);
+            return v as _;
         },
     };
 
@@ -165,10 +170,10 @@ pub unsafe extern "C" fn log_ttyin<P: 'static + IoPlugin, S: IoState<P>>(
         len as _,
     );
 
-    plugin.log_ttyin(slice).map_err(|err| {
+    Into::<LogStatus>::into(plugin.log_ttyin(slice).map_err(|err| {
         let _ = env.stderr().write_error(&err);
         err
-    }).as_sudo_io_plugin_log_retval()
+    })) as _
 }
 
 #[doc(hidden)]
@@ -195,10 +200,10 @@ pub unsafe extern "C" fn log_ttyout<P: 'static + IoPlugin, S: IoState<P>>(
         len as _,
     );
 
-    plugin.log_ttyout(slice).map_err(|err| {
+    Into::<LogStatus>::into(plugin.log_ttyout(slice).map_err(|err| {
         let _ = env.stderr().write_error(&err);
         err
-    }).as_sudo_io_plugin_log_retval()
+    })) as _
 }
 
 #[doc(hidden)]
@@ -225,10 +230,10 @@ pub unsafe extern "C" fn log_stdin<P: 'static + IoPlugin, S: IoState<P>>(
         len as _,
     );
 
-    plugin.log_stdin(slice).map_err(|err| {
+    Into::<LogStatus>::into(plugin.log_stdin(slice).map_err(|err| {
         let _ = env.stderr().write_error(&err);
         err
-    }).as_sudo_io_plugin_log_retval()
+    })) as _
 }
 
 #[doc(hidden)]
@@ -255,10 +260,10 @@ pub unsafe extern "C" fn log_stdout<P: 'static + IoPlugin, S: IoState<P>>(
         len as _,
     );
 
-    plugin.log_stdout(slice).map_err(|err| {
+    Into::<LogStatus>::into(plugin.log_stdout(slice).map_err(|err| {
         let _ = env.stderr().write_error(&err);
         err
-    }).as_sudo_io_plugin_log_retval()
+    })) as _
 }
 
 #[doc(hidden)]
@@ -285,8 +290,8 @@ pub unsafe extern "C" fn log_stderr<P: 'static + IoPlugin, S: IoState<P>>(
         len as _,
     );
 
-    plugin.log_stderr(slice).map_err(|err| {
+    Into::<LogStatus>::into(plugin.log_stderr(slice).map_err(|err| {
         let _ = env.stderr().write_error(&err);
         err
-    }).as_sudo_io_plugin_log_retval()
+    })) as _
 }

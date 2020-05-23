@@ -31,9 +31,11 @@
 /// }
 ///
 /// impl IoPlugin for Example {
-///     const NAME:    &'static str = "example";
+///     type Error = Error;
 ///
-///     fn open(env: &'static IoEnv) -> Result<Self> {
+///     const NAME: &'static str = "example";
+///
+///     fn open(env: &'static IoEnv) -> Result<Self, Self::Error> {
 ///         writeln!(env.stdout(), "example sudo plugin initialized");
 ///
 ///         Ok(Example { env })
@@ -43,7 +45,7 @@
 ///         writeln!(self.env.stdout(), "example sudo plugin exited");
 ///     }
 ///
-///     fn log_stdout(&mut self, _: &[u8]) -> Result<()> {
+///     fn log_stdout(&mut self, _: &[u8]) -> Result<(), Self::Error> {
 ///         writeln!(self.env.stdout(), "example sudo plugin received output on stdout");
 ///
 ///         Ok(())

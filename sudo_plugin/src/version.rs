@@ -12,7 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::{Result, ErrorKind, bail};
+use crate::errors::{Result, Error};
 use crate::sys::SUDO_API_VERSION;
 
 use std::fmt;
@@ -51,7 +51,10 @@ impl Version {
 
     pub fn check(self) -> Result<Self> {
         if !self.supported() {
-            bail!(ErrorKind::UnsupportedApiVersion(self))
+            return Err(Error::UnsupportedApiVersion {
+                required: MINIMUM,
+                provided: self,
+            });
         }
 
         Ok(self)

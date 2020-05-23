@@ -12,11 +12,11 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::Error;
 use crate::output::Level;
 
 use sudo_plugin_sys::sudo_printf_t;
 
+use std::error::Error;
 use std::ffi::CString;
 use std::io::{self, Write};
 
@@ -79,13 +79,17 @@ impl PrintFacility {
     }
 
     /// Pretty-prints nested errors to the user.
-    pub fn write_error(&mut self, error: &Error) -> io::Result<()> {
+    pub fn write_error(&mut self, error: &dyn Error) -> io::Result<()> {
         // errors are prefixed with a newline for clarity, since they
         // might be emitted while an existing line has output on it
         self.write_all(b"\n")?;
 
-        for e in error.iter() {
-            self.write_line(format!("{}", e).as_bytes())?;
+        // TODO: replace this and the `while` with error.chain() when
+        // stabilized
+        self.write_line(format!("{}", error).as_bytes())?;
+
+        while let Some(error) = error.source() {
+            self.write_line(format!("{}", error).as_bytes())?;
         }
 
         Ok(())
