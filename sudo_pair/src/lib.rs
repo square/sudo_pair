@@ -101,7 +101,7 @@ struct SudoPair {
 }
 
 impl IoPlugin for SudoPair {
-    type Error  = Error;
+    type Error = Error;
 
     const NAME: &'static str = "sudo_pair";
 
