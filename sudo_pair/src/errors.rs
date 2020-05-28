@@ -18,7 +18,7 @@ use std::error::Error as StdError;
 
 use failure::Context;
 
-use sudo_plugin::errors::{Error as PluginError, OpenStatus, LogStatus};
+use sudo_plugin::prelude::{Error as PluginError, OpenStatus, LogStatus};
 
 pub(crate) type Result<T> = StdResult<T, Error>;
 

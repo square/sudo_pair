@@ -20,13 +20,85 @@
 // aren't going to affect anything.
 #![allow(clippy::must_use_candidate)]
 
-use crate::errors::{OpenStatus, LogStatus};
+use crate::errors::SudoError;
 use crate::output::PrintFacility;
 use crate::plugin::{IoEnv, IoPlugin, IoState};
 use crate::sys;
 
 use std::os::raw;
 use std::path::PathBuf;
+
+/// Return codes understood by the `io_plugin.open` callback.
+///
+/// The interpretations of these values are badly-documented within the
+/// [`sudo_plugin(8)` manpage][manpage] so the code was used to
+/// understand their actual effects.
+///
+/// [manpage]: https://www.sudo.ws/man/1.8.30/sudo_plugin.man.html
+/// [code]: https://github.com/sudo-project/sudo/blob/446ae3f507271c8a08f054c9291cb8804afe81d9/src/sudo.c#L1404
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(i32)]
+pub enum OpenStatus {
+    /// The plugin was `open`ed successfully and may be used as normal.
+    Ok = 1,
+
+    /// The plugin should be unloaded for the duration of this `sudo`
+    /// session. The `sudo` session may continue, but will not use any
+    /// of the features of this plugin.
+    Disable = 0,
+
+    /// The `sudo` command is unauthorized and must be immediately
+    /// terminated.
+    Deny = -1,
+
+    /// The `sudo` command was invoked incorrectly and will be
+    /// terminated. Basic usage information will be presented to the
+    /// user. The plugin may choose to emit its own usage information
+    /// describing the problem.
+    Usage = -2,
+}
+
+/// Return codes understood by the `io_plugin.log_*` family of callbacks.
+///
+/// The interpretations of these values are badly-documented within the
+/// [`sudo_plugin(8)` manpage][manpage] so the code was used to
+/// understand their actual effects.
+///
+/// [manpage]: https://www.sudo.ws/man/1.8.30/sudo_plugin.man.html
+/// [code]: https://github.com/sudo-project/sudo/blob/446ae3f507271c8a08f054c9291cb8804afe81d9/src/sudo.c#L1404
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(i32)]
+pub enum LogStatus {
+    /// The plugin logged the information successfully.
+    Ok = 1,
+
+    /// The plugin has determined that the `sudo` session should be
+    /// terminated immediately.
+    Deny = 0,
+
+    /// The plugin no longer needs this callback. This callback will no
+    /// longer be invoked by `sudo`, but the rest of the plugin's
+    /// callbacks will function as normal.
+    Disable = -1,
+}
+
+impl<T, E: SudoError> From<Result<T, E>> for OpenStatus {
+    fn from(result: Result<T, E>) -> Self {
+        match result {
+            Ok(_)  => OpenStatus::Ok,
+            Err(e) => e.into(),
+        }
+    }
+}
+
+impl<T, E: SudoError> From<Result<T, E>> for LogStatus {
+    fn from(result: Result<T, E>) -> Self {
+        match result {
+            Ok(_)  => LogStatus::Ok,
+            Err(e) => e.into(),
+        }
+    }
+}
 
 #[doc(hidden)]
 pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
