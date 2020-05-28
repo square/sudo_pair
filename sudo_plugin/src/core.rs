@@ -101,7 +101,7 @@ impl<T, E: SudoError> From<Result<T, E>> for LogStatus {
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
     version: raw::c_uint,
     conversation:       sys::sudo_conv_t,
     plugin_printf:      sys::sudo_printf_t,
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn open<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn close<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn close<P: IoPlugin, S: IoState<P>>(
     exit_status: raw::c_int,
     error:       raw::c_int,
 ) {
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn close<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn show_version<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn show_version<P: IoPlugin, S: IoState<P>>(
     verbose: raw::c_int,
 ) -> raw::c_int {
     let env = match S::io_env().as_ref() {
@@ -219,7 +219,7 @@ pub unsafe extern "C" fn show_version<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn log_ttyin<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn log_ttyin<P: IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
 ) -> raw::c_int {
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn log_ttyin<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn log_ttyout<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn log_ttyout<P: IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
 ) -> raw::c_int {
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn log_ttyout<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn log_stdin<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn log_stdin<P: IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
 ) -> raw::c_int {
@@ -309,7 +309,7 @@ pub unsafe extern "C" fn log_stdin<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn log_stdout<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn log_stdout<P: IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
 ) -> raw::c_int {
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn log_stdout<P: 'static + IoPlugin, S: IoState<P>>(
 }
 
 #[doc(hidden)]
-pub unsafe extern "C" fn log_stderr<P: 'static + IoPlugin, S: IoState<P>>(
+pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
     buf: *const raw::c_char,
     len:        raw::c_uint,
 ) -> raw::c_int {
