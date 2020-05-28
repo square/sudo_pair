@@ -24,7 +24,7 @@ use std::io::Write;
 #[warn(clippy::missing_inline_in_public_items)]
 
 /// The trait that defines the implementation of a sudo I/O plugin.
-pub trait IoPlugin: Sized {
+pub trait IoPlugin: 'static + Sized {
     /// The type for errors returned by this `IoPlugin`. Errors must
     /// implement the
     type Error: SudoError;
