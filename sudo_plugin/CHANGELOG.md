@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   provided `Error` type defaults to aborting the session on error.
 - Plugins no longer mutable when calling `log_*` functions.
 
+### Fixed
+- Panics inside of plugins no longer cause undefined behavior by
+  crossing FFI boundaries. All panics are caught at the boundaries and
+  turned into an appropriate error type.
+
 ## [1.2.0] - 2020-03-26
 
 ### Added
