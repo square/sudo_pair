@@ -54,17 +54,23 @@ pub enum Error {
     #[error("sudo called plugin with an unparseable value for {key}: {value}")]
     OptionInvalid {
         /// The name of the option.
-        key:   String,
+        key: String,
 
         /// The value provided.
         value: String,
     },
 
+    /// A plugin method panicked and the panic was captured at the FFI
+    /// boundary. Panics can't cross into C, so we have to capture it
+    /// and turn it into an appropriate return code.
+    #[error("uncaught internal error")]
+    UncaughtPanic,
+
     /// A generic error identified only by a provided string. This may
     /// be used by plugin implementors who don't wish to provide their
     /// own custom error types, and instead are happy to simply use
     /// stringly-typed error messages.
-    #[error("plugin exited: {0}")]
+    #[error("{0}")]
     Other(String),
 }
 
