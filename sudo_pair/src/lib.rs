@@ -68,6 +68,7 @@ use crate::errors::{Error, ErrorKind, Result};
 use crate::template::Spec;
 use crate::socket::Socket;
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -95,7 +96,7 @@ sudo_io_plugin!{ sudo_pair : SudoPair }
 struct SudoPair {
     env:     &'static IoEnv,
     options: PluginOptions,
-    socket:  Option<Socket>,
+    socket:  Option<RefCell<Socket>>,
 
     slog: slog::Logger,
 }
@@ -133,7 +134,7 @@ impl IoPlugin for SudoPair {
         let mut pair = Self {
             env,
             options,
-            socket:  None,
+            socket: None,
 
             slog,
         };
@@ -195,24 +196,24 @@ impl IoPlugin for SudoPair {
         // if we have a socket, close it
         if let Some(mut socket) = self.socket.take() {
             slog::trace!(self.slog, "pair session ending");
-            let _ = socket.close();
+            let _ = socket.get_mut().close();
             slog::info!(self.slog, "pair session ended");
         }
     }
 
-    fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
+    fn log_ttyout(&self, log: &[u8]) -> Result<()> {
         self.log_output(log)
     }
 
-    fn log_stdout(&mut self, log: &[u8]) -> Result<()> {
+    fn log_stdout(&self, log: &[u8]) -> Result<()> {
        self.log_output(log)
     }
 
-    fn log_stderr(&mut self, log: &[u8]) -> Result<()> {
+    fn log_stderr(&self, log: &[u8]) -> Result<()> {
         self.log_output(log)
     }
 
-    fn log_stdin(&mut self, _: &[u8]) -> Result<()> {
+    fn log_stdin(&self, _: &[u8]) -> Result<()> {
         // if we're exempt, don't disable stdin
         if self.is_exempt() {
             return Ok(());
@@ -223,10 +224,10 @@ impl IoPlugin for SudoPair {
 }
 
 impl SudoPair {
-    fn log_output(&mut self, log: &[u8]) -> Result<()> {
+    fn log_output(&self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
-        self.socket.as_mut().map_or(Ok(()), |socket| {
-            socket.write_all(log)
+        self.socket.as_ref().map_or(Ok(()), |socket| {
+            socket.borrow_mut().write_all(log)
         }).context(ErrorKind::SessionTerminated)?;
 
         slog::trace!(self.slog, "{{{} bytes sent}}", log.len());
@@ -317,7 +318,7 @@ impl SudoPair {
             self.socket_mode(),
         ).context(ErrorKind::CommunicationError)?;
 
-        self.socket = Some(socket);
+        self.socket = Some(RefCell::new(socket));
 
         slog::info!(slog, "socket connected");
 
@@ -337,9 +338,10 @@ impl SudoPair {
 
         slog::trace!(self.slog, "remote prompt evaluated");
 
-        let socket = self.socket
-            .as_mut()
-            .ok_or(ErrorKind::CommunicationError)?;
+        let mut socket = self.socket
+            .as_ref()
+            .ok_or(ErrorKind::CommunicationError)?
+            .borrow_mut();
 
         socket.write_all(&prompt[..])
             .context(ErrorKind::CommunicationError)?;

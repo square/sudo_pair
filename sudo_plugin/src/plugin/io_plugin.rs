@@ -94,7 +94,7 @@ pub trait IoPlugin: 'static + Sized {
     /// a [`LogStatus`](crate::errors::LogStatus) before being
     /// returned to `sudo`.
     #[inline]
-    fn log_ttyin(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
+    fn log_ttyin(&self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -110,7 +110,7 @@ pub trait IoPlugin: 'static + Sized {
     /// a [`LogStatus`](crate::errors::LogStatus) before being
     /// returned to `sudo`.
     #[inline]
-    fn log_ttyout(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
+    fn log_ttyout(&self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -125,7 +125,7 @@ pub trait IoPlugin: 'static + Sized {
     /// a [`LogStatus`](crate::errors::LogStatus) before being
     /// returned to `sudo`.
     #[inline]
-    fn log_stdin(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
+    fn log_stdin(&self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -142,7 +142,7 @@ pub trait IoPlugin: 'static + Sized {
     /// a [`LogStatus`](crate::errors::LogStatus) before being
     /// returned to `sudo`.
     #[inline]
-    fn log_stdout(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
+    fn log_stdout(&self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -159,7 +159,7 @@ pub trait IoPlugin: 'static + Sized {
     /// a [`LogStatus`](crate::errors::LogStatus) before being
     /// returned to `sudo`.
     #[inline]
-    fn log_stderr(&mut self, _log: &[u8]) -> Result<(), Self::Error> {
+    fn log_stderr(&self, _log: &[u8]) -> Result<(), Self::Error> {
         Ok(())
     }
 

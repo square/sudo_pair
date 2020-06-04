@@ -45,7 +45,7 @@
 ///         writeln!(self.env.stdout(), "example sudo plugin exited");
 ///     }
 ///
-///     fn log_stdout(&mut self, _: &[u8]) -> Result<(), Self::Error> {
+///     fn log_stdout(&self, _: &[u8]) -> Result<(), Self::Error> {
 ///         writeln!(self.env.stdout(), "example sudo plugin received output on stdout");
 ///
 ///         Ok(())
