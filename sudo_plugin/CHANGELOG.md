@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Completely reworked error handling. Plugin implementations may now provide
   coercions from sudo_plugin internal errors to appropriate return codes. The
   provided `Error` type defaults to aborting the session on error.
+- Plugins no longer mutable when calling `log_*` functions.
 
 ## [1.2.0] - 2020-03-26
 
