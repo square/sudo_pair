@@ -753,39 +753,43 @@ impl slog::Value for PluginOptions {
     }
 }
 
-#[cfg(all(target_os = "macos", feature = "syslog"))]
-const SYSLOG_PATH: &str = "/private/var/run/syslog";
-
-#[cfg(all(not(target_os = "macos"), feature = "syslog"))]
-const SYSLOG_PATH: &str = "/dev/log";
-
 // TODO: can we only compile slog in when logging features are enabled?
+#[cfg(not(any(feature = "syslog", feature = "journald")))]
 fn slog(name: &str, version: &str) -> slog::Logger {
-    use slog::Drain;
+    slog::Logger::root(slog::Discard, o!()  )
+}
 
-    #[cfg(not(any(feature = "syslog", feature = "journald")))]
-    let drain = Ok(slog::Discard);
+#[cfg(all(feature = "syslog", not(feature = "journald")))]
+fn slog(name: &str, version: &str) -> slog::Logger {
+    #[cfg(all(target_os = "macos", feature = "syslog"))]
+    const SYSLOG_PATH: &str = "/private/var/run/syslog";
 
-    #[cfg(all(feature = "syslog", not(feature = "journald")))]
+    #[cfg(all(not(target_os = "macos"), feature = "syslog"))]
+    const SYSLOG_PATH: &str = "/dev/log";
+
     let drain = slog_syslog::SyslogBuilder::new()
         .unix(SYSLOG_PATH)
         .facility(slog_syslog::Facility::LOG_AUTH)
-        .start();
-
-    #[cfg(feature = "journald")]
-    let drain = Ok(slog_journald::JournaldDrain);
+        .start()
+        .map(slog::Drain::ignore_res)
+        .ok();
 
     match drain {
-        Ok(d)  => {
-            // TODO: handle errors without ignore_res()
-            slog::Logger::root(d.ignore_res(), slog::o!(
-                "plugin_name"    => name   .to_owned(),
-                "plugin_version" => version.to_owned()
-            ))
-        },
+        Some(d) => slog::Logger::root(d, slog::o!(
+            "plugin_name"    => name   .to_owned(),
+            "plugin_version" => version.to_owned()
+        )),
 
-        Err(_) => {
-            slog::Logger::root(slog::Discard, slog::o!())
-        },
+        None => slog::Logger::root(slog::Discard, slog::o!()),
     }
+}
+
+#[cfg(feature = "journald")]
+fn slog_drain() -> Option<impl slog::Drain> {
+    let drain = slog_journald::JournaldDrain.ignore_res();
+
+    slog::Logger::root(drain, slog::o!(
+        "plugin_name"    => name   .to_owned(),
+        "plugin_version" => version.to_owned()
+    ))
 }
