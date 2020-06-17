@@ -785,7 +785,9 @@ fn slog(name: &str, version: &str) -> slog::Logger {
 }
 
 #[cfg(feature = "journald")]
-fn slog_drain() -> Option<impl slog::Drain> {
+fn slog(name: &str, version: &str) -> slog::Logger {
+    use slog::Drain;
+
     let drain = slog_journald::JournaldDrain.ignore_res();
 
     slog::Logger::root(drain, slog::o!(
