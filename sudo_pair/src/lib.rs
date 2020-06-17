@@ -764,22 +764,28 @@ fn slog(name: &str, version: &str) -> slog::Logger {
     use slog::Drain;
 
     #[cfg(not(any(feature = "syslog", feature = "journald")))]
-    let drain = slog::Drain::Discard;
+    let drain = Ok(slog::Discard);
 
-    #[cfg(feature = "syslog")]
+    #[cfg(all(feature = "syslog", not(feature = "journald")))]
     let drain = slog_syslog::SyslogBuilder::new()
         .unix(SYSLOG_PATH)
         .facility(slog_syslog::Facility::LOG_AUTH)
-        .start()
-        .unwrap() // TODO: remove unwrap
-        .ignore_res(); // TODO: handle errors
+        .start();
 
     #[cfg(feature = "journald")]
-    let drain = slog_journald::JournaldDrain
-        .ignore_res(); // TODO: handle errors
+    let drain = Ok(slog_journald::JournaldDrain);
 
-    slog::Logger::root(drain, slog::o!(
-        "plugin_name"    => name   .to_owned(),
-        "plugin_version" => version.to_owned()
-    ))
+    match drain {
+        Ok(d)  => {
+            // TODO: handle errors without ignore_res()
+            slog::Logger::root(d.ignore_res(), slog::o!(
+                "plugin_name"    => name   .to_owned(),
+                "plugin_version" => version.to_owned()
+            ))
+        },
+
+        Err(_) => {
+            slog::Logger::root(slog::Discard, slog::o!())
+        },
+    }
 }
