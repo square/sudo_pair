@@ -69,14 +69,20 @@ macro_rules! sudo_io_plugin {
             use super::*;
 
             // TODO: end use of static mut
+
             static mut SUDO_IO_ENV:    Option<$crate::plugin::IoEnv> = None;
             static mut SUDO_IO_PLUGIN: Option<$ty>                   = None;
 
-            pub struct State { }
+            pub struct State;
 
-            impl $crate::plugin::IoState<$ty> for State {
-                unsafe fn io_env()    -> &'static mut Option<$crate::plugin::IoEnv> { &mut SUDO_IO_ENV }
-                unsafe fn io_plugin() -> &'static mut Option<$ty>                   { &mut SUDO_IO_PLUGIN }
+            unsafe impl $crate::plugin::IoState<$ty> for State {
+                unsafe fn io_env_mut() -> &'static mut Option<$crate::plugin::IoEnv> {
+                    &mut SUDO_IO_ENV
+                }
+
+                unsafe fn io_plugin_mut() -> &'static mut Option<$ty> {
+                    &mut SUDO_IO_PLUGIN
+                }
             }
         }
 

@@ -141,9 +141,6 @@ pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
     plugin_options_ptr: *const *mut raw::c_char,
 ) -> raw::c_int {
     catch_unwind_open(|| {
-        let static_io_env    = S::io_env();
-        let static_io_plugin = S::io_plugin();
-
         // create our own PrintFacility to log to in case IoEnv
         // initialization fails
         let (_, mut stderr) = PrintFacility::new(
@@ -173,42 +170,20 @@ pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
             }
         };
 
-        // Long story short, the `IoEnv` needs to be moved into static
-        // memory before we initialize the user-provided `IoPlugin`. But
-        // doing so puts it into an `Option` so we have to get a reference
-        // out of the option. I hate using `unwrap` but in this case we know
-        // it exists since we literally just assigned to it.
-        //
-        // TODO: can we avoid this dance?
-        let _      = static_io_env.replace(io_env);
-        let io_env = static_io_env.as_ref().unwrap();
+        S::init(io_env, |env| {
+            // even though we're avoiding instantiating the plugin
+            // fully, we need to make sure it makes its way into static
+            // storage before returning, which is why we put this check
+            // inside `S::init`
+            if env.command_info.command == PathBuf::default() {
+                return Err(OpenStatus::Ok);
+            }
 
-        // if the command is empty, to the best of my knowledge
-        // we're being called with `-V` to report our version; in
-        // this case there's no reason to fully invoke the plugin
-        // through its `open` function
-        //
-        // TODO: find a canonical way to test for `-V`
-        // TODO: this test should go into the IoEnv
-        // TODO: maybe model this as an "error"?
-        if io_env.command_info.command == PathBuf::default() {
-            // even though we're avoiding instantiating the plugin fully,
-            // we need to make sure it makes its way into static storage
-            // before returning
-            return OpenStatus::Ok;
-        }
-
-        let io_plugin = match P::open(io_env) {
-            Ok(v)  => v,
-            Err(e) => {
+            P::open(env).map_err(|e| {
                 let _ = stderr.write_error(&e);
-                return Into::<OpenStatus>::into(e);
-            },
-        };
-
-        let _ = static_io_plugin.replace(io_plugin);
-
-        OpenStatus::Ok
+                Into::<OpenStatus>::into(e)
+            })
+        })
     })
 }
 
@@ -218,18 +193,7 @@ pub unsafe extern "C" fn close<P: IoPlugin, S: IoState<P>>(
     error:       raw::c_int,
 ) {
     let _ = catch_unwind(|| {
-        // `close` takes ownership of the plugin and doesn't return it, so
-        // the plugin is dropped once `close` exits
-        //
-        // # SAFETY it's extremely important that this method be called
-        // *before* `S::io_env()` is taken, because the plugin may hold a
-        // reference to the static IoEnv memory
-        let _ = S::io_plugin().take()
-            .map(|p| p.close(exit_status, error));
-
-        // it's unnecessary to actually drop env explicitly, but doing so
-        // intent that it cease to exist
-        drop(S::io_env().take());
+        S::drop(|plugin| plugin.close(exit_status, error));
     });
 }
 
@@ -238,12 +202,7 @@ pub unsafe extern "C" fn show_version<P: IoPlugin, S: IoState<P>>(
     verbose: raw::c_int,
 ) -> raw::c_int {
     catch_unwind_open(|| {
-        let env = match S::io_env().as_ref() {
-            Some(env) => env,
-            None      => return OpenStatus::Deny,
-        };
-
-        P::show_version(env, verbose != 0);
+        P::show_version(S::io_env(), verbose != 0);
 
         OpenStatus::Ok
     })
@@ -255,18 +214,11 @@ pub unsafe extern "C" fn log_ttyin<P: IoPlugin, S: IoState<P>>(
     len:        raw::c_uint,
 ) -> raw::c_int {
     catch_unwind_log(|| {
-        let env = match S::io_env() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
-
-        let plugin = match S::io_plugin() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
+        let env    = S::io_env();
+        let plugin = S::io_plugin();
 
         if !env.command_info.iolog_ttyin && !P::IGNORE_IOLOG_HINTS {
-            return LogStatus::Ok;
+            return Ok(());
         }
 
         let slice = ::std::slice::from_raw_parts(
@@ -274,10 +226,10 @@ pub unsafe extern "C" fn log_ttyin<P: IoPlugin, S: IoState<P>>(
             len as _,
         );
 
-        Into::<LogStatus>::into(plugin.log_ttyin(slice).map_err(|err| {
+        plugin.log_ttyin(slice).map_err(|err| {
             let _ = env.stderr().write_error(&err);
             err
-        }))
+        })
     })
 }
 
@@ -287,18 +239,11 @@ pub unsafe extern "C" fn log_ttyout<P: IoPlugin, S: IoState<P>>(
     len:        raw::c_uint,
 ) -> raw::c_int {
     catch_unwind_log(|| {
-        let env = match S::io_env() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
-
-        let plugin = match S::io_plugin() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
+        let env    = S::io_env();
+        let plugin = S::io_plugin();
 
         if !env.command_info.iolog_ttyout && !P::IGNORE_IOLOG_HINTS {
-            return LogStatus::Ok;
+            return Ok(());
         }
 
         let slice = ::std::slice::from_raw_parts(
@@ -306,10 +251,10 @@ pub unsafe extern "C" fn log_ttyout<P: IoPlugin, S: IoState<P>>(
             len as _,
         );
 
-        Into::<LogStatus>::into(plugin.log_ttyout(slice).map_err(|err| {
+        plugin.log_ttyout(slice).map_err(|err| {
             let _ = env.stderr().write_error(&err);
             err
-        }))
+        })
     })
 }
 
@@ -319,18 +264,11 @@ pub unsafe extern "C" fn log_stdin<P: IoPlugin, S: IoState<P>>(
     len:        raw::c_uint,
 ) -> raw::c_int {
     catch_unwind_log(|| {
-        let env = match S::io_env() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
-
-        let plugin = match S::io_plugin() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
+        let env    = S::io_env();
+        let plugin = S::io_plugin();
 
         if !env.command_info.iolog_stdin && !P::IGNORE_IOLOG_HINTS {
-            return LogStatus::Ok;
+            return Ok(());
         }
 
         let slice = ::std::slice::from_raw_parts(
@@ -338,10 +276,10 @@ pub unsafe extern "C" fn log_stdin<P: IoPlugin, S: IoState<P>>(
             len as _,
         );
 
-        Into::<LogStatus>::into(plugin.log_stdin(slice).map_err(|err| {
+        plugin.log_stdin(slice).map_err(|err| {
             let _ = env.stderr().write_error(&err);
             err
-        }))
+        })
     })
 }
 
@@ -351,18 +289,11 @@ pub unsafe extern "C" fn log_stdout<P: IoPlugin, S: IoState<P>>(
     len:        raw::c_uint,
 ) -> raw::c_int {
     catch_unwind_log(|| {
-        let env = match S::io_env() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
-
-        let plugin = match S::io_plugin() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
+        let env    = S::io_env();
+        let plugin = S::io_plugin();
 
         if !env.command_info.iolog_stdout && !P::IGNORE_IOLOG_HINTS {
-            return LogStatus::Ok;
+            return Ok(());
         }
 
         let slice = ::std::slice::from_raw_parts(
@@ -370,10 +301,10 @@ pub unsafe extern "C" fn log_stdout<P: IoPlugin, S: IoState<P>>(
             len as _,
         );
 
-        Into::<LogStatus>::into(plugin.log_stdout(slice).map_err(|err| {
+        plugin.log_stdout(slice).map_err(|err| {
             let _ = env.stderr().write_error(&err);
             err
-        }))
+        })
     })
 }
 
@@ -383,18 +314,11 @@ pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
     len:        raw::c_uint,
 ) -> raw::c_int {
     catch_unwind_log(|| {
-        let env = match S::io_env() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
-
-        let plugin = match S::io_plugin() {
-            Some(e) => e,
-            None    => return LogStatus::Deny,
-        };
+        let env    = S::io_env();
+        let plugin = S::io_plugin();
 
         if !env.command_info.iolog_stderr && !P::IGNORE_IOLOG_HINTS {
-            return LogStatus::Ok;
+            return Ok(());
         }
 
         let slice = ::std::slice::from_raw_parts(
@@ -402,9 +326,9 @@ pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
             len as _,
         );
 
-        Into::<LogStatus>::into(plugin.log_stderr(slice).map_err(|err| {
+        plugin.log_stderr(slice).map_err(|err| {
             let _ = env.stderr().write_error(&err);
             err
-        }))
+        })
     })
 }

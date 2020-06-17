@@ -13,20 +13,21 @@
 // permissions and limitations under the License.
 
 // TODO: once associated type defaults are stabilized, provide defaults
-// `OpenError` and `LogError` and return `Disable` for default methods
-// to avoid any performance penalties.
+// for `Error`, and use that to return `Disable` for default methods in
+// order to avoid any performance penalties from calling unimplemented
+// functions.
 
 use super::IoEnv;
 use crate::errors::SudoError;
-
-use std::io::Write;
 
 #[warn(clippy::missing_inline_in_public_items)]
 
 /// The trait that defines the implementation of a sudo I/O plugin.
 pub trait IoPlugin: 'static + Sized {
     /// The type for errors returned by this `IoPlugin`. Errors must
-    /// implement the
+    /// implement the [`SudoError`](crate::errors::SudoError) trait
+    /// which describes how to convert them to the return codes expected
+    /// by the `sudo_plugin(8)` facility.
     type Error: SudoError;
 
     /// The name of the plugin. Used when printing the version of the
@@ -50,7 +51,9 @@ pub trait IoPlugin: 'static + Sized {
     /// implementation of this function is provided, but may be
     /// overridden if desired.
     #[inline]
-    fn show_version(env: &'static IoEnv, _verbose: bool) {
+    fn show_version(env: &IoEnv, _verbose: bool) {
+        use std::io::Write;
+
         let _ = writeln!(
             env.stdout(),
             "{} I/O plugin version {}",
