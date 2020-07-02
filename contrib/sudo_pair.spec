@@ -1,4 +1,4 @@
-Name: sudo-pair
+Name: sudo_pair
 Version: 0.11.1
 Release: 1
 Summary: Plugin for sudo that requires another human to approve and monitor privileged sudo sessions.
