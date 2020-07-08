@@ -11,7 +11,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-build
 BuildRequires: cargo
 BuildRequires: clang-devel
 BuildRequires: git
-Requires: sudo
+Requires: sudo >= 1.9
 
 %description
 Plugin for sudo that requires another human to approve and monitor privileged sudo sessions
