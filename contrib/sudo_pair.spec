@@ -1,5 +1,5 @@
 Name: sudo_pair
-Version: 0.11.1
+Version: 1.0.0
 Release: 1
 Summary: Plugin for sudo that requires another human to approve and monitor privileged sudo sessions.
 Group: System Environment/Libraries
@@ -43,3 +43,5 @@ rm -rf %{buildroot}
 %changelog
 * Wed May 23 2018 - robert (at) meinit.nl
 - Initial release.
+* Fri Jul 3 2020 - robert (at) meinit.nl
+- Bump version to 1.0.0
