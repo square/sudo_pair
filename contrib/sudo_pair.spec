@@ -35,6 +35,7 @@ rm -rf %{buildroot}
 %files
 /usr/libexec/sudo/libsudo_pair.so
 %doc README.md
+%doc sudo_pair/README.md
 %doc sample/etc/sudo.conf
 %doc sample/etc/sudo.prompt.pair
 %doc sample/etc/sudo.prompt.user
