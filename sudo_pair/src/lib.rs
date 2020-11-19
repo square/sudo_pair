@@ -88,7 +88,7 @@ const DEFAULT_PAIR_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.pair";
 const DEFAULT_SOCKET_DIR       : &str       = "/var/run/sudo_pair";
 const DEFAULT_GIDS_ENFORCED    : [gid_t; 1] = [0];
 
-const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p %u'\n";
+const DEFAULT_USER_PROMPT : &[u8] = b"%B %u %p\n";
 const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
 sudo_io_plugin!{ sudo_pair : SudoPair }
