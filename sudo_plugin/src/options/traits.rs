@@ -18,7 +18,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug)]
-pub struct ParseListError();
+pub struct ParseListError<T>(T);
 
 pub trait FromSudoOption: Sized {
     type Err;
@@ -119,7 +119,7 @@ impl<T> FromSudoOption for Vec<T>
 where
     T: FromSudoOption + FromSudoOptionList,
 {
-    type Err = ParseListError;
+    type Err = ParseListError<T::Err>;
 
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let      list = <T as FromSudoOptionList>::from_sudo_option_list(s);
@@ -127,7 +127,7 @@ where
 
         for element in list {
             let item = FromSudoOption::from_sudo_option(element)
-                .map_err(|_| ParseListError())?;
+                .map_err(|e| ParseListError(e))?;
 
             items.push(item);
         }
@@ -140,7 +140,7 @@ impl<T> FromSudoOption for HashSet<T>
 where
     T: Eq + Hash + FromSudoOption + FromSudoOptionList,
 {
-    type Err = ParseListError;
+    type Err = ParseListError<T::Err>;
 
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         Vec::<T>::from_sudo_option(s).map(|vec| vec.into_iter().collect())
