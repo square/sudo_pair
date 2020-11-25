@@ -192,9 +192,9 @@ pub unsafe extern "C" fn close<P: IoPlugin, S: IoState<P>>(
     exit_status: raw::c_int,
     error:       raw::c_int,
 ) {
-    let _ = catch_unwind(|| {
+    drop(catch_unwind(|| {
         S::drop(|plugin| plugin.close(exit_status, error));
-    });
+    }));
 }
 
 #[doc(hidden)]
