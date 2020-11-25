@@ -84,10 +84,10 @@ impl OptionMap {
             // otherwise-reasonable way to handle duplicate key names;
             // that said, the implications of this are that the last
             // value of a given key is the one that's set
-            let _ = map.insert(
+            drop(map.insert(
                 k.to_owned(),
                 v.to_owned(),
-            );
+            ));
 
             ptr = ptr.offset(1);
         }
@@ -109,7 +109,7 @@ impl OptionMap {
         let v = self.get_str(k).ok_or(Error::OptionMissing { key: k.into() })?;
 
         FromSudoOption::from_sudo_option(v)
-            .map_err(|_| Error::OptionInvalid { key: k.into(), value: v.into() })
+            .map_err(|_e| Error::OptionInvalid { key: k.into(), value: v.into() })
     }
 
     /// Gets the value of a key as a string. Returns `None` if no such

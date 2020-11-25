@@ -127,7 +127,7 @@ where
 
         for element in list {
             let item = FromSudoOption::from_sudo_option(element)
-                .map_err(|e| ParseListError(e))?;
+                .map_err(ParseListError)?;
 
             items.push(item);
         }
