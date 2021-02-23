@@ -17,8 +17,8 @@ use std::collections::HashMap;
 const DEFAULT_ESCAPE_BYTE : u8 = b'%';
 
 pub(crate) struct Spec {
-    expansions: HashMap<u8, Vec<u8>>,
     escape:     u8,
+    expansions: HashMap<u8, Vec<u8>>,
 }
 
 impl Spec {
@@ -31,7 +31,7 @@ impl Spec {
     }
 
     pub(crate) fn replace<T: Into<Vec<u8>>>(&mut self, literal: u8, replacement: T) {
-        let _ = self.expansions.insert(literal, replacement.into());
+        drop(self.expansions.insert(literal, replacement.into()));
     }
 
     pub(crate) fn expand(&self, template: &[u8]) -> Vec<u8> {

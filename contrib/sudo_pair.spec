@@ -1,5 +1,5 @@
-Name: sudo-pair
-Version: 0.11.1
+Name: sudo_pair
+Version: 1.0.0
 Release: 1
 Summary: Plugin for sudo that requires another human to approve and monitor privileged sudo sessions.
 Group: System Environment/Libraries
@@ -11,7 +11,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-build
 BuildRequires: cargo
 BuildRequires: clang-devel
 BuildRequires: git
-Requires: sudo
+Requires: sudo >= 1.9
 
 %description
 Plugin for sudo that requires another human to approve and monitor privileged sudo sessions
@@ -35,6 +35,7 @@ rm -rf %{buildroot}
 %files
 /usr/libexec/sudo/libsudo_pair.so
 %doc README.md
+%doc sudo_pair/README.md
 %doc sample/etc/sudo.conf
 %doc sample/etc/sudo.prompt.pair
 %doc sample/etc/sudo.prompt.user
@@ -43,3 +44,5 @@ rm -rf %{buildroot}
 %changelog
 * Wed May 23 2018 - robert (at) meinit.nl
 - Initial release.
+* Fri Jul 3 2020 - robert (at) meinit.nl
+- Bump version to 1.0.0

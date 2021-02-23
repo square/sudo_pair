@@ -68,6 +68,7 @@ use crate::errors::{Error, ErrorKind, Result};
 use crate::template::Spec;
 use crate::socket::Socket;
 
+use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -87,7 +88,7 @@ const DEFAULT_PAIR_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.pair";
 const DEFAULT_SOCKET_DIR       : &str       = "/var/run/sudo_pair";
 const DEFAULT_GIDS_ENFORCED    : [gid_t; 1] = [0];
 
-const DEFAULT_USER_PROMPT : &[u8] = b"%B '%p %u'\n";
+const DEFAULT_USER_PROMPT : &[u8] = b"%B %u %p\n";
 const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
 sudo_io_plugin!{ sudo_pair : SudoPair }
@@ -95,13 +96,13 @@ sudo_io_plugin!{ sudo_pair : SudoPair }
 struct SudoPair {
     env:     &'static IoEnv,
     options: PluginOptions,
-    socket:  Option<Socket>,
+    socket:  Option<RefCell<Socket>>,
 
     slog: slog::Logger,
 }
 
 impl IoPlugin for SudoPair {
-    type Error  = Error;
+    type Error = Error;
 
     const NAME: &'static str = "sudo_pair";
 
@@ -133,7 +134,7 @@ impl IoPlugin for SudoPair {
         let mut pair = Self {
             env,
             options,
-            socket:  None,
+            socket: None,
 
             slog,
         };
@@ -195,24 +196,24 @@ impl IoPlugin for SudoPair {
         // if we have a socket, close it
         if let Some(mut socket) = self.socket.take() {
             slog::trace!(self.slog, "pair session ending");
-            let _ = socket.close();
+            let _ = socket.get_mut().close();
             slog::info!(self.slog, "pair session ended");
         }
     }
 
-    fn log_ttyout(&mut self, log: &[u8]) -> Result<()> {
+    fn log_ttyout(&self, log: &[u8]) -> Result<()> {
         self.log_output(log)
     }
 
-    fn log_stdout(&mut self, log: &[u8]) -> Result<()> {
+    fn log_stdout(&self, log: &[u8]) -> Result<()> {
        self.log_output(log)
     }
 
-    fn log_stderr(&mut self, log: &[u8]) -> Result<()> {
+    fn log_stderr(&self, log: &[u8]) -> Result<()> {
         self.log_output(log)
     }
 
-    fn log_stdin(&mut self, _: &[u8]) -> Result<()> {
+    fn log_stdin(&self, _: &[u8]) -> Result<()> {
         // if we're exempt, don't disable stdin
         if self.is_exempt() {
             return Ok(());
@@ -223,10 +224,10 @@ impl IoPlugin for SudoPair {
 }
 
 impl SudoPair {
-    fn log_output(&mut self, log: &[u8]) -> Result<()> {
+    fn log_output(&self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
-        self.socket.as_mut().map_or(Ok(()), |socket| {
-            socket.write_all(log)
+        self.socket.as_ref().map_or(Ok(()), |socket| {
+            socket.borrow_mut().write_all(log)
         }).context(ErrorKind::SessionTerminated)?;
 
         slog::trace!(self.slog, "{{{} bytes sent}}", log.len());
@@ -317,7 +318,7 @@ impl SudoPair {
             self.socket_mode(),
         ).context(ErrorKind::CommunicationError)?;
 
-        self.socket = Some(socket);
+        self.socket = Some(RefCell::new(socket));
 
         slog::info!(slog, "socket connected");
 
@@ -337,9 +338,10 @@ impl SudoPair {
 
         slog::trace!(self.slog, "remote prompt evaluated");
 
-        let socket = self.socket
-            .as_mut()
-            .ok_or(ErrorKind::CommunicationError)?;
+        let mut socket = self.socket
+            .as_ref()
+            .ok_or(ErrorKind::CommunicationError)?
+            .borrow_mut();
 
         socket.write_all(&prompt[..])
             .context(ErrorKind::CommunicationError)?;
@@ -751,30 +753,42 @@ impl slog::Value for PluginOptions {
     }
 }
 
-#[cfg(all(target_os = "macos", feature = "syslog"))]
-const SYSLOG_PATH: &str = "/private/var/run/syslog";
-
-#[cfg(all(not(target_os = "macos"), feature = "syslog"))]
-const SYSLOG_PATH: &str = "/dev/log";
-
 // TODO: can we only compile slog in when logging features are enabled?
+#[cfg(not(any(feature = "syslog", feature = "journald")))]
 fn slog(name: &str, version: &str) -> slog::Logger {
-    use slog::Drain;
+    slog::Logger::root(slog::Discard, o!()  )
+}
 
-    #[cfg(not(any(feature = "syslog", feature = "journald")))]
-    let drain = slog::Drain::Discard;
+#[cfg(all(feature = "syslog", not(feature = "journald")))]
+fn slog(name: &str, version: &str) -> slog::Logger {
+    #[cfg(all(target_os = "macos", feature = "syslog"))]
+    const SYSLOG_PATH: &str = "/private/var/run/syslog";
 
-    #[cfg(feature = "syslog")]
+    #[cfg(all(not(target_os = "macos"), feature = "syslog"))]
+    const SYSLOG_PATH: &str = "/dev/log";
+
     let drain = slog_syslog::SyslogBuilder::new()
         .unix(SYSLOG_PATH)
         .facility(slog_syslog::Facility::LOG_AUTH)
         .start()
-        .unwrap() // TODO: remove unwrap
-        .ignore_res(); // TODO: handle errors
+        .map(slog::Drain::ignore_res)
+        .ok();
 
-    #[cfg(feature = "journald")]
-    let drain = slog_journald::JournaldDrain
-        .ignore_res(); // TODO: handle errors
+    match drain {
+        Some(d) => slog::Logger::root(d, slog::o!(
+            "plugin_name"    => name   .to_owned(),
+            "plugin_version" => version.to_owned()
+        )),
+
+        None => slog::Logger::root(slog::Discard, slog::o!()),
+    }
+}
+
+#[cfg(feature = "journald")]
+fn slog(name: &str, version: &str) -> slog::Logger {
+    use slog::Drain;
+
+    let drain = slog_journald::JournaldDrain.ignore_res();
 
     slog::Logger::root(drain, slog::o!(
         "plugin_name"    => name   .to_owned(),

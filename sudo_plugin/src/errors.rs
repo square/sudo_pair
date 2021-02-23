@@ -22,65 +22,12 @@
 #![allow(single_use_lifetimes)]
 #![allow(variant_size_differences)]
 
+use crate::core::{OpenStatus, LogStatus};
 use crate::version::Version;
 
 use std::result::Result as StdResult;
 use std::error::Error as StdError;
 use thiserror::Error;
-
-/// Return codes understood by the `io_plugin.open` callback.
-///
-/// The interpretations of these values are badly-documented within the
-/// [`sudo_plugin(8)` manpage][manpage] so the code was used to
-/// understand their actual effects.
-///
-/// [manpage]: https://www.sudo.ws/man/1.8.30/sudo_plugin.man.html
-/// [code]: https://github.com/sudo-project/sudo/blob/446ae3f507271c8a08f054c9291cb8804afe81d9/src/sudo.c#L1404
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(i32)]
-pub enum OpenStatus {
-    /// The plugin was `open`ed successfully and may be used as normal.
-    Ok = 1,
-
-    /// The plugin should be unloaded for the duration of this `sudo`
-    /// session. The `sudo` session may continue, but will not use any
-    /// of the features of this plugin.
-    Disable = 0,
-
-    /// The `sudo` command is unauthorized and must be immediately
-    /// terminated.
-    Deny = -1,
-
-    /// The `sudo` command was invoked incorrectly and will be
-    /// terminated. Basic usage information will be presented to the
-    /// user. The plugin may choose to emit its own usage information
-    /// describing the problem.
-    Usage = -2,
-}
-
-/// Return codes understood by the `io_plugin.log_*` family of callbacks.
-///
-/// The interpretations of these values are badly-documented within the
-/// [`sudo_plugin(8)` manpage][manpage] so the code was used to
-/// understand their actual effects.
-///
-/// [manpage]: https://www.sudo.ws/man/1.8.30/sudo_plugin.man.html
-/// [code]: https://github.com/sudo-project/sudo/blob/446ae3f507271c8a08f054c9291cb8804afe81d9/src/sudo.c#L1404
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(i32)]
-pub enum LogStatus {
-    /// The plugin logged the information successfully.
-    Ok = 1,
-
-    /// The plugin has determined that the `sudo` session should be
-    /// terminated immediately.
-    Deny = 0,
-
-    /// The plugin no longer needs this callback. This callback will no
-    /// longer be invoked by `sudo`, but the rest of the plugin's
-    /// callbacks will function as normal.
-    Disable = -1,
-}
 
 /// Errors that can be produced by plugin internals.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -107,17 +54,23 @@ pub enum Error {
     #[error("sudo called plugin with an unparseable value for {key}: {value}")]
     OptionInvalid {
         /// The name of the option.
-        key:   String,
+        key: String,
 
         /// The value provided.
         value: String,
     },
 
+    /// A plugin method panicked and the panic was captured at the FFI
+    /// boundary. Panics can't cross into C, so we have to capture it
+    /// and turn it into an appropriate return code.
+    #[error("uncaught internal error")]
+    UncaughtPanic,
+
     /// A generic error identified only by a provided string. This may
     /// be used by plugin implementors who don't wish to provide their
     /// own custom error types, and instead are happy to simply use
     /// stringly-typed error messages.
-    #[error("plugin exited: {0}")]
+    #[error("{0}")]
     Other(String),
 }
 
@@ -143,23 +96,5 @@ impl From<Error> for LogStatus {
     fn from(_: Error) -> Self {
         // by default, abort `sudo` on all errors
         LogStatus::Deny
-    }
-}
-
-impl<T, E: SudoError> From<StdResult<T, E>> for OpenStatus {
-    fn from(result: StdResult<T, E>) -> Self {
-        match result {
-            Ok(_)  => OpenStatus::Ok,
-            Err(e) => e.into(),
-        }
-    }
-}
-
-impl<T, E: SudoError> From<StdResult<T, E>> for LogStatus {
-    fn from(result: StdResult<T, E>) -> Self {
-        match result {
-            Ok(_)  => LogStatus::Ok,
-            Err(e) => e.into(),
-        }
     }
 }

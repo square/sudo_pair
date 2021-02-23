@@ -260,7 +260,7 @@ goal to have a minimal set of dependencies. Currently, those are:
 * [rust-lang/libc][libc]
 * [rust-lang-nursery/rust-bindgen][bindgen]
 * [rust-lang-nursery/failure][failure]
-* [rust-lang-nursery/error-chain][error-chain] (to be removed)
+* [dtolnay/thiserror][thiserror]
 
 ## Contributions
 
@@ -286,6 +286,6 @@ See [LICENSE-APACHE](LICENSE-APACHE) for details.
 [sudo_plugin_man]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 [libc]: https://github.com/rust-lang/libc
 [bindgen]: https://github.com/rust-lang-nursery/rust-bindgen
-[error-chain]: https://github.com/rust-lang-nursery/error-chain
 [failure]: https://github.com/rust-lang-nursery/failure
+[thiserror]: https://github.com/dtolnay/thiserror
 [airtight-hatchway]: https://blogs.msdn.microsoft.com/oldnewthing/20060508-22/?p=31283
