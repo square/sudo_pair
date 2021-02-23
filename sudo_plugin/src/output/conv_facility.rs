@@ -2,7 +2,8 @@
 
 use crate::sys;
 
-use std::sync::{Arc, Mutex};
+use std::{ffi::CStr, sync::{Arc, Mutex}};
+use libc::c_void;
 use sudo_plugin_sys::{sudo_conv_t, sudo_conv_message, sudo_conv_reply};
 use std::io;
 use std::ffi::CString;
@@ -74,11 +75,11 @@ impl ConversationReply {
         if scr.reply.is_null() {
             return None;
         }
-        unsafe { 
-            Some( ConversationReply {
-                reply: CString::from_raw(scr.reply).into_string().expect("error converting reply to String")
-            })
-        }
+        let reply = unsafe{ CStr::from_ptr(scr.reply) }.to_str().unwrap().to_owned();
+        unsafe { libc::free(scr.reply as *mut c_void) };
+        Some( ConversationReply {
+            reply
+        })
     }
 }
 
@@ -161,5 +162,22 @@ impl ConversationFacility {
         let replies = creplies.iter().map(|x| ConversationReply::from_conv_reply(*x))
             .collect::<Vec<Option<ConversationReply>>>();
         Ok(replies)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{alloc::{Layout, System}, borrow::BorrowMut};
+    use std::alloc::GlobalAlloc;
+    use libc::c_void;
+    use super::*;
+
+    #[test]
+    fn conversation_reply_construction() {
+        let text = CString::new("Hey").unwrap();
+        let scr = sudo_conv_reply { reply: text.as_ptr() as *mut i8 };
+        std::mem::forget(text);
+        let conv = ConversationReply::from_conv_reply(scr).unwrap();
+        assert_eq!(conv.reply, "Hey");
     }
 }
