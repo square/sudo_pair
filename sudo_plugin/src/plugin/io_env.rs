@@ -76,12 +76,9 @@ pub struct IoEnv {
     /// the user's stdin.
     stderr: PrintFacility,
 
+    /// A handle to the sudo_plugin conversation facility, which allows two-way
+    /// communication with the user.
     conversation_f: ConversationFacility,
-    /// A handle to the sudo_plugin conversation
-    /// facility, which allows two-way communication with the user.
-
-
-    _conversation: crate::sys::sudo_conv_t,
 }
 
 // I don't get to control how many arguments these methods accept, since
@@ -117,7 +114,6 @@ impl IoEnv {
         plugin_options: *const *mut c_char,
         plugin_printf:  crate::sys::sudo_printf_t,
         conversation:   crate::sys::sudo_conv_t,
-        conversation_f: ConversationFacility,
     ) -> Result<Self> {
         let version = Version::from(version).check()?;
 
@@ -154,8 +150,7 @@ impl IoEnv {
 
             stdout,
             stderr,
-            _conversation: conversation,
-            conversation_f
+            conversation_f: ConversationFacility::new(conversation),
         };
 
         Ok(plugin)
@@ -188,8 +183,8 @@ impl IoEnv {
     }
 
     ///
-    /// Returns a facility implementing `std::io::Write` that emits to
-    /// the user's TTY, if sudo detected one.
+    /// Returns a facility implementing `std::io::Write` that emits to the
+    /// user's TTY, if sudo detected one.
     ///
     #[must_use]
     pub fn tty(&self) -> Option<Tty> {

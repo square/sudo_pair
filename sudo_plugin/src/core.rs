@@ -20,7 +20,7 @@
 // aren't going to affect anything.
 #![allow(clippy::must_use_candidate)]
 
-use crate::{errors::{Error, SudoError}, output::{ConversationFacility, PrintFacility}, plugin::IoEnv};
+use crate::{errors::{Error, SudoError}, output::PrintFacility, plugin::IoEnv};
 use crate::plugin::{IoPlugin, IoState};
 use crate::sys;
 
@@ -145,8 +145,6 @@ pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
             Some(P::NAME), plugin_printf
         );
 
-        let conv_f = ConversationFacility::new(conversation);
-
         let io_env = IoEnv::new(
             P::NAME,
             P::VERSION,
@@ -158,8 +156,7 @@ pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
             user_env_ptr,
             plugin_options_ptr,
             plugin_printf,
-            conversation,
-            conv_f,
+            conversation
         );
 
         let io_env = match io_env {

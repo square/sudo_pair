@@ -12,8 +12,7 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-//! A module that includes input and output modules for
-//! a sudo plugin
+//! A module that includes input and output modules for sudo plugin .
 
 pub(crate) mod print_facility;
 pub(crate) mod tty;
@@ -21,7 +20,7 @@ pub mod conv_facility;
 
 pub(crate) use print_facility::PrintFacility;
 pub(crate) use tty::Tty;
-pub(crate) use conv_facility::*;
+pub(crate) use conv_facility::ConversationFacility;
 
 use crate::sys;
 
@@ -29,5 +28,25 @@ use crate::sys;
 #[repr(u32)]
 enum Level {
     Info  = sys::SUDO_CONV_INFO_MSG,
-    Error = sys::SUDO_CONV_ERROR_MSG,
+    Error = sys::SUDO_CONV_PROMPT_ECHO_OFF,
+}
+
+bitflags::bitflags! {
+    /// If used with the sudo conversation function and you want a reply from
+    /// the user, you must specify one of the echo bits.
+    #[allow(clippy::clippy::cast_possible_wrap)]
+    pub struct MessageType: i32 {
+        /// Do not echo user input.
+        const ECHO_OFF       = sys::SUDO_CONV_PROMPT_ECHO_OFF as i32;
+        /// Echo user input.
+        const ECHO_ON        = sys::SUDO_CONV_PROMPT_ECHO_ON as i32;
+        /// Error message.
+        const ERROR          = sys::SUDO_CONV_ERROR_MSG as i32;
+        /// Informational message.
+        const INFO           = sys::SUDO_CONV_INFO_MSG as i32;
+        /// Mask user input.
+        const PROMPT_MASK    = sys::SUDO_CONV_PROMPT_MASK as i32;
+        /// Echo user input if no TTY.
+        const PROMPT_ECHO_OK = sys::SUDO_CONV_PROMPT_ECHO_OK as i32;
+    }
 }

@@ -15,9 +15,9 @@ categories = [ 'external-ffi-bindings' ]
 keywords   = [ 'sudo', 'sudo-plugin' ]
 
 [dependencies]
+bitflags  = '1'
 libc      = '0.2.70'
 thiserror = '1.0'
-
 
 [dependencies.sudo_plugin-sys]
 version = '1.2'
@@ -25,3 +25,8 @@ path    = '../sudo_plugin-sys'
 
 [badges]
 travis-ci = { repository = 'square/sudo_pair' }
+
+[[example]]
+path = "examples/conversation.rs"
+name = "conversation"
+crate-type = ["cdylib"]
