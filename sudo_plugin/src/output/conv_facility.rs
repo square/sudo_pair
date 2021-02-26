@@ -47,9 +47,10 @@ pub struct ConversationPrompt {
 impl TryFrom<ConversationPrompt> for sudo_conv_message {
     type Error = ConversationError;
 
+    #[allow(clippy::cast_possible_wrap)]
     fn try_from(cp: ConversationPrompt) -> Result<Self, ConversationError> {
         Ok(sudo_conv_message {
-            msg_type: cp.message_type.bits,
+            msg_type: cp.message_type.bits as i32,
             timeout: cp.timeout,
             // sudo does not take ownership of this.
             msg: CString::new(cp.message).map_err(ConversationError::ConversationPromptMessage)?.into_raw()
@@ -160,7 +161,8 @@ mod test {
         };
 
         let message = sudo_conv_message::try_from(prompt).unwrap();
-        assert_eq!(message.msg_type, MessageType::ECHO_ON.bits);
+        #[allow(clippy::clippy::cast_possible_wrap)]
+        assert_eq!(message.msg_type, MessageType::ECHO_ON.bits as i32);
         assert_eq!(message.timeout, 200);
         assert_eq!(unsafe { libc::strcmp(message.msg, b"Hey\0".as_ptr() as _) }, 0);
 

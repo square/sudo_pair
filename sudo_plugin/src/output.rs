@@ -34,19 +34,18 @@ enum Level {
 bitflags::bitflags! {
     /// If used with the sudo conversation function and you want a reply from
     /// the user, you must specify one of the echo bits.
-    #[allow(clippy::clippy::cast_possible_wrap)]
-    pub struct MessageType: i32 {
+    pub struct MessageType: u32 {
         /// Do not echo user input.
-        const ECHO_OFF       = sys::SUDO_CONV_PROMPT_ECHO_OFF as i32;
+        const ECHO_OFF       = sys::SUDO_CONV_PROMPT_ECHO_OFF;
         /// Echo user input.
-        const ECHO_ON        = sys::SUDO_CONV_PROMPT_ECHO_ON as i32;
+        const ECHO_ON        = sys::SUDO_CONV_PROMPT_ECHO_ON;
         /// Error message.
-        const ERROR          = sys::SUDO_CONV_ERROR_MSG as i32;
+        const ERROR          = sys::SUDO_CONV_ERROR_MSG;
         /// Informational message.
-        const INFO           = sys::SUDO_CONV_INFO_MSG as i32;
+        const INFO           = sys::SUDO_CONV_INFO_MSG;
         /// Mask user input.
-        const PROMPT_MASK    = sys::SUDO_CONV_PROMPT_MASK as i32;
+        const PROMPT_MASK    = sys::SUDO_CONV_PROMPT_MASK;
         /// Echo user input if no TTY.
-        const PROMPT_ECHO_OK = sys::SUDO_CONV_PROMPT_ECHO_OK as i32;
+        const PROMPT_ECHO_OK = sys::SUDO_CONV_PROMPT_ECHO_OK;
     }
 }
