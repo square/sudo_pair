@@ -288,4 +288,4 @@ See [LICENSE-APACHE](LICENSE-APACHE) for details.
 [bindgen]: https://github.com/rust-lang-nursery/rust-bindgen
 [failure]: https://github.com/rust-lang-nursery/failure
 [thiserror]: https://github.com/dtolnay/thiserror
-[airtight-hatchway]: https://blogs.msdn.microsoft.com/oldnewthing/20060508-22/?p=31283
+[airtight-hatchway]: http://web.archive.org/web/20190119055125/https://blogs.msdn.microsoft.com/oldnewthing/20060508-22/?p=31283
