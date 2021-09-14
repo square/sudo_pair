@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+chmod 644 /usr/lib/sudo
+chown root:root /usr/lib/sudo
+
+chmod 755 /var/run/sudo_pair
+chown root:root /var/run/sudo_pair
+
+chmod 755 /usr/lib/sudo/libsudo_pair.so
+chown root:root /usr/lib/sudo/libsudo_pair.so
+
+chmod 755 /usr/bin/sudo_approve
+chown root:root /usr/bin/sudo_approve
+
+chmod 644 /etc/sudo.conf_for_sudo_pair_sample
+chown root:root /etc/sudo.conf_for_sudo_pair_sample
+
+chmod 644 /etc/sudo.prompt.user
+chown root:root /etc/sudo.prompt.user
+
+chmod 644 /etc/sudo.prompt.pair
+chown root:root /etc/sudo.prompt.pair
+
+exit 0

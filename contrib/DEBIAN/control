@@ -1,0 +1,12 @@
+Package: sudo-pair
+Version: 1.2.1
+License: Apache-2.0 License
+Vendor: square
+Architecture: amd64
+Maintainer: fabio.germann@gmail.com
+Installed-Size: 1824
+Section: default
+Priority: extra
+Depends: socat
+Homepage: https://github.com/square/sudo_pair
+Description: Plugin for sudo that requires another human to approve and monitor privileged sudo sessions
