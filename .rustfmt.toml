@@ -2,18 +2,13 @@
 
 max_width = 80
 
-normalize_comments = true
-wrap_comments      = true
+normalize_comments   = true
+reorder_imports      = true
+use_try_shorthand    = true
+wrap_comments        = true
 
 ### unstable features ##
 
 unstable_features = true
 
-#reorder_imports        = true
-reorder_imported_names = true
-
 struct_field_align_threshold = 64
-
-use_try_shorthand = true
-
-use_small_heuristics = false
