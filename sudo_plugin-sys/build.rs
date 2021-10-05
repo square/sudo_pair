@@ -60,13 +60,13 @@ mod bindings {
 
 #[cfg(feature = "bindgen")]
 mod bindings {
-    use bindgen::Builder;
+    use bindgen::builder;
     use std::path::Path;
 
     pub fn generate(out_path: &Path) {
-      Builder::default()
-        .clang_arg("-I /usr/include")
-        .clang_arg("-I include")
+      builder()
+        .clang_arg("-I/usr/include")
+        .clang_arg("-I/usr/local/include")
         .header("include/bindings.h")
         .generate()
         .unwrap()
