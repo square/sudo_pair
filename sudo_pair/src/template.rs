@@ -38,7 +38,7 @@ impl Spec {
         // the expanded result is likely to be at least as long as the
         // template; if we go a little over, it's not a big deal
         let mut result = Vec::with_capacity(template.len());
-        let mut iter   = template.iter().cloned();
+        let mut iter   = template.iter().copied();
 
         while iter.len() != 0 {
             // copy literally everything up to the next escape character

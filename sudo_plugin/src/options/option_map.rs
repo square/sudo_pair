@@ -77,7 +77,7 @@ impl OptionMap {
             // be within the slice
             let (k, v) = match sep {
                 Some(s) => { ( &bytes[..s], &bytes[s+1..] ) }
-                None    => { ( &bytes[..],  &bytes[..] ) }
+                None    => { ( bytes,       bytes) }
             };
 
             // the return value is ignored because there's not an
