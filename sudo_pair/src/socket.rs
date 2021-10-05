@@ -43,11 +43,11 @@ impl Socket {
     ) -> Result<Self> {
         let path = path.as_ref();
 
-        Self::enforce_ownership(&path)?;
+        Self::enforce_ownership(path)?;
 
         // if the path already exists as a socket, make a best-effort
         // attempt at unlinking it
-        Self::unlink(&path)?;
+        Self::unlink(path)?;
 
         // by default, ensure no permissions on the created socket since
         // we're going to customize them immediately afterward
@@ -97,7 +97,7 @@ impl Socket {
 
                 // as a sanity check, confirm that the fd we're going to
                 // `accept` is the one that `select` says is ready
-                if !libc::FD_ISSET(fd, &mut readfds) {
+                if !libc::FD_ISSET(fd, &readfds) {
                     unreachable!("`select` returned an unexpected file descriptor");
                 }
             }
@@ -116,7 +116,7 @@ impl Socket {
         // because we want to unlink the socket regardless) and b) it's
         // more important to continue the sudo session than to worry
         // about filesystem janitorial work
-        let _ = Self::unlink(&path);
+        let _ = Self::unlink(path);
 
         // restore the process' original umask
         let _ = unsafe { libc::umask(umask) };
