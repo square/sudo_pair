@@ -27,6 +27,9 @@ mod bindings {
     use std::fs;
     use std::path::Path;
 
+    #[cfg(target_arch = "aarch64")]
+    const TARGET_ARCH : &str = "aarch64";
+
     #[cfg(target_arch = "x86_64")]
     const TARGET_ARCH : &str = "x86-64";
 
