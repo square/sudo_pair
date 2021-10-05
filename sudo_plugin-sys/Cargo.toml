@@ -21,6 +21,7 @@ default              = ['min_sudo_plugin_1_9']
 change_winsize       = ['min_sudo_plugin_1_12']
 min_sudo_plugin_1_9  = []
 min_sudo_plugin_1_12 = []
+min_sudo_plugin_1_14 = []
 generate_bindings    = ['bindgen']
 
 [build-dependencies]
