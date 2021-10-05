@@ -22,7 +22,7 @@ fn main() {
     bindings::generate(&bindings_path);
 }
 
-#[cfg(not(feature = "generate_bindings"))]
+#[cfg(not(feature = "bindgen"))]
 mod bindings {
     use std::fs;
     use std::path::Path;
@@ -58,7 +58,7 @@ mod bindings {
     }
 }
 
-#[cfg(feature = "generate_bindings")]
+#[cfg(feature = "bindgen")]
 mod bindings {
     use bindgen::Builder;
     use std::path::Path;
