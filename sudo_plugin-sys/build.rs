@@ -42,6 +42,9 @@ mod bindings {
 
         #[cfg(feature = "min_sudo_plugin_1_12")]
         "1.12",
+
+        #[cfg(feature = "min_sudo_plugin_1_14")]
+        "1.14",
     ];
 
     pub fn generate(out_path: &Path) {
