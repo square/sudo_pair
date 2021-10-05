@@ -16,12 +16,6 @@
 
 // TODO: use error types as directly defined by sudo_plugin(8).
 
-// TODO: remove when error_chain is updated to compile cleanly
-#![allow(bare_trait_objects)]
-#![allow(renamed_and_removed_lints)]
-#![allow(single_use_lifetimes)]
-#![allow(variant_size_differences)]
-
 use crate::core::{OpenStatus, LogStatus};
 use crate::version::Version;
 
