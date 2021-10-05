@@ -1,0 +1,101 @@
+name: Rust
+
+on:
+  push:
+    branches: [ 'master' ]
+    tags:     [ 'v*' ]
+  pull_request:
+    branches: [ 'master' ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -A unknown-lints -D warnings
+
+jobs:
+
+  ci:
+    name: Build and Test
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.52 # MSRV
+
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v2
+
+      - name: cache crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-rust-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+            ${{ runner.os }}-rust-${{ matrix.rust }}-cargo
+            ${{ runner.os }}-rust
+
+      - name: rustup install
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile:   minimal
+          override:  true
+
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+  clippy:
+    name: Lint
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v2
+
+      - name: cache crates
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: rustup install
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain:  nightly
+          profile:    minimal
+          override:   true
+          components: clippy
+
+      - name: cargo clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # TODO: all features
+          # args: --all-features
+
+      # TODO: run cargo fmt
+      # - name: cargo fmt
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: fmt
+      #     args: --all -- --check

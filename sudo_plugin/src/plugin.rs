@@ -14,6 +14,8 @@
 
 //! Traits and structs directly used for implementation of plugins.
 
+#![allow(clippy::module_name_repetitions)]
+
 mod io_env;
 mod io_plugin;
 mod io_state;
