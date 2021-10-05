@@ -1,0 +1,25 @@
+name: Security Audit
+
+on:
+
+  push:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+
+  schedule:
+    - cron: '3 17 * * *'
+
+jobs:
+
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: git checkout
+        uses: actions/checkout@v1
+
+      - name: cargo audit
+        uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
