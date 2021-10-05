@@ -166,6 +166,22 @@ pub trait IoPlugin: 'static + Sized {
         Ok(())
     }
 
-    // TODO: support for `change_winsize`
+    /// The `change_winsize` callback is invoked whenever the controlling
+    /// terminal for the sudo session detects that it's been resized. It is
+    /// provided with a count of the number of horizontal lines and vertical
+    /// columns that the terminal can now display.
+    ///
+    /// # Errors
+    ///
+    /// Any errors will be recursively printed (up their
+    /// [`source`](std::error::Error::source) chain) then converted to
+    /// a [`LogStatus`](crate::errors::LogStatus) before being
+    /// returned to `sudo`.
+    #[cfg(feature = "change_winsize")]
+    #[inline]
+    fn change_winsize(&self, _lines: u64, _cols: u64) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
     // TODO: support for `log_suspend`
 }

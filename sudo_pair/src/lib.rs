@@ -226,6 +226,11 @@ impl IoPlugin for SudoPair {
 
         Err(ErrorKind::StdinRedirected.into())
     }
+
+    #[cfg(feature = "change_winsize")]
+    fn change_winsize(&self, lines: u64, cols: u64) -> Result<()> {
+        self.log_output(format!("\x1b[8;{};{}t", lines, cols).as_bytes())
+    }
 }
 
 impl SudoPair {

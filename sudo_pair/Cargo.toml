@@ -19,9 +19,10 @@ name       = 'sudo_pair'
 crate-type = ['cdylib']
 
 [features]
-default  = ['syslog']
-journald = ['slog-journald']
-syslog   = ['slog-syslog']
+default        = ['syslog', 'change_winsize']
+change_winsize = ['sudo_plugin/change_winsize']
+journald       = ['slog-journald']
+syslog         = ['slog-syslog']
 
 [dependencies]
 libc        = '0.2.70'

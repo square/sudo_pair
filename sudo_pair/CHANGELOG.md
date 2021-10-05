@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Added
 - Structured logging to syslog and journald through the `slog` crate. Enabled
   through an optional feature.
+- Support for automatically changing the window size of the pair terminal.
+  Requires sudo 1.8.21 or greater.
 
 ## Changed
 - Rewritten to work on the v2 sudo_plugin API.
@@ -26,20 +28,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.11.1] - 2018-06-08
 
 ### Fixed
-- The approval command is once again implicitly whitelisted, this was unintentionally removed when adding support for obeying `log_output` hinting in `/etc/sudoers`.
+- The approval command is once again implicitly whitelisted, this was
+  unintentionally removed when adding support for obeying `log_output` hinting
+  in `/etc/sudoers`.
 
 ## [0.11.0] - 2018-06-06
 
 ### Added
-- Now obeys the `log_output` setting from `/etc/sudoers`. However, this renders this plugin completely nonfunctional unless this setting is enabled (or individual commands are opted in with the `LOG_OUTPUT:` tag).
+- Now obeys the `log_output` setting from `/etc/sudoers`. However, this renders
+  this plugin completely nonfunctional unless this setting is enabled (or
+  individual commands are opted in with the `LOG_OUTPUT:` tag).
 
 ### Removed
-- Removed the short-lived `whitelist` setting in favor of simply honoring `log_output`.
+- Removed the short-lived `whitelist` setting in favor of simply honoring
+  `log_output`.
 
 ## [0.10.0] - 2018-06-05
 
 ### Added
-- New `whitelist` plugin option allows for naming binaries to be exempt from requiring a pair.
+- New `whitelist` plugin option allows for naming binaries to be exempt from
+  requiring a pair.
 
 ### Changed
 - No longer fails to build on warnings, unless being run in CI
@@ -53,13 +61,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Prompt is rendered directly to the user's TTY when possible
 
 ### Fixed
-- Output sent to the plugin printf function is sent with `write_all` for technical correctness (although AFAICT this is unnecessary in practice)
+- Output sent to the plugin printf function is sent with `write_all` for
+  technical correctness (although AFAICT this is unnecessary in practice)
 
 ## [0.9.1] - 2018-05-08
 
 ### Security
 - Ensure approval sockets aren't created with the primary group of the new user
-- Print all the arguments passed to the command being `sudo`ed (thanks [`/u/__xor__`](https://www.reddit.com/r/rust/comments/8hppka/sudo_pair_090_released/dymsev8/))
+- Print all the arguments passed to the command being `sudo`ed (thanks
+  [`/u/__xor__`](https://www.reddit.com/r/rust/comments/8hppka/sudo_pair_090_released/dymsev8/))
 
 ### Fixed
 - Rolled back the minimum plugin API version to 1.9; it was mistakenly bumped to 1.12 when support for 1.12 was added
