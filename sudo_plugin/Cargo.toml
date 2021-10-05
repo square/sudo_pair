@@ -22,6 +22,3 @@ thiserror = '1.0'
 [dependencies.sudo_plugin-sys]
 version = '1.2'
 path    = '../sudo_plugin-sys'
-
-[badges]
-travis-ci = { repository = 'square/sudo_pair' }
