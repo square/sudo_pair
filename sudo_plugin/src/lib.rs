@@ -18,13 +18,11 @@
 
 // TODO: provide the Plugin object to all callbacks?
 
-#![warn(bad_style)]
 #![warn(future_incompatible)]
 #![warn(nonstandard_style)]
 #![warn(rust_2021_compatibility)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
-#![warn(rustdoc::all)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -44,6 +42,8 @@
 
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
+
+#![warn(rustdoc::all)]
 
 #![warn(clippy::cargo)]
 #![warn(clippy::complexity)]
