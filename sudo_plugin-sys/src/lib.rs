@@ -20,12 +20,11 @@
 //!
 //! [sudo_plugin]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 
-#![warn(bad_style)]
 #![warn(future_incompatible)]
 #![warn(nonstandard_style)]
+#![warn(rust_2021_compatibility)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
-#![warn(rustdoc)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -47,9 +46,8 @@
 // this entire crate is generated code
 #![allow(missing_docs)]
 #![allow(non_camel_case_types)]
-#![allow(rustdoc)]
-#![allow(trivial_casts)]
-#![allow(trivial_numeric_casts)]
+
+#![warn(rustdoc::all)]
 
 #![warn(clippy::cargo)]
 #![warn(clippy::complexity)]
@@ -58,12 +56,12 @@
 #![warn(clippy::perf)]
 #![warn(clippy::style)]
 
-// this is triggered by dependencies
-#![allow(clippy::multiple_crate_versions)]
-
 // this entire crate is generated code
 #![allow(clippy::similar_names)]
 #![allow(clippy::type_complexity)]
+
+// FIXME: https://github.com/rust-lang/rust-bindgen/issues/1651
+#![allow(deref_nullptr)]
 
 use std::os::raw::c_uint;
 

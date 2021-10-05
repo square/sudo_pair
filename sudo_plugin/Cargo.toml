@@ -23,9 +23,6 @@ thiserror = '1.0'
 version = '1.2'
 path    = '../sudo_plugin-sys'
 
-[badges]
-travis-ci = { repository = 'square/sudo_pair' }
-
 [[example]]
 path = "examples/conversation.rs"
 name = "conversation"

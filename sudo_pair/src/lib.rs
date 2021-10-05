@@ -24,12 +24,11 @@
 // TODO: various badges
 // TODO: fill out all fields of https://doc.rust-lang.org/cargo/reference/manifest.html
 
-#![warn(bad_style)]
 #![warn(future_incompatible)]
 #![warn(nonstandard_style)]
+#![warn(rust_2021_compatibility)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
-#![warn(rustdoc)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -50,6 +49,8 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
+#![warn(rustdoc::all)]
+
 #![warn(clippy::cargo)]
 #![warn(clippy::complexity)]
 #![warn(clippy::correctness)]
@@ -59,6 +60,10 @@
 
 // this is triggered by dependencies
 #![allow(clippy::multiple_crate_versions)]
+
+// FIXME: this appears to be triggering on non-Drop items like Result,
+// but this needs to be either investigated or reported upstream
+#![allow(clippy::let_underscore_drop)]
 
 mod errors;
 mod template;
@@ -468,7 +473,7 @@ impl SudoPair {
         if !self.is_sudoing_to_user() && !self.is_sudoing_to_group() {
             debug_assert_eq!(
                 self.env.runas_gids(),
-                self.env.user_info.groups.iter().cloned().collect()
+                self.env.user_info.groups.iter().copied().collect()
             );
 
             return true;
@@ -517,7 +522,7 @@ impl SudoPair {
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
         !self.options.gids_exempted.is_disjoint(
-            &self.env.user_info.groups.iter().cloned().collect()
+            &self.env.user_info.groups.iter().copied().collect()
         )
     }
 
@@ -739,7 +744,7 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
             gids_enforced: map.get("gids_enforced")
-                .unwrap_or_else(|_| DEFAULT_GIDS_ENFORCED.iter().cloned().collect()),
+                .unwrap_or_else(|_| DEFAULT_GIDS_ENFORCED.iter().copied().collect()),
 
             gids_exempted: map.get("gids_exempted")
                 .unwrap_or_default(),

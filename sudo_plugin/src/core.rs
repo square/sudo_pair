@@ -220,7 +220,7 @@ pub unsafe extern "C" fn log_ttyin<P: IoPlugin, S: IoState<P>>(
         }
 
         let slice = ::std::slice::from_raw_parts(
-            buf as *const _,
+            buf.cast(),
             len as _,
         );
 
@@ -245,7 +245,7 @@ pub unsafe extern "C" fn log_ttyout<P: IoPlugin, S: IoState<P>>(
         }
 
         let slice = ::std::slice::from_raw_parts(
-            buf as *const _,
+            buf.cast(),
             len as _,
         );
 
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn log_stdin<P: IoPlugin, S: IoState<P>>(
         }
 
         let slice = ::std::slice::from_raw_parts(
-            buf as *const _,
+            buf.cast(),
             len as _,
         );
 
@@ -295,7 +295,7 @@ pub unsafe extern "C" fn log_stdout<P: IoPlugin, S: IoState<P>>(
         }
 
         let slice = ::std::slice::from_raw_parts(
-            buf as *const _,
+            buf.cast(),
             len as _,
         );
 
@@ -320,7 +320,7 @@ pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
         }
 
         let slice = ::std::slice::from_raw_parts(
-            buf as *const _,
+            buf.cast(),
             len as _,
         );
 

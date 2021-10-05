@@ -18,12 +18,11 @@
 
 // TODO: provide the Plugin object to all callbacks?
 
-#![warn(bad_style)]
 #![warn(future_incompatible)]
 #![warn(nonstandard_style)]
+#![warn(rust_2021_compatibility)]
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
-#![warn(rustdoc)]
 #![warn(unused)]
 
 #![warn(bare_trait_objects)]
@@ -44,6 +43,8 @@
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
 
+#![warn(rustdoc::all)]
+
 #![warn(clippy::cargo)]
 #![warn(clippy::complexity)]
 #![warn(clippy::correctness)]
@@ -51,8 +52,9 @@
 #![warn(clippy::perf)]
 #![warn(clippy::style)]
 
-// this is triggered by dependencies
-#![allow(clippy::multiple_crate_versions)]
+// FIXME: this appears to be triggering on non-Drop items like Result,
+// but this needs to be either investigated or reported upstream
+#![allow(clippy::let_underscore_drop)]
 
 // this warns on names that are out of our control like argv, argc, uid,
 // and gid

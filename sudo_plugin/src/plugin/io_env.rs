@@ -142,11 +142,11 @@ impl IoEnv {
 
             cmdline,
 
-            settings:       OptionMap::from_raw(settings as _).try_into()?,
-            user_info:      OptionMap::from_raw(user_info as _).try_into()?,
-            command_info:   OptionMap::from_raw(command_info as _).try_into()?,
-            user_env:       OptionMap::from_raw(user_env as _),
-            plugin_options: OptionMap::from_raw(plugin_options as _),
+            settings:       OptionMap::from_raw(settings.cast()).try_into()?,
+            user_info:      OptionMap::from_raw(user_info.cast()).try_into()?,
+            command_info:   OptionMap::from_raw(command_info.cast()).try_into()?,
+            user_env:       OptionMap::from_raw(user_env.cast()),
+            plugin_options: OptionMap::from_raw(plugin_options.cast()),
 
             stdout,
             stderr,
@@ -243,9 +243,9 @@ impl IoEnv {
         // sanity-check that if preserve_groups is unset we have
         // `runas_groups`, and if it is set that we don't
         if self.command_info.preserve_groups {
-            debug_assert!(self.command_info.runas_groups.is_none())
+            debug_assert!(self.command_info.runas_groups.is_none());
         } else {
-            debug_assert!(self.command_info.runas_groups.is_some())
+            debug_assert!(self.command_info.runas_groups.is_some());
         }
 
         // even though the above sanity-check might go wrong, it still
@@ -255,7 +255,7 @@ impl IoEnv {
         // verify this)
         let mut set : HashSet<_> = self.command_info.runas_groups.as_ref().unwrap_or(
             &self.user_info.groups
-        ).iter().cloned().collect();
+        ).iter().copied().collect();
 
         // `command_info.runas_egid` won't necessarily be in the list of
         // `command_info.runas_groups` if `-P` was passed; however, the
