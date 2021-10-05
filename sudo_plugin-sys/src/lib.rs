@@ -84,6 +84,6 @@ pub const IO_PLUGIN_EMPTY : io_plugin = io_plugin {
     register_hooks:   None,
     deregister_hooks: None,
 
-    #[cfg(feature = "min_sudo_plugin_1_12")]
+    #[cfg(feature = "change_winsize")]
     change_winsize: None,
 };

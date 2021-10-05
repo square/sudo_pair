@@ -103,6 +103,9 @@ macro_rules! sudo_io_plugin {
             log_stdout: Some($crate::core::log_stdout::<$ty, $name::State>),
             log_stderr: Some($crate::core::log_stderr::<$ty, $name::State>),
 
+            #[cfg(feature = "change_winsize")]
+            change_winsize: Some($crate::core::change_winsize::<$ty, $name::State>),
+
             .. $crate::sys::IO_PLUGIN_EMPTY
         };
     }

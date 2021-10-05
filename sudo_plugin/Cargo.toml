@@ -14,10 +14,13 @@ readme     = '../README.md'
 categories = [ 'external-ffi-bindings' ]
 keywords   = [ 'sudo', 'sudo-plugin' ]
 
+[features]
+default        = ['change_winsize']
+change_winsize = ['sudo_plugin-sys/change_winsize']
+
 [dependencies]
 libc      = '0.2.70'
 thiserror = '1.0'
-
 
 [dependencies.sudo_plugin-sys]
 version = '1.2'

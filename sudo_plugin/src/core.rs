@@ -332,3 +332,20 @@ pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
         })
     })
 }
+
+#[cfg(feature = "change_winsize")]
+#[doc(hidden)]
+pub unsafe extern "C" fn change_winsize<P: IoPlugin, S: IoState<P>>(
+    line: raw::c_uint,
+    cols: raw::c_uint,
+) -> raw::c_int {
+    catch_unwind_log(|| {
+        let env    = S::io_env();
+        let plugin = S::io_plugin();
+
+        plugin.change_winsize(u64::from(line), u64::from(cols)).map_err(|err| {
+            let _ = env.stderr().write_error(&err);
+            err
+        })
+    })
+}
