@@ -1,4 +1,4 @@
-]0;sudo: <%U@%h:%d $ > %C[8;%H;%WtYou have been asked to approve and monitor the following sudo session:
+You have been asked to approve and monitor the following sudo session:
 
     <[1m[34m%U[0m@[1m[31m%h[0m:[1m[34m%d[0m [31m$[0m > %C
 
