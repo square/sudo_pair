@@ -90,9 +90,6 @@ macro_rules! sudo_io_plugin {
         #[allow(missing_docs)]
         #[no_mangle]
         pub static $name: $crate::sys::io_plugin = $crate::sys::io_plugin {
-            type_:   $crate::sys::SUDO_IO_PLUGIN,
-            version: $crate::sys::SUDO_API_VERSION,
-
             open:         Some($crate::core::open::<$ty, $name::State>),
             close:        Some($crate::core::close::<$ty, $name::State>),
             show_version: Some($crate::core::show_version::<$ty, $name::State>),
@@ -103,10 +100,9 @@ macro_rules! sudo_io_plugin {
             log_stdout: Some($crate::core::log_stdout::<$ty, $name::State>),
             log_stderr: Some($crate::core::log_stderr::<$ty, $name::State>),
 
-            #[cfg(feature = "change_winsize")]
             change_winsize: Some($crate::core::change_winsize::<$ty, $name::State>),
 
-            .. $crate::sys::IO_PLUGIN_EMPTY
+            .. $crate::sys::io_plugin::empty()
         };
     }
 }

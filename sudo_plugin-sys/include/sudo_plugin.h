@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: ISC
  *
- * Copyright (c) 2009-2018 Todd C. Miller <Todd.Miller@sudo.ws>
+ * Copyright (c) 2009-2020 Todd C. Miller <Todd.Miller@sudo.ws>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,7 +21,7 @@
 
 /* API version major/minor */
 #define SUDO_API_VERSION_MAJOR 1
-#define SUDO_API_VERSION_MINOR 14
+#define SUDO_API_VERSION_MINOR 17
 #define SUDO_API_MKVERSION(x, y) (((x) << 16) | (y))
 #define SUDO_API_VERSION SUDO_API_MKVERSION(SUDO_API_VERSION_MAJOR, SUDO_API_VERSION_MINOR)
 
@@ -34,6 +34,9 @@
 #define SUDO_API_VERSION_SET_MINOR(vp, n) do { \
     *(vp) = (*(vp) & 0xffff0000U) | (n); \
 } while(0)
+
+/* "plugin type" for the sudo front end, as passed to an audit plugin */
+#define SUDO_FRONT_END		0
 
 /* Conversation function types and defines */
 struct sudo_conv_message {
@@ -54,11 +57,9 @@ struct sudo_conv_message {
  * conversing with the user.  In practical terms, this is the longest
  * password sudo will support.  This means that a buffer of size
  * SUDO_CONV_REPL_MAX+1 is guaranteed to be able to hold any reply
- * from the conversation function.  It is also useful as a max value
- * for memset_s() when clearing passwords returned by the conversation
- * function.
+ * from the conversation function.
  */
-#define SUDO_CONV_REPL_MAX	255
+#define SUDO_CONV_REPL_MAX	1023
 
 struct sudo_conv_reply {
     char *reply;
@@ -89,6 +90,10 @@ typedef int (*sudo_printf_t)(int msg_type, const char *fmt, ...);
 /*
  * Hooks allow a plugin to hook into specific sudo and/or libc functions.
  */
+
+#if defined(__GNUC__) && ((__GNUC__ == 4 && __GNUC_MINOR__ >= 4) || __GNUC__ > 4)
+# pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#endif
 
 /* Hook functions typedefs. */
 typedef int (*sudo_hook_fn_t)();
@@ -128,7 +133,32 @@ struct sudo_hook {
 #define SUDO_HOOK_PUTENV	3
 #define SUDO_HOOK_GETENV	4
 
-/* Policy plugin type and defines */
+/*
+ * Plugin interface to sudo's main event loop.
+ */
+typedef void (*sudo_plugin_ev_callback_t)(int fd, int what, void *closure);
+
+struct timespec;
+struct sudo_plugin_event {
+    int (*set)(struct sudo_plugin_event *pev, int fd, int events, sudo_plugin_ev_callback_t callback, void *closure);
+    int (*add)(struct sudo_plugin_event *pev, struct timespec *timeout);
+    int (*del)(struct sudo_plugin_event *pev);
+    int (*pending)(struct sudo_plugin_event *pev, int events, struct timespec *ts);
+    int (*fd)(struct sudo_plugin_event *pev);
+    void (*setbase)(struct sudo_plugin_event *pev, void *base);
+    void (*loopbreak)(struct sudo_plugin_event *pev);
+    void (*free)(struct sudo_plugin_event *pev);
+    /* actually larger... */
+};
+
+/* Sudo plugin Event types */
+#define SUDO_PLUGIN_EV_TIMEOUT	0x01	/* fire after timeout */
+#define SUDO_PLUGIN_EV_READ	0x02	/* fire when readable */
+#define SUDO_PLUGIN_EV_WRITE	0x04	/* fire when writable */
+#define SUDO_PLUGIN_EV_PERSIST	0x08	/* persist until deleted */
+#define SUDO_PLUGIN_EV_SIGNAL	0x10	/* fire on signal receipt */
+
+/* Policy plugin type and defines. */
 struct passwd;
 struct policy_plugin {
 #define SUDO_POLICY_PLUGIN     1
@@ -137,22 +167,24 @@ struct policy_plugin {
     int (*open)(unsigned int version, sudo_conv_t conversation,
 	sudo_printf_t sudo_printf, char * const settings[],
 	char * const user_info[], char * const user_env[],
-	char * const plugin_options[]);
+	char * const plugin_options[], const char **errstr);
     void (*close)(int exit_status, int error); /* wait status or error */
     int (*show_version)(int verbose);
     int (*check_policy)(int argc, char * const argv[],
 	char *env_add[], char **command_info[],
-	char **argv_out[], char **user_env_out[]);
+	char **argv_out[], char **user_env_out[], const char **errstr);
     int (*list)(int argc, char * const argv[], int verbose,
-	const char *list_user);
-    int (*validate)(void);
+	const char *list_user, const char **errstr);
+    int (*validate)(const char **errstr);
     void (*invalidate)(int remove);
-    int (*init_session)(struct passwd *pwd, char **user_env_out[]);
+    int (*init_session)(struct passwd *pwd, char **user_env_out[],
+	const char **errstr);
     void (*register_hooks)(int version, int (*register_hook)(struct sudo_hook *hook));
     void (*deregister_hooks)(int version, int (*deregister_hook)(struct sudo_hook *hook));
+    struct sudo_plugin_event * (*event_alloc)(void);
 };
 
-/* I/O plugin type and defines */
+/* I/O plugin type and defines. */
 struct io_plugin {
 #define SUDO_IO_PLUGIN	    2
     unsigned int type; /* always SUDO_IO_PLUGIN */
@@ -161,18 +193,70 @@ struct io_plugin {
 	sudo_printf_t sudo_printf, char * const settings[],
 	char * const user_info[], char * const command_info[],
 	int argc, char * const argv[], char * const user_env[],
-	char * const plugin_options[]);
+	char * const plugin_options[], const char **errstr);
     void (*close)(int exit_status, int error); /* wait status or error */
     int (*show_version)(int verbose);
-    int (*log_ttyin)(const char *buf, unsigned int len);
-    int (*log_ttyout)(const char *buf, unsigned int len);
-    int (*log_stdin)(const char *buf, unsigned int len);
-    int (*log_stdout)(const char *buf, unsigned int len);
-    int (*log_stderr)(const char *buf, unsigned int len);
+    int (*log_ttyin)(const char *buf, unsigned int len, const char **errstr);
+    int (*log_ttyout)(const char *buf, unsigned int len, const char **errstr);
+    int (*log_stdin)(const char *buf, unsigned int len, const char **errstr);
+    int (*log_stdout)(const char *buf, unsigned int len, const char **errstr);
+    int (*log_stderr)(const char *buf, unsigned int len, const char **errstr);
+    void (*register_hooks)(int version,
+	int (*register_hook)(struct sudo_hook *hook));
+    void (*deregister_hooks)(int version,
+	int (*deregister_hook)(struct sudo_hook *hook));
+    int (*change_winsize)(unsigned int line, unsigned int cols,
+	const char **errstr);
+    int (*log_suspend)(int signo, const char **errstr);
+    struct sudo_plugin_event * (*event_alloc)(void);
+};
+
+/* Differ audit plugin close status types. */
+#define SUDO_PLUGIN_NO_STATUS		0
+#define SUDO_PLUGIN_WAIT_STATUS		1
+#define SUDO_PLUGIN_EXEC_ERROR		2
+#define SUDO_PLUGIN_SUDO_ERROR		3
+
+/* Audit plugin type and defines */
+struct audit_plugin {
+#define SUDO_AUDIT_PLUGIN	    3
+    unsigned int type; /* always SUDO_AUDIT_PLUGIN */
+    unsigned int version; /* always SUDO_API_VERSION */
+    int (*open)(unsigned int version, sudo_conv_t conversation,
+	sudo_printf_t sudo_printf, char * const settings[],
+	char * const user_info[], int submit_optind,
+	char * const submit_argv[], char * const submit_envp[],
+	char * const plugin_options[], const char **errstr);
+    void (*close)(int status_type, int status);
+    int (*accept)(const char *plugin_name, unsigned int plugin_type,
+	char * const command_info[], char * const run_argv[],
+	char * const run_envp[], const char **errstr);
+    int (*reject)(const char *plugin_name, unsigned int plugin_type,
+	const char *audit_msg, char * const command_info[],
+	const char **errstr);
+    int (*error)(const char *plugin_name, unsigned int plugin_type,
+	const char *audit_msg, char * const command_info[],
+	const char **errstr);
+    int (*show_version)(int verbose);
     void (*register_hooks)(int version, int (*register_hook)(struct sudo_hook *hook));
     void (*deregister_hooks)(int version, int (*deregister_hook)(struct sudo_hook *hook));
-    int (*change_winsize)(unsigned int line, unsigned int cols);
-    int (*log_suspend)(int signo);
+    struct sudo_plugin_event * (*event_alloc)(void);
+};
+
+/* Approval plugin type and defines */
+struct approval_plugin {
+#define SUDO_APPROVAL_PLUGIN	    4
+    unsigned int type; /* always SUDO_APPROVAL_PLUGIN */
+    unsigned int version; /* always SUDO_API_VERSION */
+    int (*open)(unsigned int version, sudo_conv_t conversation,
+	sudo_printf_t sudo_printf, char * const settings[],
+	char * const user_info[], int submit_optind,
+	char * const submit_argv[], char * const submit_envp[],
+	char * const plugin_options[], const char **errstr);
+    void (*close)(void);
+    int (*check)(char * const command_info[], char * const run_argv[],
+	char * const run_envp[], const char **errstr);
+    int (*show_version)(int verbose);
 };
 
 /* Sudoers group plugin version major/minor */

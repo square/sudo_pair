@@ -20,7 +20,7 @@ crate-type = ['cdylib']
 
 [features]
 default        = ['syslog', 'change_winsize']
-change_winsize = ['sudo_plugin/change_winsize']
+change_winsize = []
 journald       = ['slog-journald']
 syslog         = ['slog-syslog']
 

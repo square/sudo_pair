@@ -177,7 +177,6 @@ pub trait IoPlugin: 'static + Sized {
     /// [`source`](std::error::Error::source) chain) then converted to
     /// a [`LogStatus`](crate::errors::LogStatus) before being
     /// returned to `sudo`.
-    #[cfg(feature = "change_winsize")]
     #[inline]
     fn change_winsize(&self, _lines: u64, _cols: u64) -> Result<(), Self::Error> {
         Ok(())

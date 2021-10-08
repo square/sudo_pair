@@ -67,23 +67,94 @@ use std::os::raw::c_uint;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-pub const SUDO_API_VERSION: c_uint =
+const SUDO_API_VERSION: c_uint =
     SUDO_API_VERSION_MAJOR << 16 | SUDO_API_VERSION_MINOR;
 
-pub const IO_PLUGIN_EMPTY : io_plugin = io_plugin {
-    type_:            SUDO_IO_PLUGIN,
-    version:          SUDO_API_VERSION,
-    open:             None,
-    close:            None,
-    show_version:     None,
-    log_ttyin:        None,
-    log_ttyout:       None,
-    log_stdin:        None,
-    log_stdout:       None,
-    log_stderr:       None,
-    register_hooks:   None,
-    deregister_hooks: None,
+impl policy_plugin {
+    const EMPTY : Self = Self  {
+        type_:   SUDO_POLICY_PLUGIN,
+        version: SUDO_API_VERSION,
 
-    #[cfg(feature = "change_winsize")]
-    change_winsize: None,
-};
+        open:             None,
+        close:            None,
+        show_version:     None,
+        check_policy:     None,
+        list:             None,
+        validate:         None,
+        invalidate:       None,
+        init_session:     None,
+        register_hooks:   None,
+        deregister_hooks: None,
+        event_alloc:      None,
+    };
+
+    /// Returns an empty instance of this plugin that provides no
+    /// implementations for any callback.
+    #[must_use]
+    pub const fn empty() -> Self { Self::EMPTY }
+}
+
+impl io_plugin {
+    const EMPTY : Self = Self {
+        type_:   SUDO_IO_PLUGIN,
+        version: SUDO_API_VERSION,
+
+        open:             None,
+        close:            None,
+        show_version:     None,
+        log_ttyin:        None,
+        log_ttyout:       None,
+        log_stdin:        None,
+        log_stdout:       None,
+        log_stderr:       None,
+        register_hooks:   None,
+        deregister_hooks: None,
+        change_winsize:   None,
+        log_suspend:      None,
+        event_alloc:      None,
+    };
+
+    /// Returns an empty instance of this plugin that provides no
+    /// implementations for any callback.
+    #[must_use]
+    pub const fn empty() -> Self { Self::EMPTY }
+}
+
+impl audit_plugin {
+    const EMPTY : Self = Self {
+            type_:   SUDO_AUDIT_PLUGIN,
+            version: SUDO_API_VERSION,
+
+            open:             None,
+            close:            None,
+            accept:           None,
+            reject:           None,
+            error:            None,
+            show_version:     None,
+            register_hooks:   None,
+            deregister_hooks: None,
+            event_alloc:      None,
+    };
+
+    /// Returns an empty instance of this plugin that provides no
+    /// implementations for any callback.
+    #[must_use]
+    pub const fn empty() -> Self { Self::EMPTY }
+}
+
+impl approval_plugin {
+    const EMPTY: Self = Self {
+        type_:   SUDO_APPROVAL_PLUGIN,
+        version: SUDO_API_VERSION,
+
+        open:         None,
+        close:        None,
+        check:        None,
+        show_version: None,
+    };
+
+    /// Returns an empty instance of this plugin that provides no
+    /// implementations for any callback.
+    #[must_use]
+    pub const fn empty() -> Self { Self::EMPTY }
+}
