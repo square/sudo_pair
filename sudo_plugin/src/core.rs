@@ -129,16 +129,17 @@ fn catch_unwind_log<T: Into<LogStatus>, F: FnOnce() -> T + UnwindSafe>(f: F) -> 
 
 #[doc(hidden)]
 pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
-    version: raw::c_uint,
-    conversation:       sys::sudo_conv_t,
-    plugin_printf:      sys::sudo_printf_t,
+    version:                        raw::c_uint,
+    conversation:                   sys::sudo_conv_t,
+    plugin_printf:                  sys::sudo_printf_t,
     settings_ptr:       *const *mut raw::c_char,
     user_info_ptr:      *const *mut raw::c_char,
     command_info_ptr:   *const *mut raw::c_char,
-    argc:               raw::c_int,
+    argc:                           raw::c_int,
     argv:               *const *mut raw::c_char,
     user_env_ptr:       *const *mut raw::c_char,
     plugin_options_ptr: *const *mut raw::c_char,
+    _errstr:            *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_open(|| {
         // create our own PrintFacility to log to in case IoEnv
@@ -210,8 +211,9 @@ pub unsafe extern "C" fn show_version<P: IoPlugin, S: IoState<P>>(
 
 #[doc(hidden)]
 pub unsafe extern "C" fn log_ttyin<P: IoPlugin, S: IoState<P>>(
-    buf: *const raw::c_char,
-    len:        raw::c_uint,
+    buf:          *const raw::c_char,
+    len:                 raw::c_uint,
+    _errstr: *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_log(|| {
         let env    = S::io_env();
@@ -235,8 +237,9 @@ pub unsafe extern "C" fn log_ttyin<P: IoPlugin, S: IoState<P>>(
 
 #[doc(hidden)]
 pub unsafe extern "C" fn log_ttyout<P: IoPlugin, S: IoState<P>>(
-    buf: *const raw::c_char,
-    len:        raw::c_uint,
+    buf:          *const raw::c_char,
+    len:                 raw::c_uint,
+    _errstr: *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_log(|| {
         let env    = S::io_env();
@@ -260,8 +263,9 @@ pub unsafe extern "C" fn log_ttyout<P: IoPlugin, S: IoState<P>>(
 
 #[doc(hidden)]
 pub unsafe extern "C" fn log_stdin<P: IoPlugin, S: IoState<P>>(
-    buf: *const raw::c_char,
-    len:        raw::c_uint,
+    buf:          *const raw::c_char,
+    len:                 raw::c_uint,
+    _errstr: *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_log(|| {
         let env    = S::io_env();
@@ -285,8 +289,9 @@ pub unsafe extern "C" fn log_stdin<P: IoPlugin, S: IoState<P>>(
 
 #[doc(hidden)]
 pub unsafe extern "C" fn log_stdout<P: IoPlugin, S: IoState<P>>(
-    buf: *const raw::c_char,
-    len:        raw::c_uint,
+    buf:          *const raw::c_char,
+    len:                 raw::c_uint,
+    _errstr: *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_log(|| {
         let env    = S::io_env();
@@ -310,8 +315,9 @@ pub unsafe extern "C" fn log_stdout<P: IoPlugin, S: IoState<P>>(
 
 #[doc(hidden)]
 pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
-    buf: *const raw::c_char,
-    len:        raw::c_uint,
+    buf:          *const raw::c_char,
+    len:                 raw::c_uint,
+    _errstr: *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_log(|| {
         let env    = S::io_env();
@@ -333,11 +339,11 @@ pub unsafe extern "C" fn log_stderr<P: IoPlugin, S: IoState<P>>(
     })
 }
 
-#[cfg(feature = "change_winsize")]
 #[doc(hidden)]
 pub unsafe extern "C" fn change_winsize<P: IoPlugin, S: IoState<P>>(
-    line: raw::c_uint,
-    cols: raw::c_uint,
+    line:                raw::c_uint,
+    cols:                raw::c_uint,
+    _errstr: *mut *const raw::c_char,
 ) -> raw::c_int {
     catch_unwind_log(|| {
         let env    = S::io_env();

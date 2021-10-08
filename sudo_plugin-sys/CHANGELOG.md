@@ -8,19 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Added
-- Reimplemented direct-commit of bindgen-generated bindings. Bindings
-  are generated for 64-bit and 32-bit targets, but bindings can be
-  generated at compile-time with an optional feature.
-- Support for newer sudo_plugin API features can be enabled with
-  optional features, that opt in to pregenerated bindings for more
-  recent versions of `sudo_plugin.h`.
+- Pre-built bindings are now committed for x86, x86-64, and aarch64 targets.
+- Bindings may be generated at compile-time for additional architectures with
+  the `bindgen` feature.
 - Added constants for log function return values.
-- Support for the `change_winsize` callback. Requires sudo 1.8.21 or
-  greater.
 
 ### Changed
-- Bindings are now generated on-the-fly with system headers by using
-  the `bindgen` feature instead of `generate_bindings`.
+- This project will now adopt the upstream sudo_plugin version number for future
+  releases.
 
 ### Removed
 

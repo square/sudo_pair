@@ -16,11 +16,5 @@ keywords   = [ 'sudo', 'sudo-plugin', 'api-bindings' ]
 
 build = 'build.rs'
 
-[features]
-default              = ['change_winsize']
-change_winsize       = ['min_sudo_plugin_1_12']
-min_sudo_plugin_1_9  = []
-min_sudo_plugin_1_12 = []
-
 [build-dependencies]
 bindgen = { version = '0.59.0', optional = true }

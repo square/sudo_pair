@@ -36,21 +36,9 @@ mod bindings {
     #[cfg(target_arch = "x86")]
     const TARGET_ARCH : &str = "x86";
 
-    const SUDO_PLUGIN_API_VERSIONS : &[&str] = &[
-        #[cfg(feature = "min_sudo_plugin_1_9")]
-        "1.9",
-
-        #[cfg(feature = "min_sudo_plugin_1_12")]
-        "1.12",
-
-        #[cfg(feature = "min_sudo_plugin_1_14")]
-        "1.14",
-    ];
-
     pub fn generate(out_path: &Path) {
         let in_path = format!(
-            "src/bindings/sudo_plugin-{}.{}.rs",
-            SUDO_PLUGIN_API_VERSIONS.last().unwrap(),
+            "src/bindings/sudo_plugin.{}.rs",
             TARGET_ARCH,
         );
 
@@ -65,9 +53,7 @@ mod bindings {
 
     pub fn generate(out_path: &Path) {
       builder()
-        .clang_arg("-I/usr/include")
-        .clang_arg("-I/usr/local/include")
-        .header("include/bindings.h")
+        .header("include/sudo_plugin.h")
         .generate()
         .unwrap()
         .write_to_file(out_path)

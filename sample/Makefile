@@ -15,7 +15,7 @@ localstatedir := $(prefix)/var
 runstatedir   := $(localstatedir)/run
 
 CARGO_TARGET_DIR ?= $(realpath ./target)
-CARGOFLAGS       ?= --features sudo_plugin-sys/bindgen,slog/release_max_level_trace
+CARGOFLAGS       ?= --features slog/release_max_level_trace
 
 nogroup_gid := $(shell getent group nogroup | awk -F: '{print $$3}')
 
