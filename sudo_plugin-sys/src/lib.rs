@@ -71,10 +71,71 @@ pub use sys::*;
 
 use std::os::raw::c_uint;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+/// Constructs a sudo API verson from a major version and a minor version.
+///
+/// # Example:
+///
+/// ```rust
+/// use sudo_plugin_sys as sudo;
+///
+/// let v1_9  = sudo::sudo_api_mkversion(1, 9);
+/// let v1_0  = sudo::sudo_api_mkversion(1, 0);
+/// let v1_17 = sudo::sudo_api_mkversion(1, 17);
+///
+/// assert!(v1_0 < v1_9);
+/// assert!(v1_0 < v1_17);
+/// assert!(v1_9 < v1_17);
+/// ```
+#[must_use]
+pub const fn sudo_api_mkversion(major: c_uint, minor: c_uint) -> c_uint {
+    major << 16 | minor
+}
 
-const SUDO_API_VERSION: c_uint =
-    SUDO_API_VERSION_MAJOR << 16 | SUDO_API_VERSION_MINOR;
+/// Gets the major version component from a sudo API version.
+///
+/// # Example:
+///
+/// ```rust
+/// use sudo_plugin_sys as sudo;
+///
+/// let v1_0  = sudo::sudo_api_mkversion(1, 0);
+/// let v1_17 = sudo::sudo_api_mkversion(1, 17);
+/// let v99_1 = sudo::sudo_api_mkversion(99, 1);
+///
+/// assert_eq!(1,  sudo::sudo_api_version_get_major(v1_0));
+/// assert_eq!(1,  sudo::sudo_api_version_get_major(v1_17));
+/// assert_eq!(99, sudo::sudo_api_version_get_major(v99_1));
+/// ```
+#[must_use]
+pub const fn sudo_api_version_get_major(version: c_uint) -> c_uint {
+    version >> 16
+}
+
+/// Gets the minor version component from a sudo API version.
+///
+/// # Example:
+///
+/// ```rust
+/// use sudo_plugin_sys as sudo;
+///
+/// let v1_0  = sudo::sudo_api_mkversion(1, 0);
+/// let v1_17 = sudo::sudo_api_mkversion(1, 17);
+/// let v99_1 = sudo::sudo_api_mkversion(99, 1);
+///
+/// assert_eq!(0,  sudo::sudo_api_version_get_minor(v1_0));
+/// assert_eq!(17, sudo::sudo_api_version_get_minor(v1_17));
+/// assert_eq!(1,  sudo::sudo_api_version_get_minor(v99_1));
+/// ```
+#[must_use]
+pub const fn sudo_api_version_get_minor(version: c_uint) -> c_uint {
+    version & 0xffff
+}
+
+/// The version of the sudo API this extension supports.
+pub const SUDO_API_VERSION: c_uint = sudo_api_mkversion(
+    SUDO_API_VERSION_MAJOR,
+    SUDO_API_VERSION_MINOR,
+);
 
 impl policy_plugin {
     const EMPTY : Self = Self  {

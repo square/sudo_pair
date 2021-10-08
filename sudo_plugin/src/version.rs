@@ -13,12 +13,12 @@
 // permissions and limitations under the License.
 
 use crate::errors::{Result, Error};
-use crate::sys::SUDO_API_VERSION;
+use crate::sys;
 
 use std::fmt;
 use std::os::raw::c_uint;
 
-const MINIMUM: Version = Version::from_ffi(SUDO_API_VERSION);
+const MINIMUM: Version = Version::new(1, 9);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Version {
@@ -36,8 +36,15 @@ impl Version {
         // and masks
         #[allow(clippy::cast_possible_truncation)]
         Self::new(
-            (version >> 16)     as _,
-            (version &  0xffff) as _,
+            sys::sudo_api_version_get_major(version) as _,
+            sys::sudo_api_version_get_minor(version) as _,
+        )
+    }
+
+    pub const fn into_ffi(self) -> c_uint {
+        sys::sudo_api_mkversion(
+            self.major as _,
+            self.minor as _,
         )
     }
 
@@ -64,6 +71,12 @@ impl Version {
 impl From<c_uint> for Version {
     fn from(version: c_uint) -> Self {
         Self::from_ffi(version)
+    }
+}
+
+impl From<Version> for c_uint {
+    fn from(version: Version) -> Self {
+        version.into_ffi()
     }
 }
 
