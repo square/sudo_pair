@@ -18,6 +18,83 @@
 //! handcrafted Rust wrappers from the `sudo_plugin` crate which
 //! accompanies this project.
 //!
+//! # Example:
+//!
+//! ```rust
+//! use sudo_plugin_sys as sudo;
+//! use std::os::raw;
+//!
+//! /// Plugins must be exposed as `pub static mut` and tagged with the
+//! /// `no_mangle` attribute. The name of the variable it is assigned to will
+//! /// be the `symbol_name` to be used in [`sudo.conf`][man-sudo-conf].
+//! ///
+//! /// The `no_mangle` attribute ensures that the exported symbol name is the
+//! /// same as its variable name. It also ensures that the item will be
+//! /// exported to the compiled library even though we're not using it directly
+//! /// ourselves.
+//! ///
+//! /// The `static mut` declaration is required to ensure that the plugin is
+//! /// placed in a single precise memory location in the compiled library (as
+//! /// opposed to `const`, which simply inlines the value wherever it's used).
+//! /// It must be declared `mut` so that the contents are not placed into
+//! /// read-only memory, as the sudo plugin interface may write values into
+//! /// the plugin (e.g., the `event_alloc` field).
+//! ///
+//! /// [man-sudo-conf]: https://www.sudo.ws/man/sudo.conf.man.html
+//! #[no_mangle]
+//! pub static mut deny_everything: sudo::approval_plugin = sudo::approval_plugin {
+//!     open:         Some(open),
+//!     show_version: Some(show_version),
+//!
+//!     .. sudo::approval_plugin::empty()
+//! };
+//!
+//! static mut sudo_conv:  sudo::sudo_conv_t   = None;
+//! static mut sudo_print: sudo::sudo_printf_t = None;
+//!
+//! const err : &'static [u8] = b"deny_everything denied this command\0";
+//!
+//! unsafe extern "C" fn open(
+//!     version:                     raw::c_uint,
+//!     conversation:                sudo::sudo_conv_t,
+//!     sudo_printf:                 sudo::sudo_printf_t,
+//!     _settings:       *const *mut raw::c_char,
+//!     _user_info:      *const *mut raw::c_char,
+//!     _submit_optind:              raw::c_int,
+//!     _submit_argv:    *const *mut raw::c_char,
+//!     _submit_envp:    *const *mut raw::c_char,
+//!     _plugin_options: *const *mut raw::c_char,
+//!     errstr:          *mut *const raw::c_char,
+//! ) -> raw::c_int {
+//!     unsafe {
+//!         sudo_conv  = conversation;
+//!         sudo_print = sudo_printf;
+//!     }
+//!
+//!     if version >= sudo::sudo_api_mkversion(1, 17) {
+//!         *errstr = err.as_ptr().cast();
+//!     }
+//!
+//!     return 0;
+//! }
+//!
+//! unsafe extern "C" fn show_version(_verbose: raw::c_int) -> raw::c_int {
+//!     let print = match sudo_print {
+//!         Some(f) => f,
+//!         None    => { return 0 },
+//!     };
+//!
+//!     unsafe {
+//!         (print)(
+//!             sudo::SUDO_CONV_INFO_MSG as _,
+//!             b"Deny Everything version 1.0\n\0".as_ptr().cast(),
+//!         )
+//!     };
+//!
+//!     return 1;
+//! }
+//! ```
+//!
 //! [sudo_plugin]: https://www.sudo.ws/man/1.8.22/sudo_plugin.man.html
 
 #![warn(future_incompatible)]
