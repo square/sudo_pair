@@ -40,13 +40,6 @@
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
 
-// this entire crate is unsafe code
-#![allow(unsafe_code)]
-
-// this entire crate is generated code
-#![allow(missing_docs)]
-#![allow(non_camel_case_types)]
-
 #![warn(rustdoc::all)]
 
 #![warn(clippy::cargo)]
@@ -56,12 +49,25 @@
 #![warn(clippy::perf)]
 #![warn(clippy::style)]
 
-// this entire crate is generated code
-#![allow(clippy::similar_names)]
-#![allow(clippy::type_complexity)]
+mod sys {
+    // this entire module is unsafe code
+    #![allow(unsafe_code)]
 
-// FIXME: https://github.com/rust-lang/rust-bindgen/issues/1651
-#![allow(deref_nullptr)]
+    // this entire module is generated code
+    #![allow(missing_docs)]
+    #![allow(non_camel_case_types)]
+
+    // this entire module is generated code
+    #![allow(clippy::similar_names)]
+    #![allow(clippy::type_complexity)]
+
+    // FIXME: https://github.com/rust-lang/rust-bindgen/issues/1651
+    #![allow(deref_nullptr)]
+
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+
+pub use sys::*;
 
 use std::os::raw::c_uint;
 
