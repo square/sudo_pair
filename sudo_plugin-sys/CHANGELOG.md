@@ -11,7 +11,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Pre-built bindings are now committed for x86, x86-64, and aarch64 targets.
 - Bindings may be generated at compile-time for additional architectures with
   the `bindgen` feature.
-- Added constants for log function return values.
+- Functions to operate on sudo plugin API versions, which normally exist as
+  macros in `sudo_plugin.h` but aren't incorporated by `bindgen`.
+  - `sudo_api_version_get_major`
+  - `sudo_api_version_get_minor`
+  - `sudo_api_mkversion`
 
 ### Changed
 - This project will now adopt the upstream sudo_plugin version number for future
