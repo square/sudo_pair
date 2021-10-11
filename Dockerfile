@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.2
+# syntax=docker/dockerfile:1
 
 FROM rust:latest AS base
 
@@ -48,8 +48,8 @@ COPY sudo_plugin/Cargo.toml             ./sudo_plugin
 COPY sudo_pair/Cargo.toml               ./sudo_pair
 COPY examples/raw_plugin_api/Cargo.toml ./examples/raw_plugin_api
 
-RUN --mount=type=cache,target=/tmp/cache/cargo                  \
-    --mount=type=cache,target=/tmp/cache/target,sharing=private \
+RUN --mount=type=cache,target=${CARGO_HOME}       \
+    --mount=type=cache,target=${CARGO_TARGET_DIR} \
     cargo build
 
 FROM sudo_pair-deps AS sudo_pair
@@ -63,20 +63,20 @@ COPY . .
 
 FROM sudo_pair AS sudo_pair-build
 
-RUN --mount=type=cache,target=/tmp/cache/cargo                  \
-    --mount=type=cache,target=/tmp/cache/target,sharing=private \
+RUN --mount=type=cache,target=${CARGO_HOME}       \
+    --mount=type=cache,target=${CARGO_TARGET_DIR} \
     cargo build ${CARGOFLAGS}
 
 FROM sudo_pair-build AS sudo_pair-test
 
-RUN --mount=type=cache,target=/tmp/cache/cargo                  \
-    --mount=type=cache,target=/tmp/cache/target,sharing=private \
+RUN --mount=type=cache,target=${CARGO_HOME}       \
+    --mount=type=cache,target=${CARGO_TARGET_DIR} \
     cargo test ${CARGOFLAGS}
 
 FROM sudo_pair-build AS sudo_pair-lint
 
-RUN --mount=type=cache,target=/tmp/cache/cargo                  \
-    --mount=type=cache,target=/tmp/cache/target,sharing=private \
+RUN --mount=type=cache,target=${CARGO_HOME}       \
+    --mount=type=cache,target=${CARGO_TARGET_DIR} \
     cargo clippy ${CARGOFLAGS}
 
 FROM sudo_pair AS sudo_pair-sample
@@ -87,12 +87,14 @@ RUN --mount=type=cache,target=/var/cache/apt \
         socat           \
         vim
 
-WORKDIR /srv/rust/sample
+# copy the cached cargo build stages into the container
+RUN --mount=type=cache,target=${CARGO_HOME}       \
+    --mount=type=cache,target=${CARGO_TARGET_DIR} \
+    cp -a ${CARGO_HOME}       ~/.cargo && \
+    cp -a ${CARGO_TARGET_DIR} .
 
-RUN --mount=type=cache,target=/tmp/cache/cargo                  \
-    --mount=type=cache,target=/tmp/cache/target,sharing=private \
-    make
+ENV CARGO_HOME=~/.cargo
+ENV CARGO_TARGET_DIR=/srv/rust/target
 
-RUN --mount=type=cache,target=/tmp/cache/cargo                  \
-    --mount=type=cache,target=/tmp/cache/target,sharing=private \
-    make prefix= exec_prefix=/usr install
+RUN make -C sample
+RUN make -C sample prefix= exec_prefix=/usr install
