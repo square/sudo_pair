@@ -2,6 +2,6 @@ Due to security and compliance requirements, this `sudo` session will require ap
 
 To continue, another human must run:
 
-    ssh -t '[1m[31m%h[0m' 'sh -l -c "%b %u %p"'
+    docker exec -it %h '%B %u %p'
 
 If a suitable human is not available and you have an immediate and urgent need to run this command, you may run the above command to approve your own session. [1mNote that doing so will immediately page an oncall security engineer, so this capability should only be used in the event of an emergency.[0m
