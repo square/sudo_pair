@@ -11,8 +11,8 @@ homepage   = 'https://github.com/square/sudo_pair'
 repository = 'https://github.com/square/sudo_pair.git'
 readme     = 'README.md'
 
-categories = [ 'external-ffi-bindings' ]
-keywords   = [ 'sudo', 'sudo-plugin', 'api-bindings' ]
+categories = ['external-ffi-bindings']
+keywords   = ['sudo', 'sudo-plugin', 'api-bindings']
 
 build = 'build.rs'
 
