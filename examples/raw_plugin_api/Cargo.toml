@@ -1,0 +1,23 @@
+[package]
+name    = 'deny_everything'
+version = '1.0.0'
+license = 'Apache-2.0'
+edition = '2018'
+
+authors     = ['Stephen Touset <stephen@squareup.com>']
+description = 'sudo approval plugin that denies everything'
+
+homepage   = 'https://github.com/square/sudo_pair/tree/master/examples/raw_plugin_api'
+repository = 'https://github.com/square/sudo_pair.git'
+readme     = 'README.md'
+
+categories = ['command-line-utilities']
+keywords   = [ 'sudo', 'sudo-plugin']
+
+[lib]
+name       = 'deny_everything'
+crate-type = ['cdylib']
+
+[dependencies]
+sudo_plugin-sys = { path = '../../sudo_plugin-sys' }
+

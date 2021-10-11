@@ -3,4 +3,6 @@ members = [
     'sudo_plugin',
     'sudo_plugin-sys',
     'sudo_pair',
+
+    'examples/raw_plugin_api',
 ]

@@ -38,13 +38,15 @@ FROM build AS sudo_pair-deps
 RUN cargo new --lib sudo_plugin-sys
 RUN cargo new --lib sudo_plugin
 RUN cargo new --lib sudo_pair
+RUN cargo new --lib examples/raw_plugin_api
 
-COPY sudo_plugin-sys/Cargo.toml   ./sudo_plugin-sys
-COPY sudo_plugin-sys/build.rs     ./sudo_plugin-sys
-COPY sudo_plugin-sys/src/bindings ./sudo_plugin-sys/src/bindings
-COPY sudo_plugin/Cargo.toml       ./sudo_plugin
-COPY sudo_pair/Cargo.toml         ./sudo_pair
-COPY Cargo.toml                   .
+COPY Cargo.toml                         .
+COPY sudo_plugin-sys/Cargo.toml         ./sudo_plugin-sys
+COPY sudo_plugin-sys/build.rs           ./sudo_plugin-sys
+COPY sudo_plugin-sys/src/bindings       ./sudo_plugin-sys/src/bindings
+COPY sudo_plugin/Cargo.toml             ./sudo_plugin
+COPY sudo_pair/Cargo.toml               ./sudo_pair
+COPY examples/raw_plugin_api/Cargo.toml ./examples/raw_plugin_api
 
 RUN --mount=type=cache,target=/tmp/cache/cargo                  \
     --mount=type=cache,target=/tmp/cache/target,sharing=private \
@@ -80,8 +82,10 @@ RUN --mount=type=cache,target=/tmp/cache/cargo                  \
 FROM sudo_pair AS sudo_pair-sample
 
 RUN --mount=type=cache,target=/var/cache/apt \
-    apt-get install -y \
-        socat
+    apt-get install -y  \
+        busybox-syslogd \
+        socat           \
+        vim
 
 WORKDIR /srv/rust/sample
 
