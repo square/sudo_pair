@@ -55,6 +55,12 @@ jobs:
         with:
           command: build
 
+      - name: cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args:   --workspace --no-deps
+
       - name: cargo test
         uses: actions-rs/cargo@v1
         with:
