@@ -20,13 +20,11 @@
 // aren't going to affect anything.
 #![allow(clippy::must_use_candidate)]
 
-use crate::errors::{Error, SudoError};
-use crate::output::PrintFacility;
-use crate::plugin::{IoEnv, IoPlugin, IoState};
+use crate::{errors::{Error, SudoError}, output::PrintFacility, plugin::IoEnv};
+use crate::plugin::{IoPlugin, IoState};
 use crate::sys;
 
-use std::os::raw;
-use std::path::PathBuf;
+use std::{os::raw, path::PathBuf};
 use std::panic::{catch_unwind, UnwindSafe};
 
 /// Return codes understood by the `io_plugin.open` callback.
@@ -159,7 +157,7 @@ pub unsafe extern "C" fn open<P: IoPlugin, S: IoState<P>>(
             user_env_ptr,
             plugin_options_ptr,
             plugin_printf,
-            conversation,
+            conversation
         );
 
         let io_env = match io_env {

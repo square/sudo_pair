@@ -16,6 +16,7 @@ use crate::errors::Result;
 use crate::version::Version;
 use crate::options::{OptionMap, CommandInfo, Settings, UserInfo};
 use crate::output::{PrintFacility, Tty};
+use crate::output::ConversationFacility;
 
 use std::convert::{TryFrom, TryInto};
 use std::collections::HashSet;
@@ -75,9 +76,9 @@ pub struct IoEnv {
     /// the user's stdin.
     stderr: PrintFacility,
 
-    /// A (currently-unused) handle to the sudo_plugin conversation
-    /// facility, which allows two-way communication with the user.
-    _conversation: crate::sys::sudo_conv_t,
+    /// A handle to the sudo_plugin conversation facility, which allows two-way
+    /// communication with the user.
+    conversation_f: ConversationFacility,
 }
 
 // I don't get to control how many arguments these methods accept, since
@@ -149,7 +150,7 @@ impl IoEnv {
 
             stdout,
             stderr,
-            _conversation: conversation,
+            conversation_f: ConversationFacility::new(conversation),
         };
 
         Ok(plugin)
@@ -174,8 +175,16 @@ impl IoEnv {
     }
 
     ///
-    /// Returns a facility implementing `std::io::Write` that emits to
-    /// the user's TTY, if sudo detected one.
+    /// Returns a facility implementing an interface for the sudo conversation API
+    ///
+    #[must_use]
+    pub fn conversation(&self) -> ConversationFacility {
+        self.conversation_f.clone()
+    }
+
+    ///
+    /// Returns a facility implementing `std::io::Write` that emits to the
+    /// user's TTY, if sudo detected one.
     ///
     #[must_use]
     pub fn tty(&self) -> Option<Tty> {
