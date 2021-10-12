@@ -51,10 +51,10 @@ find a use-case that requires this, please [let us know][new-issue].
 
 This project simply exposes the raw sudo plugin API bindings to Rust. While
 these raw FFI bindings may be used directly, we encourage the use of a safe
-wrapper such as the [sudo_plugin][sudo_plugin] project.
+wrapper such as the [sudo_plugin] project.
 
 For a demonstration of how to use the raw FFI bindings directly, see the
-[raw_plugin_api][raw_plugin_api] example project.
+[deny_everything-raw] example project.
 
 ## Contributions
 
@@ -70,13 +70,13 @@ openly.
 `sudo_plugin-sys` is distributed under the terms of the [Apache License, Version
 2.0][license].
 
-[badge-build]:        https://github.com/square/sudo_pair/actions/workflows/rust.yml
-[badge-docs]:         https://docs.rs/sudo_plugin-sys
-[badge-crate]:        https://crates.io/crates/sudo_plugin-sys
-[license]:            https://github.com/square/sudo_pair/blob/master/LICENSE-APACHE
-[new-issue]:          https://github.com/square/sudo_pair/issues/new
-[raw_plugin_api]:     ../examples/raw_plugin_api/
-[sudo_plugin]:        ../sudo_plugin/README.md
-[square-cla]:         https://cla-assistant.io/square/sudo_pair
-[square-open-source]: https://square.github.io/
-[sudo_plugin_man]:    https://www.sudo.ws/man/sudo_plugin.man.html
+[badge-build]:         https://github.com/square/sudo_pair/actions/workflows/rust.yml
+[badge-docs]:          https://docs.rs/sudo_plugin-sys
+[badge-crate]:         https://crates.io/crates/sudo_plugin-sys
+[license]:             https://github.com/square/sudo_pair/blob/master/LICENSE-APACHE
+[new-issue]:           https://github.com/square/sudo_pair/issues/new
+[deny_everything-raw]: ../examples/deny_everything-raw/
+[sudo_plugin]:         ../sudo_plugin/README.md
+[square-cla]:          https://cla-assistant.io/square/sudo_pair
+[square-open-source]:  https://square.github.io/
+[sudo_plugin_man]:     https://www.sudo.ws/man/sudo_plugin.man.html

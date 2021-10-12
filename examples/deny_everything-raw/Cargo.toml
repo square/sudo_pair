@@ -7,7 +7,7 @@ edition = '2018'
 authors     = ['Stephen Touset <stephen@squareup.com>']
 description = 'sudo approval plugin that denies everything'
 
-homepage   = 'https://github.com/square/sudo_pair/tree/master/examples/raw_plugin_api'
+homepage   = 'https://github.com/square/sudo_pair/tree/master/examples/deny_everything-raw'
 repository = 'https://github.com/square/sudo_pair.git'
 readme     = 'README.md'
 

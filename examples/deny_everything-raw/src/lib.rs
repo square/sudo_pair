@@ -1,4 +1,10 @@
 //! An example minimal sudo approval plugin that denies all actions.
+//!
+//! # Usage
+//!
+//! ```
+//! Plugin deny_everything deny_everything.so
+//! ```
 
 #![warn(future_incompatible)]
 #![warn(nonstandard_style)]
