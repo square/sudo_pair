@@ -12,9 +12,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::{Result, Error};
-use crate::options::OptionMap;
+use crate::errors::{Error, Result};
 use crate::options::traits::{FromSudoOption, FromSudoOptionList};
+use crate::options::OptionMap;
 
 use std::convert::TryFrom;
 use std::net::{AddrParseError, IpAddr};
@@ -275,33 +275,37 @@ impl TryFrom<OptionMap> for Settings {
 
     fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
-            plugin_dir:  value.get("plugin_dir")?,
+            plugin_dir: value.get("plugin_dir")?,
             plugin_path: value.get("plugin_path")?,
-            progname:    value.get("progname")?,
+            progname: value.get("progname")?,
 
-            bsd_auth_type:        value.get("bsd_auth_type")       .ok(),
-            close_from:           value.get("closefrom")           .ok(),
-            debug_flags:          value.get("debug_flags")         .ok(),
-            debug_level:          value.get("debug_level")         .ok(),
-            ignore_ticket:        value.get("ignore_ticket")       .unwrap_or(false),
-            implied_shell:        value.get("implied_shell")       .unwrap_or(false),
-            login_class:          value.get("login_class")         .ok(),
-            login_shell:          value.get("login_shell")         .unwrap_or(false),
-            max_groups:           value.get("max_groups")          .ok(),
-            network_addrs:        value.get("network_addrs")       .unwrap_or_else(|_| vec![]),
-            noninteractive:       value.get("noninteractive")      .unwrap_or(false),
-            preserve_environment: value.get("preserve_environment").unwrap_or(false),
-            preserve_groups:      value.get("preserve_groups")     .unwrap_or(false),
-            prompt:               value.get("prompt")              .ok(),
-            remote_host:          value.get("remote_host")         .ok(),
-            run_shell:            value.get("run_shell")           .unwrap_or(false),
-            runas_group:          value.get("runas_group")         .ok(),
-            runas_user:           value.get("runas_user")          .ok(),
-            selinux_role:         value.get("selinux_role")        .ok(),
-            selinux_type:         value.get("selinux_type")        .ok(),
-            set_home:             value.get("set_home")            .unwrap_or(false),
-            sudoedit:             value.get("sudoedit")            .unwrap_or(false),
-            timeout:              value.get("timeout")             .ok(),
+            bsd_auth_type: value.get("bsd_auth_type").ok(),
+            close_from: value.get("closefrom").ok(),
+            debug_flags: value.get("debug_flags").ok(),
+            debug_level: value.get("debug_level").ok(),
+            ignore_ticket: value.get("ignore_ticket").unwrap_or(false),
+            implied_shell: value.get("implied_shell").unwrap_or(false),
+            login_class: value.get("login_class").ok(),
+            login_shell: value.get("login_shell").unwrap_or(false),
+            max_groups: value.get("max_groups").ok(),
+            network_addrs: value
+                .get("network_addrs")
+                .unwrap_or_else(|_| vec![]),
+            noninteractive: value.get("noninteractive").unwrap_or(false),
+            preserve_environment: value
+                .get("preserve_environment")
+                .unwrap_or(false),
+            preserve_groups: value.get("preserve_groups").unwrap_or(false),
+            prompt: value.get("prompt").ok(),
+            remote_host: value.get("remote_host").ok(),
+            run_shell: value.get("run_shell").unwrap_or(false),
+            runas_group: value.get("runas_group").ok(),
+            runas_user: value.get("runas_user").ok(),
+            selinux_role: value.get("selinux_role").ok(),
+            selinux_type: value.get("selinux_type").ok(),
+            set_home: value.get("set_home").unwrap_or(false),
+            sudoedit: value.get("sudoedit").unwrap_or(false),
+            timeout: value.get("timeout").ok(),
 
             raw: value,
         })
@@ -323,17 +327,12 @@ impl FromSudoOption for NetAddr {
     // slice
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let bytes = s.as_bytes();
-        let mid   = bytes.iter()
-            .position(|b| *b == b'/' )
-            .unwrap_or_else(|| bytes.len());
+        let mid = bytes.iter().position(|b| *b == b'/').unwrap_or(bytes.len());
 
-        let addr = s[        .. mid].parse()?;
-        let mask = s[mid + 1 ..    ].parse()?;
+        let addr = s[..mid].parse()?;
+        let mask = s[mid + 1..].parse()?;
 
-        Ok(Self {
-            addr,
-            mask,
-        })
+        Ok(Self { addr, mask })
     }
 }
 
