@@ -19,11 +19,11 @@
 
 use std::ffi::CString;
 use std::fs;
-use std::io::{Read, Write, Result, Error, ErrorKind};
-use std::net::Shutdown;
-use std::os::unix::prelude::*;
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::io::{Error, ErrorKind, Read, Result, Write};
 use std::mem;
+use std::net::Shutdown;
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::prelude::*;
 use std::path::Path;
 use std::ptr;
 
@@ -37,8 +37,8 @@ pub(crate) struct Socket {
 impl Socket {
     pub(crate) fn open<P: AsRef<Path>>(
         path: P,
-        uid:  uid_t,
-        gid:  gid_t,
+        uid: uid_t,
+        gid: gid_t,
         mode: mode_t,
     ) -> Result<Self> {
         let path = path.as_ref();
@@ -56,9 +56,7 @@ impl Socket {
         };
 
         let socket = UnixListener::bind(&path).and_then(|listener| {
-            let cpath = CString::new(
-                path.as_os_str().as_bytes()
-            )?;
+            let cpath = CString::new(path.as_os_str().as_bytes())?;
 
             unsafe {
                 if libc::chown(cpath.as_ptr(), uid, gid) == -1 {
@@ -69,7 +67,7 @@ impl Socket {
                     return Err(Error::last_os_error());
                 }
 
-                let     fd      = listener.as_raw_fd();
+                let fd = listener.as_raw_fd();
                 let mut readfds = mem::MaybeUninit::<libc::fd_set>::uninit();
 
                 libc::FD_ZERO(readfds.as_mut_ptr());
@@ -89,21 +87,27 @@ impl Socket {
                     ptr::null_mut(),
                     ptr::null_mut(),
                 ) {
-                    1  => (),
+                    1 => (),
                     -1 => return Err(Error::last_os_error()),
-                    0  => unreachable!("`select` returned 0 even though no timeout was set"),
-                    _  => unreachable!("`select` indicated that more than 1 fd is ready"),
+                    0 => unreachable!(
+                        "`select` returned 0 even though no timeout was set"
+                    ),
+                    _ => unreachable!(
+                        "`select` indicated that more than 1 fd is ready"
+                    ),
                 };
 
                 // as a sanity check, confirm that the fd we're going to
                 // `accept` is the one that `select` says is ready
                 if !libc::FD_ISSET(fd, &readfds) {
-                    unreachable!("`select` returned an unexpected file descriptor");
+                    unreachable!(
+                        "`select` returned an unexpected file descriptor"
+                    );
                 }
             }
 
-            listener.accept().map(|connection| {
-                Self { socket: connection.0 }
+            listener.accept().map(|connection| Self {
+                socket: connection.0,
             })
         });
 
@@ -149,40 +153,44 @@ impl Socket {
 
     fn enforce_ownership(path: &Path) -> Result<()> {
         let parent = path.parent().ok_or_else(|| {
-            Error::new(ErrorKind::AlreadyExists, format!(
+            Error::new(
+                ErrorKind::AlreadyExists,
+                format!(
                 "couldn't determine permissions of the parent directory for {}",
                 path.to_string_lossy()
-            ))
+            ),
+            )
         })?;
 
-        let parent = CString::new(
-            parent.as_os_str().as_bytes()
-        )?;
+        let parent = CString::new(parent.as_os_str().as_bytes())?;
 
         unsafe {
             let mut stat = mem::MaybeUninit::<libc::stat>::uninit();
 
-            if libc::stat(
-                parent.as_ptr(),
-                stat.as_mut_ptr()
-            ) == -1 {
+            if libc::stat(parent.as_ptr(), stat.as_mut_ptr()) == -1 {
                 return Err(Error::last_os_error());
             }
 
             let stat = stat.assume_init();
 
             if stat.st_mode & libc::S_IFDIR == 0 {
-                return Err(Error::new(ErrorKind::Other, format!(
-                    "the socket path {} is not a directory",
-                    parent.to_string_lossy(),
-                )));
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!(
+                        "the socket path {} is not a directory",
+                        parent.to_string_lossy(),
+                    ),
+                ));
             }
 
             if stat.st_uid != libc::geteuid() {
-                return Err(Error::new(ErrorKind::Other, format!(
-                    "the socket directory {} is not owned by root",
-                    parent.to_string_lossy(),
-                )));
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!(
+                        "the socket directory {} is not owned by root",
+                        parent.to_string_lossy(),
+                    ),
+                ));
             }
 
             // TODO: temporarily disabled while I relearn everything I
@@ -215,10 +223,13 @@ impl Socket {
             // }
 
             if stat.st_mode & (libc::S_IWGRP | libc::S_IWOTH) != 0 {
-                return Err(Error::new(ErrorKind::Other, format!(
-                    "the socket directory {} has insecure permissions",
-                    parent.to_string_lossy(),
-                )));
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!(
+                        "the socket directory {} has insecure permissions",
+                        parent.to_string_lossy(),
+                    ),
+                ));
             }
         }
 
@@ -238,17 +249,17 @@ impl Read for Socket {
         // of the socket, so we ensure that the signal handler for
         // Ctrl-C aborts the read instead of restarting it
         // automatically
-        ctrl_c_aborts_syscalls(|| self.socket.read(buf) )?
+        ctrl_c_aborts_syscalls(|| self.socket.read(buf))?
     }
 }
 
 impl Write for Socket {
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
-        ctrl_c_aborts_syscalls(|| self.socket.write(buf) )?
+        ctrl_c_aborts_syscalls(|| self.socket.write(buf))?
     }
 
     fn flush(&mut self) -> Result<()> {
-        ctrl_c_aborts_syscalls(|| self.socket.flush() )?
+        ctrl_c_aborts_syscalls(|| self.socket.flush())?
     }
 }
 
@@ -260,11 +271,12 @@ impl Write for Socket {
 /// will be terminated upon receipt on the signal instead of
 /// automatically resuming.
 fn ctrl_c_aborts_syscalls<F, T>(func: F) -> Result<T>
-    where F: FnOnce() -> T
+where
+    F: FnOnce() -> T,
 {
     unsafe {
-        let mut sigaction_old  = mem::MaybeUninit::<libc::sigaction>::uninit();
-        let     sigaction_null = ::std::ptr::null_mut();
+        let mut sigaction_old = mem::MaybeUninit::<libc::sigaction>::uninit();
+        let sigaction_null = ::std::ptr::null_mut();
 
         // retrieve the existing handler
         sigaction(libc::SIGINT, sigaction_null, sigaction_old.as_mut_ptr())?;
@@ -293,10 +305,10 @@ fn ctrl_c_aborts_syscalls<F, T>(func: F) -> Result<T>
 unsafe fn sigaction(
     sig: libc::c_int,
     new: *const libc::sigaction,
-    old: *mut   libc::sigaction,
+    old: *mut libc::sigaction,
 ) -> Result<()> {
     if libc::sigaction(sig, new, old) == -1 {
-        return Err(Error::last_os_error())
+        return Err(Error::last_os_error());
     }
 
     Ok(())

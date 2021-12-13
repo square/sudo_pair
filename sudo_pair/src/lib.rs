@@ -30,7 +30,6 @@
 #![warn(rust_2018_compatibility)]
 #![warn(rust_2018_idioms)]
 #![warn(unused)]
-
 #![warn(bare_trait_objects)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
@@ -45,33 +44,28 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 #![warn(variant_size_differences)]
-
 // this entire crate is unsafe code
 #![allow(unsafe_code)]
-
 #![warn(rustdoc::all)]
-
 #![warn(clippy::cargo)]
 #![warn(clippy::complexity)]
 #![warn(clippy::correctness)]
 #![warn(clippy::pedantic)]
 #![warn(clippy::perf)]
 #![warn(clippy::style)]
-
 // this is triggered by dependencies
 #![allow(clippy::multiple_crate_versions)]
-
 // FIXME: this appears to be triggering on non-Drop items like Result,
 // but this needs to be either investigated or reported upstream
 #![allow(clippy::let_underscore_drop)]
 
 mod errors;
-mod template;
 mod socket;
+mod template;
 
 use crate::errors::{Error, ErrorKind, Result};
-use crate::template::Spec;
 use crate::socket::Socket;
+use crate::template::Spec;
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -84,24 +78,24 @@ use libc::{gid_t, mode_t, uid_t};
 
 use failure::ResultExt;
 
-use sudo_plugin::prelude::*;
 use sudo_plugin::options::OptionMap;
+use sudo_plugin::prelude::*;
 
-const DEFAULT_BINARY_PATH      : &str       = "/usr/bin/sudo_approve";
-const DEFAULT_USER_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.user";
-const DEFAULT_PAIR_PROMPT_PATH : &str       = "/etc/sudo_pair.prompt.pair";
-const DEFAULT_SOCKET_DIR       : &str       = "/var/run/sudo_pair";
-const DEFAULT_GIDS_ENFORCED    : [gid_t; 1] = [0];
+const DEFAULT_BINARY_PATH: &str = "/usr/bin/sudo_approve";
+const DEFAULT_USER_PROMPT_PATH: &str = "/etc/sudo_pair.prompt.user";
+const DEFAULT_PAIR_PROMPT_PATH: &str = "/etc/sudo_pair.prompt.pair";
+const DEFAULT_SOCKET_DIR: &str = "/var/run/sudo_pair";
+const DEFAULT_GIDS_ENFORCED: [gid_t; 1] = [0];
 
-const DEFAULT_USER_PROMPT : &[u8] = b"%B %u %p\n";
-const DEFAULT_PAIR_PROMPT : &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
+const DEFAULT_USER_PROMPT: &[u8] = b"%B %u %p\n";
+const DEFAULT_PAIR_PROMPT: &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 
-sudo_io_plugin!{ sudo_pair : SudoPair }
+sudo_io_plugin! { sudo_pair : SudoPair }
 
 struct SudoPair {
-    env:     &'static IoEnv,
+    env: &'static IoEnv,
     options: PluginOptions,
-    socket:  Option<RefCell<Socket>>,
+    socket: Option<RefCell<Socket>>,
 
     slog: slog::Logger,
 }
@@ -116,18 +110,23 @@ impl IoPlugin for SudoPair {
 
         slog::debug!(slog, "plugin initializing");
 
-        let args : Vec<_> = env.cmdline.iter()
+        let args: Vec<_> = env
+            .cmdline
+            .iter()
             .skip(1)
-            .map (|arg| arg.to_string_lossy())
+            .map(|arg| arg.to_string_lossy())
             .collect();
 
-        slog = slog::Logger::new(&slog, slog::o!(
-            "uid"           => &env.user_info.uid,
-            "runas_euid"    => &env.command_info.runas_euid,
-            "runas_egid"    => &env.command_info.runas_egid,
-            "command"       => env.command_info.command.to_string_lossy().into_owned(),
-            "args"          => format!("{:?}", args),
-        ));
+        slog = slog::Logger::new(
+            &slog,
+            slog::o!(
+                "uid"           => &env.user_info.uid,
+                "runas_euid"    => &env.command_info.runas_euid,
+                "runas_egid"    => &env.command_info.runas_egid,
+                "command"       => env.command_info.command.to_string_lossy().into_owned(),
+                "args"          => format!("{:?}", args),
+            ),
+        );
 
         let options = PluginOptions::from(&env.plugin_options);
 
@@ -145,9 +144,12 @@ impl IoPlugin for SudoPair {
         };
 
         if pair.is_exempt() {
-            slog::info!(pair.slog, "pair session exempt from pairing requirements");
+            slog::info!(
+                pair.slog,
+                "pair session exempt from pairing requirements"
+            );
 
-            return Ok(pair)
+            return Ok(pair);
         }
 
         slog::info!(pair.slog, "pair session required");
@@ -211,7 +213,7 @@ impl IoPlugin for SudoPair {
     }
 
     fn log_stdout(&self, log: &[u8]) -> Result<()> {
-       self.log_output(log)
+        self.log_output(log)
     }
 
     fn log_stderr(&self, log: &[u8]) -> Result<()> {
@@ -235,9 +237,10 @@ impl IoPlugin for SudoPair {
 impl SudoPair {
     fn log_output(&self, log: &[u8]) -> Result<()> {
         // if we have a socket, write to it
-        self.socket.as_ref().map_or(Ok(()), |socket| {
-            socket.borrow_mut().write_all(log)
-        }).context(ErrorKind::SessionTerminated)?;
+        self.socket
+            .as_ref()
+            .map_or(Ok(()), |socket| socket.borrow_mut().write_all(log))
+            .context(ErrorKind::SessionTerminated)?;
 
         slog::trace!(self.slog, "{{{} bytes sent}}", log.len());
 
@@ -247,9 +250,9 @@ impl SudoPair {
     fn local_pair_prompt(&self, template_spec: &Spec) {
         // read the template from the file; if there's an error, use the
         // default template instead
-        let template : Vec<u8> = File::open(&self.options.user_prompt_path)
-            .and_then(|file| file.bytes().collect() )
-            .unwrap_or_else(|_| DEFAULT_USER_PROMPT.into() );
+        let template: Vec<u8> = File::open(&self.options.user_prompt_path)
+            .and_then(|file| file.bytes().collect())
+            .unwrap_or_else(|_| DEFAULT_USER_PROMPT.into());
 
         slog::trace!(self.slog, "local prompt template loaded");
 
@@ -288,17 +291,23 @@ impl SudoPair {
         // improbable. For now, I'm ignoring the situation but hopefully
         // there's enough information here for someone (probably me) to
         // pick up where I left off.
-        let _ = self.env.tty().as_mut()
-            .and_then(|tty| tty.write_all(&prompt).ok() )
+        let _ = self
+            .env
+            .tty()
+            .as_mut()
+            .and_then(|tty| tty.write_all(&prompt).ok())
             .ok_or_else(|| self.env.stderr().write_all(&prompt));
 
         slog::trace!(self.slog, "local prompt rendered");
     }
 
     fn remote_pair_connect(&mut self) -> Result<()> {
-        let slog = slog::Logger::new(&self.slog, slog::o!(
-            "socket_path" => self.socket_path().to_string_lossy().into_owned(),
-        ));
+        let slog = slog::Logger::new(
+            &self.slog,
+            slog::o!(
+                "socket_path" => self.socket_path().to_string_lossy().into_owned(),
+            ),
+        );
 
         slog::debug!(slog, "socket initializing";
             "socket_uid"  => self.socket_uid(),
@@ -325,7 +334,8 @@ impl SudoPair {
             self.socket_uid(),
             self.socket_gid(),
             self.socket_mode(),
-        ).context(ErrorKind::CommunicationError)?;
+        )
+        .context(ErrorKind::CommunicationError)?;
 
         self.socket = Some(RefCell::new(socket));
 
@@ -337,9 +347,9 @@ impl SudoPair {
     fn remote_pair_prompt(&mut self, template_spec: &Spec) -> Result<()> {
         // read the template from the file; if there's an error, use the
         // default template instead
-        let template : Vec<u8> = File::open(&self.options.pair_prompt_path)
-            .and_then(|file| file.bytes().collect() )
-            .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.into() );
+        let template: Vec<u8> = File::open(&self.options.pair_prompt_path)
+            .and_then(|file| file.bytes().collect())
+            .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.into());
 
         slog::trace!(self.slog, "remote prompt loaded");
 
@@ -347,17 +357,17 @@ impl SudoPair {
 
         slog::trace!(self.slog, "remote prompt evaluated");
 
-        let mut socket = self.socket
+        let mut socket = self
+            .socket
             .as_ref()
             .ok_or(ErrorKind::CommunicationError)?
             .borrow_mut();
 
-        socket.write_all(&prompt[..])
+        socket
+            .write_all(&prompt[..])
             .context(ErrorKind::CommunicationError)?;
 
-        socket.flush()
-            .context(ErrorKind::CommunicationError)?;
-
+        socket.flush().context(ErrorKind::CommunicationError)?;
 
         slog::trace!(self.slog, "remote prompt rendered");
 
@@ -365,7 +375,7 @@ impl SudoPair {
         // `read` might return without actually having written anything;
         // this prevents us from being required to check the number of
         // bytes actually read from `read`
-        let mut response : [u8; 1] = [b'n'];
+        let mut response: [u8; 1] = [b'n'];
 
         slog::debug!(self.slog, "remote prompt awaiting response...");
 
@@ -374,7 +384,8 @@ impl SudoPair {
         // Ctrl-C and retry the read); we don't need to check the return
         // value because if the read was successful, we're guaranteed to
         // have read at least one byte
-        let _ = socket.read(&mut response)
+        let _ = socket
+            .read(&mut response)
             .context(ErrorKind::SessionDeclined)?;
 
         slog::debug!(self.slog, "remote pair responded";
@@ -388,7 +399,7 @@ impl SudoPair {
 
         match &response {
             b"y" | b"Y" => (),
-            _           => {
+            _ => {
                 slog::warn!(self.slog, "remote pair declined session");
                 return Err(ErrorKind::SessionDeclined.into());
             }
@@ -495,10 +506,9 @@ impl SudoPair {
     /// facilities to log output for.
     ///
     fn is_exempted_from_logging(&self) -> bool {
-        if
-            !self.env.command_info.iolog_ttyout &&
-            !self.env.command_info.iolog_stdout &&
-            !self.env.command_info.iolog_stderr
+        if !self.env.command_info.iolog_ttyout
+            && !self.env.command_info.iolog_stdout
+            && !self.env.command_info.iolog_stderr
         {
             return true;
         }
@@ -518,22 +528,24 @@ impl SudoPair {
         // to a new group which is fine, what we want to avoid is the
         // user explicitly providing a *different* group
         if self.is_sudoing_to_user() && self.is_sudoing_to_explicit_group() {
-            return true
+            return true;
         }
 
         false
     }
 
     fn is_sudoing_from_exempted_gid(&self) -> bool {
-        !self.options.gids_exempted.is_disjoint(
-            &self.env.user_info.groups.iter().copied().collect()
-        )
+        !self
+            .options
+            .gids_exempted
+            .is_disjoint(&self.env.user_info.groups.iter().copied().collect())
     }
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
-        !self.options.gids_enforced.is_disjoint(
-            &self.env.runas_gids()
-        )
+        !self
+            .options
+            .gids_enforced
+            .is_disjoint(&self.env.runas_gids())
     }
 
     fn is_sudoing_to_user(&self) -> bool {
@@ -560,13 +572,10 @@ impl SudoPair {
         // note that we want the *`uid`* and not the `euid` here since
         // we want to know who the real user is and not the `uid` of the
         // owner of `sudo`
-        self.options.socket_dir.join(
-            format!(
-                "{}.{}.sock",
-                self.env.user_info.uid,
-                self.env.user_info.pid,
-            )
-        )
+        self.options.socket_dir.join(format!(
+            "{}.{}.sock",
+            self.env.user_info.uid, self.env.user_info.pid,
+        ))
     }
 
     fn socket_uid(&self) -> uid_t {
@@ -723,9 +732,10 @@ struct PluginOptions {
 
 impl PluginOptions {
     fn binary_name(&self) -> &[u8] {
-        self.binary_path.file_name().unwrap_or_else(||
-            self.binary_path.as_os_str()
-        ).as_bytes()
+        self.binary_path
+            .file_name()
+            .unwrap_or_else(|| self.binary_path.as_os_str())
+            .as_bytes()
     }
 }
 
@@ -735,29 +745,38 @@ impl PluginOptions {
 impl<'a> From<&'a OptionMap> for PluginOptions {
     fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path: map.get("binary_path")
+            binary_path: map
+                .get("binary_path")
                 .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
 
-            user_prompt_path: map.get("user_prompt_path")
+            user_prompt_path: map
+                .get("user_prompt_path")
                 .unwrap_or_else(|_| DEFAULT_USER_PROMPT_PATH.into()),
 
-            pair_prompt_path: map.get("pair_prompt_path")
+            pair_prompt_path: map
+                .get("pair_prompt_path")
                 .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT_PATH.into()),
 
-            socket_dir: map.get("socket_dir")
+            socket_dir: map
+                .get("socket_dir")
                 .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
 
-            gids_enforced: map.get("gids_enforced")
-                .unwrap_or_else(|_| DEFAULT_GIDS_ENFORCED.iter().copied().collect()),
+            gids_enforced: map.get("gids_enforced").unwrap_or_else(|_| {
+                DEFAULT_GIDS_ENFORCED.iter().copied().collect()
+            }),
 
-            gids_exempted: map.get("gids_exempted")
-                .unwrap_or_default(),
+            gids_exempted: map.get("gids_exempted").unwrap_or_default(),
         }
     }
 }
 
 impl slog::Value for PluginOptions {
-    fn serialize(&self, _: &slog::Record<'_>, key: slog::Key, serializer: &mut dyn slog::Serializer) -> slog::Result {
+    fn serialize(
+        &self,
+        _: &slog::Record<'_>,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
         serializer.emit_str(key, &format!("{:?}", self))
     }
 }
@@ -765,7 +784,7 @@ impl slog::Value for PluginOptions {
 // TODO: can we only compile slog in when logging features are enabled?
 #[cfg(not(any(feature = "syslog", feature = "journald")))]
 fn slog(name: &str, version: &str) -> slog::Logger {
-    slog::Logger::root(slog::Discard, o!()  )
+    slog::Logger::root(slog::Discard, o!())
 }
 
 #[cfg(all(feature = "syslog", not(feature = "journald")))]
@@ -784,10 +803,13 @@ fn slog(name: &str, version: &str) -> slog::Logger {
         .ok();
 
     match drain {
-        Some(d) => slog::Logger::root(d, slog::o!(
-            "plugin_name"    => name   .to_owned(),
-            "plugin_version" => version.to_owned()
-        )),
+        Some(d) => slog::Logger::root(
+            d,
+            slog::o!(
+                "plugin_name"    => name   .to_owned(),
+                "plugin_version" => version.to_owned()
+            ),
+        ),
 
         None => slog::Logger::root(slog::Discard, slog::o!()),
     }
@@ -799,8 +821,11 @@ fn slog(name: &str, version: &str) -> slog::Logger {
 
     let drain = slog_journald::JournaldDrain.ignore_res();
 
-    slog::Logger::root(drain, slog::o!(
-        "plugin_name"    => name   .to_owned(),
-        "plugin_version" => version.to_owned()
-    ))
+    slog::Logger::root(
+        drain,
+        slog::o!(
+            "plugin_name"    => name   .to_owned(),
+            "plugin_version" => version.to_owned()
+        ),
+    )
 }
