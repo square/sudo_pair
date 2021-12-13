@@ -93,9 +93,9 @@ const DEFAULT_PAIR_PROMPT: &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
 sudo_io_plugin! { sudo_pair : SudoPair }
 
 struct SudoPair {
-    env: &'static IoEnv,
+    env:     &'static IoEnv,
     options: PluginOptions,
-    socket: Option<RefCell<Socket>>,
+    socket:  Option<RefCell<Socket>>,
 
     slog: slog::Logger,
 }
@@ -501,10 +501,8 @@ impl SudoPair {
         self.env.command_info.command == self.options.binary_path
     }
 
-    ///
     /// Returns true if the policy plugin has not given us any
     /// facilities to log output for.
-    ///
     fn is_exempted_from_logging(&self) -> bool {
         if !self.env.command_info.iolog_ttyout
             && !self.env.command_info.iolog_stdout
@@ -734,7 +732,7 @@ impl PluginOptions {
     fn binary_name(&self) -> &[u8] {
         self.binary_path
             .file_name()
-            .unwrap_or_else(|| self.binary_path.as_os_str())
+            .unwrap_or(self.binary_path.as_os_str())
             .as_bytes()
     }
 }
