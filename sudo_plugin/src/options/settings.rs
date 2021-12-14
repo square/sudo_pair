@@ -289,7 +289,7 @@ impl TryFrom<OptionMap> for Settings {
             login_class:          value.get("login_class")         .ok(),
             login_shell:          value.get("login_shell")         .unwrap_or(false),
             max_groups:           value.get("max_groups")          .ok(),
-            network_addrs:        value.get("network_addrs")       .unwrap_or_default(),
+            network_addrs:        value.get("network_addrs")       .unwrap_or_else(|_| vec![]),
             noninteractive:       value.get("noninteractive")      .unwrap_or(false),
             preserve_environment: value.get("preserve_environment").unwrap_or(false),
             preserve_groups:      value.get("preserve_groups")     .unwrap_or(false),
@@ -325,12 +325,17 @@ impl FromSudoOption for NetAddr {
     #[rustfmt::skip]
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let bytes = s.as_bytes();
-        let mid = bytes.iter().position(|b| *b == b'/').unwrap_or(bytes.len());
+        let mid   = bytes.iter()
+            .position(|b| *b == b'/')
+            .unwrap_or(bytes.len());
 
         let addr = s[        .. mid].parse()?;
         let mask = s[mid + 1 ..    ].parse()?;
 
-        Ok(Self { addr, mask })
+        Ok(Self {
+            addr,
+            mask
+        })
     }
 }
 

@@ -85,11 +85,11 @@ use sudo_plugin::prelude::*;
 mod default {
     use libc::gid_t;
 
-    pub(crate) const BINARY_PATH: &str         = "/usr/bin/sudo_approve";
-    pub(crate) const USER_PROMPT_PATH: &str    = "/etc/sudo_pair.prompt.user";
-    pub(crate) const PAIR_PROMPT_PATH: &str    = "/etc/sudo_pair.prompt.pair";
-    pub(crate) const SOCKET_DIR: &str          = "/var/run/sudo_pair";
-    pub(crate) const GIDS_ENFORCED: [gid_t; 1] = [0];
+    pub(crate) const BINARY_PATH     : &str       = "/usr/bin/sudo_approve";
+    pub(crate) const USER_PROMPT_PATH: &str       = "/etc/sudo_pair.prompt.user";
+    pub(crate) const PAIR_PROMPT_PATH: &str       = "/etc/sudo_pair.prompt.pair";
+    pub(crate) const SOCKET_DIR      : &str       = "/var/run/sudo_pair";
+    pub(crate) const GIDS_ENFORCED   : [gid_t; 1] = [0];
 
     pub(crate) const USER_PROMPT: &[u8] = b"%B %u %p\n";
     pub(crate) const PAIR_PROMPT: &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
