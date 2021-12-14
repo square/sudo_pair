@@ -17,7 +17,7 @@ use std::collections::HashMap;
 const DEFAULT_ESCAPE_BYTE: u8 = b'%';
 
 pub(crate) struct Spec {
-    escape: u8,
+    escape:     u8,
     expansions: HashMap<u8, Vec<u8>>,
 }
 
@@ -27,17 +27,10 @@ impl Spec {
     }
 
     pub(crate) fn with_escape(escape: u8) -> Self {
-        Self {
-            escape,
-            ..Self::new()
-        }
+        Self { escape, ..Self::new() }
     }
 
-    pub(crate) fn replace<T: Into<Vec<u8>>>(
-        &mut self,
-        literal: u8,
-        replacement: T,
-    ) {
+    pub(crate) fn replace<T: Into<Vec<u8>>>(&mut self, literal: u8, replacement: T) {
         drop(self.expansions.insert(literal, replacement.into()));
     }
 
@@ -81,19 +74,13 @@ impl Spec {
 
 impl Default for Spec {
     fn default() -> Self {
-        Self {
-            expansions: HashMap::new(),
-            escape: DEFAULT_ESCAPE_BYTE,
-        }
+        Self { expansions: HashMap::new(), escape: DEFAULT_ESCAPE_BYTE }
     }
 }
 
 impl From<HashMap<u8, Vec<u8>>> for Spec {
     fn from(expansions: HashMap<u8, Vec<u8>>) -> Self {
-        Self {
-            expansions,
-            ..Self::new()
-        }
+        Self { expansions, ..Self::new() }
     }
 }
 
@@ -194,10 +181,7 @@ mod tests {
         spec.replace(b'y', &b"qwerty"[..]);
         spec.replace(b'n', &b"uiop["[..]);
 
-        assert_eq!(
-            b"only y should be expanded qwerty"[..],
-            spec.expand(template)[..],
-        );
+        assert_eq!(b"only y should be expanded qwerty"[..], spec.expand(template)[..],);
     }
 
     #[test]

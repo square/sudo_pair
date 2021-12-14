@@ -36,17 +36,11 @@ pub(crate) enum ErrorKind {
 impl ErrorKind {
     fn as_str(&self) -> &'static str {
         match self {
-            ErrorKind::CommunicationError => {
-                "couldn't establish communications with the pair"
-            }
+            ErrorKind::CommunicationError => "couldn't establish communications with the pair",
             ErrorKind::SessionDeclined => "pair declined the session",
             ErrorKind::SessionTerminated => "pair ended the session",
-            ErrorKind::StdinRedirected => {
-                "redirection of stdin to paired sessions is prohibited"
-            }
-            ErrorKind::SudoToUserAndGroup => {
-                "the -u and -g options may not both be specified"
-            }
+            ErrorKind::StdinRedirected => "redirection of stdin to paired sessions is prohibited",
+            ErrorKind::SudoToUserAndGroup => "the -u and -g options may not both be specified",
 
             ErrorKind::PluginError(_) => "the plugin failed to initialize",
         }

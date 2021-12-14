@@ -1,6 +1,6 @@
 ### stable features ###
 
-max_width = 80
+max_width = 100
 
 normalize_comments   = true
 reorder_imports      = true
@@ -12,3 +12,4 @@ wrap_comments        = true
 unstable_features = true
 
 struct_field_align_threshold = 64
+use_small_heuristics = "Max"

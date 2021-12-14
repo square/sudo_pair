@@ -51,9 +51,7 @@ impl Socket {
 
         // by default, ensure no permissions on the created socket since
         // we're going to customize them immediately afterward
-        let umask = unsafe {
-            libc::umask(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO)
-        };
+        let umask = unsafe { libc::umask(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO) };
 
         let socket = UnixListener::bind(&path).and_then(|listener| {
             let cpath = CString::new(path.as_os_str().as_bytes())?;
@@ -89,26 +87,18 @@ impl Socket {
                 ) {
                     1 => (),
                     -1 => return Err(Error::last_os_error()),
-                    0 => unreachable!(
-                        "`select` returned 0 even though no timeout was set"
-                    ),
-                    _ => unreachable!(
-                        "`select` indicated that more than 1 fd is ready"
-                    ),
+                    0 => unreachable!("`select` returned 0 even though no timeout was set"),
+                    _ => unreachable!("`select` indicated that more than 1 fd is ready"),
                 };
 
                 // as a sanity check, confirm that the fd we're going to
                 // `accept` is the one that `select` says is ready
                 if !libc::FD_ISSET(fd, &readfds) {
-                    unreachable!(
-                        "`select` returned an unexpected file descriptor"
-                    );
+                    unreachable!("`select` returned an unexpected file descriptor");
                 }
             }
 
-            listener.accept().map(|connection| Self {
-                socket: connection.0,
-            })
+            listener.accept().map(|connection| Self { socket: connection.0 })
         });
 
         // once the connection has been made (or aborted due to ctrl-c),
@@ -140,10 +130,7 @@ impl Socket {
             // file exists, is not a socket; abort
             Ok(false) => Err(Error::new(
                 ErrorKind::AlreadyExists,
-                format!(
-                    "{} exists and is not a socket",
-                    path.to_string_lossy()
-                ),
+                format!("{} exists and is not a socket", path.to_string_lossy()),
             )),
 
             // file doesn't exist; nothing to do
@@ -156,9 +143,9 @@ impl Socket {
             Error::new(
                 ErrorKind::AlreadyExists,
                 format!(
-                "couldn't determine permissions of the parent directory for {}",
-                path.to_string_lossy()
-            ),
+                    "couldn't determine permissions of the parent directory for {}",
+                    path.to_string_lossy()
+                ),
             )
         })?;
 
@@ -176,10 +163,7 @@ impl Socket {
             if stat.st_mode & libc::S_IFDIR == 0 {
                 return Err(Error::new(
                     ErrorKind::Other,
-                    format!(
-                        "the socket path {} is not a directory",
-                        parent.to_string_lossy(),
-                    ),
+                    format!("the socket path {} is not a directory", parent.to_string_lossy(),),
                 ));
             }
 
