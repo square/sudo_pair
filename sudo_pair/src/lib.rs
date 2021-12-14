@@ -81,14 +81,19 @@ use failure::ResultExt;
 use sudo_plugin::options::OptionMap;
 use sudo_plugin::prelude::*;
 
-const DEFAULT_BINARY_PATH: &str = "/usr/bin/sudo_approve";
-const DEFAULT_USER_PROMPT_PATH: &str = "/etc/sudo_pair.prompt.user";
-const DEFAULT_PAIR_PROMPT_PATH: &str = "/etc/sudo_pair.prompt.pair";
-const DEFAULT_SOCKET_DIR: &str = "/var/run/sudo_pair";
-const DEFAULT_GIDS_ENFORCED: [gid_t; 1] = [0];
+#[rustfmt::skip]
+mod default {
+    use libc::gid_t;
 
-const DEFAULT_USER_PROMPT: &[u8] = b"%B %u %p\n";
-const DEFAULT_PAIR_PROMPT: &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
+    pub(crate) const BINARY_PATH: &str         = "/usr/bin/sudo_approve";
+    pub(crate) const USER_PROMPT_PATH: &str    = "/etc/sudo_pair.prompt.user";
+    pub(crate) const PAIR_PROMPT_PATH: &str    = "/etc/sudo_pair.prompt.pair";
+    pub(crate) const SOCKET_DIR: &str          = "/var/run/sudo_pair";
+    pub(crate) const GIDS_ENFORCED: [gid_t; 1] = [0];
+
+    pub(crate) const USER_PROMPT: &[u8] = b"%B %u %p\n";
+    pub(crate) const PAIR_PROMPT: &[u8] = b"%U@%h:%d$ %C\ny/n? [n]: ";
+}
 
 sudo_io_plugin! { sudo_pair : SudoPair }
 
@@ -252,7 +257,7 @@ impl SudoPair {
         // default template instead
         let template: Vec<u8> = File::open(&self.options.user_prompt_path)
             .and_then(|file| file.bytes().collect())
-            .unwrap_or_else(|_| DEFAULT_USER_PROMPT.into());
+            .unwrap_or_else(|_| default::USER_PROMPT.into());
 
         slog::trace!(self.slog, "local prompt template loaded");
 
@@ -349,7 +354,7 @@ impl SudoPair {
         // default template instead
         let template: Vec<u8> = File::open(&self.options.pair_prompt_path)
             .and_then(|file| file.bytes().collect())
-            .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT.into());
+            .unwrap_or_else(|_| default::PAIR_PROMPT.into());
 
         slog::trace!(self.slog, "remote prompt loaded");
 
@@ -745,22 +750,22 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
         Self {
             binary_path: map
                 .get("binary_path")
-                .unwrap_or_else(|_| DEFAULT_BINARY_PATH.into()),
+                .unwrap_or_else(|_| default::BINARY_PATH.into()),
 
             user_prompt_path: map
                 .get("user_prompt_path")
-                .unwrap_or_else(|_| DEFAULT_USER_PROMPT_PATH.into()),
+                .unwrap_or_else(|_| default::USER_PROMPT_PATH.into()),
 
             pair_prompt_path: map
                 .get("pair_prompt_path")
-                .unwrap_or_else(|_| DEFAULT_PAIR_PROMPT_PATH.into()),
+                .unwrap_or_else(|_| default::PAIR_PROMPT_PATH.into()),
 
             socket_dir: map
                 .get("socket_dir")
-                .unwrap_or_else(|_| DEFAULT_SOCKET_DIR.into()),
+                .unwrap_or_else(|_| default::SOCKET_DIR.into()),
 
             gids_enforced: map.get("gids_enforced").unwrap_or_else(|_| {
-                DEFAULT_GIDS_ENFORCED.iter().copied().collect()
+                default::GIDS_ENFORCED.iter().copied().collect()
             }),
 
             gids_exempted: map.get("gids_exempted").unwrap_or_default(),
