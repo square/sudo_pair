@@ -115,7 +115,12 @@ impl IoPlugin for SudoPair {
 
         slog::debug!(slog, "plugin initializing");
 
-        let args: Vec<_> = env.cmdline.iter().skip(1).map(|arg| arg.to_string_lossy()).collect();
+        let args: Vec<_> = env
+            .cmdline
+            .iter()
+            .skip(1)
+            .map(|arg| arg.to_string_lossy())
+            .collect();
 
         slog = slog::Logger::new(
             &slog,
@@ -135,7 +140,12 @@ impl IoPlugin for SudoPair {
         );
 
         // TODO: convert all outgoing errors to be unauthorized errors
-        let mut pair = Self { env, options, socket: None, slog };
+        let mut pair = Self {
+            env,
+            options,
+            socket: None,
+            slog,
+        };
 
         if pair.is_exempt() {
             slog::info!(pair.slog, "pair session exempt from pairing requirements");
@@ -348,9 +358,15 @@ impl SudoPair {
 
         slog::trace!(self.slog, "remote prompt evaluated");
 
-        let mut socket = self.socket.as_ref().ok_or(ErrorKind::CommunicationError)?.borrow_mut();
+        let mut socket = self
+            .socket
+            .as_ref()
+            .ok_or(ErrorKind::CommunicationError)?
+            .borrow_mut();
 
-        socket.write_all(&prompt[..]).context(ErrorKind::CommunicationError)?;
+        socket
+            .write_all(&prompt[..])
+            .context(ErrorKind::CommunicationError)?;
 
         socket.flush().context(ErrorKind::CommunicationError)?;
 
@@ -369,7 +385,9 @@ impl SudoPair {
         // Ctrl-C and retry the read); we don't need to check the return
         // value because if the read was successful, we're guaranteed to
         // have read at least one byte
-        let _ = socket.read(&mut response).context(ErrorKind::SessionDeclined)?;
+        let _ = socket
+            .read(&mut response)
+            .context(ErrorKind::SessionDeclined)?;
 
         slog::debug!(self.slog, "remote pair responded";
             "response" => String::from_utf8_lossy(&response[..]).into_owned(),
@@ -523,7 +541,10 @@ impl SudoPair {
     }
 
     fn is_sudoing_to_enforced_gid(&self) -> bool {
-        !self.options.gids_enforced.is_disjoint(&self.env.runas_gids())
+        !self
+            .options
+            .gids_enforced
+            .is_disjoint(&self.env.runas_gids())
     }
 
     fn is_sudoing_to_user(&self) -> bool {
@@ -550,9 +571,10 @@ impl SudoPair {
         // note that we want the *`uid`* and not the `euid` here since
         // we want to know who the real user is and not the `uid` of the
         // owner of `sudo`
-        self.options
-            .socket_dir
-            .join(format!("{}.{}.sock", self.env.user_info.uid, self.env.user_info.pid,))
+        self.options.socket_dir.join(format!(
+            "{}.{}.sock",
+            self.env.user_info.uid, self.env.user_info.pid,
+        ))
     }
 
     fn socket_uid(&self) -> uid_t {
@@ -709,7 +731,10 @@ struct PluginOptions {
 
 impl PluginOptions {
     fn binary_name(&self) -> &[u8] {
-        self.binary_path.file_name().unwrap_or(self.binary_path.as_os_str()).as_bytes()
+        self.binary_path
+            .file_name()
+            .unwrap_or(self.binary_path.as_os_str())
+            .as_bytes()
     }
 }
 
@@ -719,7 +744,9 @@ impl PluginOptions {
 impl<'a> From<&'a OptionMap> for PluginOptions {
     fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path: map.get("binary_path").unwrap_or_else(|_| default::BINARY_PATH.into()),
+            binary_path: map
+                .get("binary_path")
+                .unwrap_or_else(|_| default::BINARY_PATH.into()),
 
             user_prompt_path: map
                 .get("user_prompt_path")
@@ -729,7 +756,9 @@ impl<'a> From<&'a OptionMap> for PluginOptions {
                 .get("pair_prompt_path")
                 .unwrap_or_else(|_| default::PAIR_PROMPT_PATH.into()),
 
-            socket_dir: map.get("socket_dir").unwrap_or_else(|_| default::SOCKET_DIR.into()),
+            socket_dir: map
+                .get("socket_dir")
+                .unwrap_or_else(|_| default::SOCKET_DIR.into()),
 
             gids_enforced: map
                 .get("gids_enforced")

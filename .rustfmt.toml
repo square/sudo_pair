@@ -12,4 +12,3 @@ wrap_comments        = true
 unstable_features = true
 
 struct_field_align_threshold = 64
-use_small_heuristics = "Max"

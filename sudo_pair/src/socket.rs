@@ -98,7 +98,9 @@ impl Socket {
                 }
             }
 
-            listener.accept().map(|connection| Self { socket: connection.0 })
+            listener.accept().map(|connection| Self {
+                socket: connection.0,
+            })
         });
 
         // once the connection has been made (or aborted due to ctrl-c),
@@ -163,7 +165,10 @@ impl Socket {
             if stat.st_mode & libc::S_IFDIR == 0 {
                 return Err(Error::new(
                     ErrorKind::Other,
-                    format!("the socket path {} is not a directory", parent.to_string_lossy(),),
+                    format!(
+                        "the socket path {} is not a directory",
+                        parent.to_string_lossy(),
+                    ),
                 ));
             }
 
