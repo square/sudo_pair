@@ -742,29 +742,26 @@ impl PluginOptions {
 // actually a way to satisfy the linter for the time being
 #[allow(single_use_lifetimes)]
 impl<'a> From<&'a OptionMap> for PluginOptions {
+    #[rustfmt::skip]
     fn from(map: &'a OptionMap) -> Self {
         Self {
-            binary_path: map
-                .get("binary_path")
+            binary_path: map.get("binary_path")
                 .unwrap_or_else(|_| default::BINARY_PATH.into()),
 
-            user_prompt_path: map
-                .get("user_prompt_path")
+            user_prompt_path: map.get("user_prompt_path")
                 .unwrap_or_else(|_| default::USER_PROMPT_PATH.into()),
 
-            pair_prompt_path: map
-                .get("pair_prompt_path")
+            pair_prompt_path: map.get("pair_prompt_path")
                 .unwrap_or_else(|_| default::PAIR_PROMPT_PATH.into()),
 
-            socket_dir: map
-                .get("socket_dir")
+            socket_dir: map.get("socket_dir")
                 .unwrap_or_else(|_| default::SOCKET_DIR.into()),
 
-            gids_enforced: map
-                .get("gids_enforced")
+            gids_enforced: map.get("gids_enforced")
                 .unwrap_or_else(|_| default::GIDS_ENFORCED.iter().copied().collect()),
 
-            gids_exempted: map.get("gids_exempted").unwrap_or_default(),
+            gids_exempted: map.get("gids_exempted")
+                .unwrap_or_default(),
         }
     }
 }
