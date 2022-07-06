@@ -306,6 +306,12 @@ an oncall security engineer, so this capability should only be used in the event
 In another terminal, you can copy and paste the given command (which will implicitly run as root
 inside the container), and your session as `nobody` will be mirrored to both terminals once approved.
 
+To clean up the existing Docker environment before creating a new build, stop and remove the container:
+
+```
+docker stop sudo-pair && docker rm sudo-pair
+```
+
 ## Contributions
 
 Contributions are welcome! This project should hopefully be small
