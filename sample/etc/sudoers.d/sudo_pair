@@ -1,1 +1,1 @@
-nobody ALL = (: games) NOPASSWD: LOG_OUTPUT: ALL
+games ALL = (nobody) NOPASSWD:LOG_OUTPUT:ALL

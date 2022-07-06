@@ -262,6 +262,50 @@ goal to have a minimal set of dependencies. Currently, those are:
 * [rust-lang-nursery/failure][failure]
 * [dtolnay/thiserror][thiserror]
 
+## Manual Testing in Docker
+
+The behavior of `sudo_pair` can be tested using the included Docker image.
+
+First, build and launch the image. It does not have an entrypoint, so using
+the `-i` flag ensures it stays open, and the `-d` flag detaches from it.
+
+```
+docker build -t sudo-pair . && docker run -id --name sudo-pair sudo-pair
+```
+
+Now, you can attach to the image as the `games` user. In the configuration generated for
+this Docker image, `games` is granted the right to passwordlessly sudo as the `nobody` user;
+in turn, the `nobody` user is a member of the `nogroup` group, which triggers the `sudo_pair`
+enforcement mechanism:
+
+```
+docker exec -u games -it sudo-pair /bin/bash
+```
+
+Now that you're logged in as `games`, you can attempt to sudo as `nobody`, and see the `sudo_pair`
+flow:
+
+```
+sudo -u nobody /bin/bash
+```
+
+You'll be given a prompt like the one below explaining that another user must approve your sudo action:
+
+```
+Due to security and compliance requirements, this `sudo` session will require approval and monitoring.
+
+To continue, another human must run:
+
+    docker exec -it d263b8d24076 /usr/bin/sudo_approve 5 112
+
+If a suitable human is not available and you have an immediate and urgent need to run this command,
+you may run the above command to approve your own session. Note that doing so will immediately page
+an oncall security engineer, so this capability should only be used in the event of an emergency.
+```
+
+In another terminal, you can copy and paste the given command (which will implicitly run as root
+inside the container), and your session as `nobody` will be mirrored to both terminals once approved.
+
 ## Contributions
 
 Contributions are welcome! This project should hopefully be small
