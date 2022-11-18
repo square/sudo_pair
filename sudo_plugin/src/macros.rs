@@ -86,10 +86,12 @@ macro_rules! sudo_io_plugin {
             }
         }
 
+        // This must be `static mut` as the sudo plugin API writes to
+        // `event_alloc` to provide us with the address of the function.
         #[allow(non_upper_case_globals)]
         #[allow(missing_docs)]
         #[no_mangle]
-        pub static $name: $crate::sys::io_plugin = $crate::sys::io_plugin {
+        pub static mut $name: $crate::sys::io_plugin = $crate::sys::io_plugin {
             open:         Some($crate::core::open::<$ty, $name::State>),
             close:        Some($crate::core::close::<$ty, $name::State>),
             show_version: Some($crate::core::show_version::<$ty, $name::State>),
