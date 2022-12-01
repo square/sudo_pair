@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM rust:latest AS base
+FROM rust:1.52.1 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
