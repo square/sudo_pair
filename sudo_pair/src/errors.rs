@@ -12,13 +12,13 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
+use std::error::Error as StdError;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::result::Result as StdResult;
-use std::error::Error as StdError;
 
 use failure::Context;
 
-use sudo_plugin::prelude::{Error as PluginError, OpenStatus, LogStatus};
+use sudo_plugin::prelude::{Error as PluginError, LogStatus, OpenStatus};
 
 pub(crate) type Result<T> = StdResult<T, Error>;
 
@@ -37,12 +37,12 @@ impl ErrorKind {
     fn as_str(&self) -> &'static str {
         match self {
             ErrorKind::CommunicationError => "couldn't establish communications with the pair",
-            ErrorKind::SessionDeclined    => "pair declined the session",
-            ErrorKind::SessionTerminated  => "pair ended the session",
-            ErrorKind::StdinRedirected    => "redirection of stdin to paired sessions is prohibited",
+            ErrorKind::SessionDeclined => "pair declined the session",
+            ErrorKind::SessionTerminated => "pair ended the session",
+            ErrorKind::StdinRedirected => "redirection of stdin to paired sessions is prohibited",
             ErrorKind::SudoToUserAndGroup => "the -u and -g options may not both be specified",
 
-            ErrorKind::PluginError(_)     => "the plugin failed to initialize",
+            ErrorKind::PluginError(_) => "the plugin failed to initialize",
         }
     }
 }
@@ -94,4 +94,4 @@ impl From<PluginError> for Error {
     }
 }
 
-impl StdError for Error { }
+impl StdError for Error {}

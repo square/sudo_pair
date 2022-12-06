@@ -1,6 +1,6 @@
 ### stable features ###
 
-max_width = 80
+max_width = 100
 
 normalize_comments   = true
 reorder_imports      = true

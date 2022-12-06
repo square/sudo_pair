@@ -12,9 +12,9 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-use crate::errors::{Result, Error};
-use crate::options::OptionMap;
+use crate::errors::{Error, Result};
 use crate::options::traits::{FromSudoOption, FromSudoOptionList};
+use crate::options::OptionMap;
 
 use std::convert::TryFrom;
 use std::net::{AddrParseError, IpAddr};
@@ -273,6 +273,7 @@ impl Settings {
 impl TryFrom<OptionMap> for Settings {
     type Error = Error;
 
+    #[rustfmt::skip]
     fn try_from(value: OptionMap) -> Result<Self> {
         Ok(Self {
             plugin_dir:  value.get("plugin_dir")?,
@@ -321,18 +322,19 @@ impl FromSudoOption for NetAddr {
     // rust to split a byte array on a delimiter, and the code below
     // selects the midpoint such that it's guaranteed to be within the
     // slice
+    #[rustfmt::skip]
     fn from_sudo_option(s: &str) -> ::std::result::Result<Self, Self::Err> {
         let bytes = s.as_bytes();
         let mid   = bytes.iter()
-            .position(|b| *b == b'/' )
-            .unwrap_or_else(|| bytes.len());
+            .position(|b| *b == b'/')
+            .unwrap_or(bytes.len());
 
         let addr = s[        .. mid].parse()?;
         let mask = s[mid + 1 ..    ].parse()?;
 
         Ok(Self {
             addr,
-            mask,
+            mask
         })
     }
 }
