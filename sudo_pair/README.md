@@ -53,7 +53,7 @@ use the plugin.
 # for your system. Proceed only on a throwaway host.
 
 # install the plugin shared library
-install -o root -g root -m 0644 ./target/release/libsudo_pair.so /usr/libexec/sudo
+install -o root -g root -m 0644 ./target/release/libsudo_pair.so /usr/lib/sudo/sudo_pair.so
 
 # create a socket directory
 install -o root -g root -m 0644 -d /var/run/sudo_pair
